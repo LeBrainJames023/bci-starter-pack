@@ -1,0 +1,17 @@
+{
+  "name": "bci-starter-pack",
+  "version": "0.1.0",
+  "description": "BCI-accessible game hub for Brain-Computer Interface users",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "serve": "npx http-server . -p 3000 -o"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  }
+}
