@@ -7,25 +7,57 @@ The goal is a polished, accessible game hub that can be handed to any new BCI us
 ## GitHub
 Repository: https://github.com/LeBrainJames023/bci-starter-pack
 
+---
+
+## Session Startup — Read These First
+Before doing anything, read the following files in this order:
+1. `README.md`
+2. `DESIGN_GUIDE.md`
+3. `FUTURE_FEATURES.md`
+4. `ASSETS.md`
+5. `GAME_PLAN.md` inside the folder of whichever game is being actively worked on
+
+No work starts until these are loaded.
+
+---
+
 ## Project Structure
 ```
 BCI Starter Pack/
 ├── index.html           # Game launcher hub — main entry point
 ├── games/
-│   └── hackey-sac/      # Only live game currently
+│   ├── hackey-sac/      # LIVE
+│   ├── golf/
+│   ├── hoops/
+│   ├── qb-targets/
+│   ├── goalie-striker/
+│   ├── boxing/
+│   ├── batter-pitcher/
+│   ├── rally/
+│   ├── hockey/
+│   ├── archery/
+│   ├── range/
+│   ├── tower-defense/   # Built in Godot — HTML5 export drops here
+│   └── side-scroller/   # Likely separate repo — same export strategy
 ├── shared/              # Reserved for shared BCI utilities
 ├── DESIGN_GUIDE.md      # Read before building any game
 ├── FUTURE_FEATURES.md   # Backlog — ideas go here, not into active builds
-└── ASSETS.md            # Every asset added must be logged here
+├── ASSETS.md            # Every asset added must be logged here
+└── GAME_PLAN.md         # Per-game plans live inside each game folder
 ```
+
+---
 
 ## Stack
 - Vanilla HTML, CSS, JavaScript for simple games
-- Phaser.js introduced when a game needs it (Tower Defense web version, Side Scroller)
-- ESLint v9 + Prettier v3 configured — run before committing
+- Phaser.js introduced when a game needs it — flag before escalating
+- ESLint v9 + Prettier v3 configured
 - No build step required for simple games
 
+---
+
 ## Game Lineup
+
 ### Training (1)
 - Hackey Sac — LIVE at games/hackey-sac/index.html
 
@@ -35,23 +67,41 @@ Golf, BCI Hoops, QB Targets, Goalie/Striker, Boxing, Batter/Pitcher, Rally, Hock
 ### Action (3 — all coming soon)
 BCI Range, Tower Defense, Side Scroller
 
-## Architecture Rules
-- Every game lives in its own folder under games/
+---
+
+## Build Approach
+- Build an MVP for each game before polishing any single game deeply
+- It is fine to bounce between games — fresh ideas for one game while working on another go into that game's GAME_PLAN.md
+- Building an MVP early also determines whether a game stays as a browser game or needs its own repo
+- Do not start Side Scroller or any heavy game without first deciding on the tech stack
+
+---
+
+## Rules
+
+### Launcher Sync
+Any time a game goes live: update its launcher card from Coming Soon to Live,
+and update the game count in the launcher header. The launcher must always reflect reality.
+
+### Tech Escalation
+If a game shows signs of outgrowing plain HTML/JS — complex animations, multiple scenes,
+heavy assets, performance issues — stop and flag it before adding more features.
+Do not build deeper into the wrong tool.
+
+### Assets
+No image, sound, or font gets added to any game without being logged in ASSETS.md first.
+
+### Architecture
 - Every game must have an index.html entry point so the launcher can link to it
-- Godot games (Tower Defense) are built in a separate repo and exported to HTML5 — the export folder drops into games/tower-defense/
-- Side Scroller will likely be a separate repo if it grows large — same export strategy
-- The launcher (index.html at root) only needs a path to link to — it does not care what built the game
+- Godot and other engine-built games belong in separate repos — only their HTML5 exports go here
+- The launcher does not care what built the game, only where to point the browser
 
-## Design Rules — Read DESIGN_GUIDE.md for Full Details
-- Every game uses exactly four inputs: floating cursor, left click (blue), right click (orange), middle click (purple)
-- Blue/orange/purple are the universal BCI click colors — they never change across any game
-- Game worlds are fully themed to their sport or genre — environments do not need to follow the color rules
+---
+
+## Design Rules — Full Details in DESIGN_GUIDE.md
+- Four inputs per game: floating cursor, left click (blue), right click (orange), middle click (purple)
+- Blue/orange/purple are the universal BCI click colors — never change across any game
+- Game worlds are fully themed to their sport — environments do not follow the color rules
 - All click targets must be large enough for BCI cursor use
-- No drag-and-drop, no hover-only interactions, no keyboard required for any game mechanic
-- Every game must include analytics (accuracy, reaction time, attempts per click type)
-
-## Session Rules
-- Always read DESIGN_GUIDE.md before starting work on any new game
-- Check FUTURE_FEATURES.md before adding anything new — if it is not already planned, flag it as scope creep
-- Log any new asset in ASSETS.md immediately when it is added
-- Before calling any game feature done, verify it works in the browser
+- No drag-and-drop, no hover-only interactions, no keyboard required
+- Every game must include analytics
