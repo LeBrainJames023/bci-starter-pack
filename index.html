@@ -5,13 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BCI Starter Pack</title>
   <style>
+    /* ─────────────────────────────────────────────────────────────
+       Theme tokens — change colors here to restyle the entire page
+       ───────────────────────────────────────────────────────────── */
+    :root {
+      /* Backgrounds */
+      --bg-page:        #0d1117;
+      --bg-card:        #1a222d;
+      --bg-card-hover:  #222c3a;
+      --bg-badge-dim:   #1f2630;
+
+      /* Text */
+      --text-primary:   #e8e4d9;
+      --text-muted:     #9aa4b1;
+      --text-dim:       #5d6670;
+
+      /* Borders */
+      --border:         #2d333b;
+      --border-strong:  #3a4150;
+
+      /* Universal BCI click colors (never change across games) */
+      --click-blue:     #4488ff;
+      --click-orange:   #ff8833;
+      --click-purple:   #aa44ff;
+
+      /* Category colors (match the click palette) */
+      --cat-training:   var(--click-blue);
+      --cat-sports:     var(--click-orange);
+      --cat-action:     var(--click-purple);
+
+      /* Status */
+      --live-text:      #6bc46b;
+      --live-bg:        #1a2a1a;
+      --live-border:    #2d4a2d;
+
+      /* Spacing */
+      --gap-card:       12px;
+      --gap-section:    40px;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: #0d1117;
+      background: var(--bg-page);
       min-height: 100vh;
       font-family: 'Courier New', monospace;
-      color: #e8e4d9;
+      color: var(--text-primary);
       user-select: none;
       padding: 48px 24px 72px;
     }
@@ -24,7 +63,7 @@
       justify-content: space-between;
       align-items: flex-end;
       padding-bottom: 24px;
-      border-bottom: 1px solid #2d333b;
+      border-bottom: 1px solid var(--border);
     }
 
     .hub-title {
@@ -32,12 +71,12 @@
       font-weight: bold;
       letter-spacing: 5px;
       text-transform: uppercase;
-      color: #e8e4d9;
+      color: var(--text-primary);
     }
 
     .hub-subtitle {
       font-size: 11px;
-      color: #7d8590;
+      color: var(--text-muted);
       letter-spacing: 3px;
       text-transform: uppercase;
       margin-top: 7px;
@@ -50,8 +89,8 @@
       line-height: 1.9;
     }
 
-    .count-live { color: #6bc46b; }
-    .count-soon { color: #4d5561; }
+    .count-live { color: var(--live-text); }
+    .count-soon { color: var(--text-dim); }
 
     /* ── Main ────────────────────────────────────────────────── */
     .hub-main {
@@ -59,7 +98,27 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 44px;
+      gap: var(--gap-section);
+    }
+
+    /* ── Section — subtle colored ambient wash ──────────────── */
+    .game-section {
+      position: relative;
+      padding: 18px 14px 22px;
+      border-radius: 10px;
+    }
+
+    .section-training {
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(68, 136, 255, 0.07), transparent 65%);
+    }
+    .section-sports {
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 136, 51, 0.05), transparent 65%);
+    }
+    .section-action {
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(170, 68, 255, 0.06), transparent 65%);
     }
 
     /* ── Section label ───────────────────────────────────────── */
@@ -67,7 +126,7 @@
       font-size: 10px;
       letter-spacing: 3px;
       text-transform: uppercase;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -80,16 +139,17 @@
       height: 7px;
       border-radius: 50%;
       background: currentColor;
+      box-shadow: 0 0 8px currentColor;
       flex-shrink: 0;
     }
 
-    .label-training { color: #4488ff; }
-    .label-sports   { color: #ff8833; }
-    .label-action   { color: #aa44ff; }
+    .label-training { color: var(--cat-training); }
+    .label-sports   { color: var(--cat-sports); }
+    .label-action   { color: var(--cat-action); }
 
     /* ── Featured card (live game) ───────────────────────────── */
     .featured-card {
-      background: #161b22;
+      background: var(--bg-card);
       border: 1px solid #3a5a88;
       border-radius: 6px;
       padding: 28px 28px 24px;
@@ -101,15 +161,15 @@
     }
 
     .featured-card:hover {
-      background: #1c2433;
-      border-color: #4488ff;
+      background: var(--bg-card-hover);
+      border-color: var(--click-blue);
       animation: none;
-      box-shadow: 0 0 18px rgba(68, 136, 255, 0.15);
+      box-shadow: 0 0 18px rgba(68, 136, 255, 0.18);
     }
 
     @keyframes glow-pulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(68, 136, 255, 0);    border-color: #3a5a88; }
-      50%       { box-shadow: 0 0 12px rgba(68, 136, 255, 0.18); border-color: #4a6a99; }
+      50%       { box-shadow: 0 0 14px rgba(68, 136, 255, 0.22); border-color: #4a6a99; }
     }
 
     .featured-card::before {
@@ -117,7 +177,7 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 3px;
-      background: linear-gradient(90deg, #4488ff, #44aaff);
+      background: linear-gradient(90deg, var(--click-blue), #44aaff);
       border-radius: 6px 6px 0 0;
     }
 
@@ -134,13 +194,13 @@
       font-size: 26px;
       font-weight: bold;
       letter-spacing: 2px;
-      color: #e8e4d9;
+      color: var(--text-primary);
       margin-bottom: 10px;
     }
 
     .featured-desc {
       font-size: 12px;
-      color: #7d8590;
+      color: var(--text-muted);
       line-height: 1.8;
       max-width: 520px;
     }
@@ -161,14 +221,14 @@
       padding: 5px 12px;
       border-radius: 3px;
       font-weight: bold;
-      background: #1a2a1a;
-      color: #6bc46b;
-      border: 1px solid #2d4a2d;
+      background: var(--live-bg);
+      color: var(--live-text);
+      border: 1px solid var(--live-border);
     }
 
     .featured-cta {
       font-size: 11px;
-      color: #4488ff;
+      color: var(--click-blue);
       letter-spacing: 2px;
       text-transform: uppercase;
     }
@@ -186,50 +246,57 @@
       text-transform: uppercase;
       padding: 3px 8px;
       border-radius: 2px;
-      background: #1c2128;
-      color: #4d5561;
-      border: 1px solid #2d333b;
+      background: var(--bg-badge-dim);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
     }
 
     /* ── Game grid ───────────────────────────────────────────── */
     .game-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: var(--gap-card);
     }
 
     /* ── Coming soon card ────────────────────────────────────── */
     .game-card {
-      background: #161b22;
-      border: 1px solid #2d333b;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 6px;
       padding: 18px 16px;
       position: relative;
-      opacity: 0.6;
-      transition: opacity 0.2s, border-color 0.2s;
+      opacity: 0.88;
+      transition: opacity 0.2s, border-color 0.2s, transform 0.2s;
+    }
+
+    .game-card:hover {
+      opacity: 1;
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
     }
 
     .game-card::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0;
-      height: 2px;
+      height: 3px;
       border-radius: 6px 6px 0 0;
-      background: var(--accent, #2d333b);
-      opacity: 0.5;
+      background: var(--accent, var(--border));
+      opacity: 0.85;
+      box-shadow: 0 0 8px var(--accent, transparent);
     }
 
     .card-name {
       font-size: 15px;
       font-weight: bold;
-      color: #e8e4d9;
+      color: var(--text-primary);
       margin-bottom: 7px;
       letter-spacing: 1px;
     }
 
     .card-desc {
       font-size: 11px;
-      color: #7d8590;
+      color: var(--text-muted);
       line-height: 1.6;
       margin-bottom: 14px;
     }
@@ -241,9 +308,9 @@
       text-transform: uppercase;
       padding: 3px 7px;
       border-radius: 2px;
-      background: #1c2128;
-      color: #3d4551;
-      border: 1px solid #252c36;
+      background: var(--bg-badge-dim);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
     }
 
     /* ── Footer ─────────────────────────────────────────────── */
@@ -251,12 +318,12 @@
       max-width: 880px;
       margin: 48px auto 0;
       padding-top: 20px;
-      border-top: 1px solid #2d333b;
+      border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 10px;
-      color: #3d4551;
+      color: var(--text-dim);
       letter-spacing: 1px;
     }
   </style>
@@ -278,7 +345,7 @@
 <main class="hub-main">
 
   <!-- ── Training ─────────────────────────────────────────────── -->
-  <section>
+  <section class="game-section section-training">
     <div class="section-label label-training">Training</div>
     <div class="featured-card" onclick="openGame('games/hackey-sac/index.html')">
       <div class="featured-inner">
@@ -305,62 +372,62 @@
   </section>
 
   <!-- ── Sports ───────────────────────────────────────────────── -->
-  <section>
+  <section class="game-section section-sports">
     <div class="section-label label-sports">Sports</div>
     <div class="game-grid">
 
       <!-- Row 1 -->
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Golf</div>
         <div class="card-desc">Putt-putt to the driving range. Precision timing and click strength control your shot distance and power.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">BCI Hoops</div>
         <div class="card-desc">Basketball. Time clicks to match the rotating rim's colored zones and sink the shot.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">QB Targets</div>
         <div class="card-desc">Football. Aim and throw to color-coded receivers before the window closes.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
       <!-- Row 2 -->
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Goalie / Striker</div>
         <div class="card-desc">Soccer. Block incoming shots as goalie or drive the ball past the keeper as striker.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Boxing</div>
         <div class="card-desc">Move your cursor to dodge, click colored targets on your opponent to land the right punch.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Batter / Pitcher</div>
         <div class="card-desc">Baseball. Time your swing on color-coded pitches or control pitch type as the pitcher.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
       <!-- Row 3 -->
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Rally</div>
         <div class="card-desc">Tennis &amp; badminton. Return shots with matching color clicks to build your rally streak.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Hockey</div>
         <div class="card-desc">Slap shot or goalie. Fast puck movement on ice — click timing controls shot power and direction.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #ff8833">
+      <div class="game-card" style="--accent: var(--cat-sports)">
         <div class="card-name">Archery</div>
         <div class="card-desc">Hold your cursor steady, breathe, release at the right moment. Precision and tremor control training.</div>
         <span class="badge-soon">Coming Soon</span>
@@ -370,23 +437,23 @@
   </section>
 
   <!-- ── Action ───────────────────────────────────────────────── -->
-  <section>
+  <section class="game-section section-action">
     <div class="section-label label-action">Action</div>
     <div class="game-grid">
 
-      <div class="game-card" style="--accent: #aa44ff">
+      <div class="game-card" style="--accent: var(--cat-action)">
         <div class="card-name">BCI Range</div>
         <div class="card-desc">Target practice. Scan the range, click the right targets — don't shoot the friendlies.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #aa44ff">
+      <div class="game-card" style="--accent: var(--cat-action)">
         <div class="card-name">Tower Defense</div>
         <div class="card-desc">Click to place and upgrade towers. Defend your base against waves of enemies.</div>
         <span class="badge-soon">Coming Soon</span>
       </div>
 
-      <div class="game-card" style="--accent: #aa44ff">
+      <div class="game-card" style="--accent: var(--cat-action)">
         <div class="card-name">Side Scroller</div>
         <div class="card-desc">Action platformer built entirely around cursor movement and click inputs.</div>
         <span class="badge-soon">Coming Soon</span>

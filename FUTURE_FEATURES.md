@@ -97,3 +97,4 @@ Nothing in this file gets built until the current feature is complete.
 - Electron wrapper for Mac/Windows desktop packaging
 - Shared `bci-config.js` utility used by all games
 - Unified analytics schema across all games
+- GitHub Pages deployment so anyone can play the launcher and games from a public URL (free, auto-deploys on push, no server needed)
