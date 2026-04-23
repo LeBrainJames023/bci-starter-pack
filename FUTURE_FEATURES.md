@@ -31,6 +31,34 @@ Nothing in this file gets built until the current feature is complete.
 - Pitcher: control pitch type/speed by timing which click you use
 - Analytics: hit accuracy per pitch type, reaction to pitch color, streak tracking
 
+### Golf
+- Putt-putt style through to full driving range
+- Click timing and hold duration control swing power and distance
+- Different clicks for club selection (chip, iron, driver)
+- Old-school mini-clip aesthetic with BCI-optimized input
+- Analytics: shot accuracy per club type, power consistency, distance control
+
+### Hockey
+- Slap shot mode and goalie mode
+- Fast puck movement across ice with realistic physics
+- Click timing controls shot power and direction
+- Similar dual-role structure to Goalie / Striker
+- Analytics: shot accuracy, save rate, reaction to puck speed
+
+### Boxing
+- Move cursor to dodge incoming punches
+- Colored targets appear on opponent — click the matching intent to strike
+- Round-based with rest between rounds
+- Offense + defense mechanics in one game
+- Analytics: dodge accuracy, strike accuracy per color, reaction time under pressure
+
+### Archery
+- Steady the cursor to hold aim on a moving or static target
+- Click timing determines release — too early or late affects trajectory
+- Wind and distance variables add challenge
+- Precision and tremor-control training — uniquely valuable for BCI users
+- Analytics: grouping accuracy, hold steadiness, release timing consistency
+
 ### BCI Rally (Tennis / Badminton)
 - Side-view court, cursor controls racket
 - Incoming shots with 3 colors, click matching color to return with spin/angle
