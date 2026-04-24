@@ -330,9 +330,14 @@
       display: none;
       grid-template-columns: 460px 220px;
       grid-template-rows: 620px auto;
-      border: 1px solid #2d333b;
-      border-radius: 6px;
+      border: 1px solid #3a4150;
+      border-radius: 10px;
       overflow: hidden;
+      transform-origin: center center;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.03),
+        0 16px 48px rgba(0, 0, 0, 0.5),
+        0 0 80px rgba(68, 136, 255, 0.06);
     }
 
     /* ── Canvas area ─────────────────────────────────────────── */
@@ -670,6 +675,7 @@
     </div>
   </div>
   <button class="menu-link" id="btn-analytics-menu">&#9632; Analytics</button>
+  <button class="menu-link" id="btn-launcher">&#8592; Back to Launcher</button>
 </div>
 
 <!-- ── Analytics Screen ───────────────────────────────────────── -->
@@ -970,6 +976,9 @@
 
 </div>
 
+<!-- Shared BCI modules — see /shared/README.md -->
+<script src="../../shared/bci-input.js"></script>
+
 <script>
 const canvas = document.getElementById('game');
 const ctx    = canvas.getContext('2d');
@@ -977,11 +986,14 @@ const W = canvas.width;
 const H = canvas.height;
 
 // ── Click types ────────────────────────────────────────────────
-const CLICKS = [
-  { id: 0, name: 'Pointer', display: 'Left',   button: 0, color: '#4488ff', textColor: '#000', label: 'P' },
-  { id: 1, name: 'Ring',    display: 'Middle',  button: 1, color: '#aa44ff', textColor: '#fff', label: 'M' },
-  { id: 2, name: 'Middle',  display: 'Right',   button: 2, color: '#ff8833', textColor: '#000', label: 'R' },
-];
+// Color, button, and textColor come from the shared BCI.CLICKS table.
+// Hackey Sac adds its own game-specific finger-name and short label.
+const CLICKS = BCI.CLICKS.map(c => ({
+  ...c,
+  display:    c.label,                                    // "Left" / "Middle" / "Right"
+  fingerName: ['Pointer', 'Ring', 'Middle'][c.id],
+  label:      ['P', 'M', 'R'][c.id],                      // short label drawn on the ball
+}));
 
 // ── Config ─────────────────────────────────────────────────────
 const CONFIG = {
@@ -1005,7 +1017,6 @@ const CONFIG = {
 // ── Mutable settings ───────────────────────────────────────────
 let hitboxPadding     = 20;
 let kickStrengthMult  = 1.0;
-let cursorSensitivity = 1.0;
 
 // ── Practice settings ──────────────────────────────────────────
 const practice = { sizeLevel: 5, gravLevel: 5, enabled: { 0: true, 1: true, 2: true } };
@@ -1014,9 +1025,8 @@ function practiceRadius()  { return 22 + (practice.sizeLevel - 1) * 4; }
 function practiceGravity() { return 0.01 + (practice.gravLevel - 1) * 0.015; }
 function practiceKickUp()  { return -6  - (practice.gravLevel - 1) * 0.45; }
 
-// ── Virtual cursor ─────────────────────────────────────────────
-let virtualCursor = { x: W / 2, y: H / 2 };
-let realCursorPos = { x: W / 2, y: H / 2 };
+// ── Virtual cursor (from shared/bci-input.js) ──────────────────
+const cursor = BCI.createVirtualCursor(canvas, { sensitivity: 1.0 });
 
 // ── App state ──────────────────────────────────────────────────
 let appMode        = 'menu';
@@ -1143,8 +1153,7 @@ function initState() {
   sessionAnalytics = makeEmptySession();
   sessionSaved     = false;
   sessionStartTime = Date.now();
-  virtualCursor    = { x: W / 2, y: H / 2 };
-  realCursorPos    = { x: W / 2, y: H / 2 };
+  cursor.reset();
 
   const savedBest = parseInt(localStorage.getItem('bciBestStreak') || '0', 10);
   const r = appMode === 'practice' ? practiceRadius() : CONFIG.BALL_RADIUS;
@@ -1288,21 +1297,7 @@ function draw() {
 }
 
 function drawCursorDot() {
-  const x = virtualCursor.x;
-  const y = virtualCursor.y;
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-  ctx.lineWidth   = 1.5;
-  const arm = 7;
-  ctx.beginPath();
-  ctx.moveTo(x - arm, y); ctx.lineTo(x + arm, y);
-  ctx.moveTo(x, y - arm); ctx.lineTo(x, y + arm);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.fill();
-  ctx.restore();
+  BCI.drawCursorDot(ctx, cursor.x, cursor.y);
 }
 
 function drawBursts(bursts) {
@@ -1418,32 +1413,6 @@ function hexToRgb(hex) {
   return r ? {r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)} : {r:255,g:255,b:255};
 }
 
-// ── Virtual cursor tracking ────────────────────────────────────
-canvas.addEventListener('mouseenter', e => {
-  const rect = canvas.getBoundingClientRect();
-  const rx = (e.clientX - rect.left) * (W / rect.width);
-  const ry = (e.clientY - rect.top)  * (H / rect.height);
-  realCursorPos.x = rx;
-  realCursorPos.y = ry;
-  virtualCursor.x = Math.max(0, Math.min(W, rx));
-  virtualCursor.y = Math.max(0, Math.min(H, ry));
-});
-
-canvas.addEventListener('mousemove', e => {
-  const rect     = canvas.getBoundingClientRect();
-  const newRealX = (e.clientX - rect.left) * (W / rect.width);
-  const newRealY = (e.clientY - rect.top)  * (H / rect.height);
-
-  const dx = newRealX - realCursorPos.x;
-  const dy = newRealY - realCursorPos.y;
-
-  virtualCursor.x = Math.max(0, Math.min(W, virtualCursor.x + dx * cursorSensitivity));
-  virtualCursor.y = Math.max(0, Math.min(H, virtualCursor.y + dy * cursorSensitivity));
-
-  realCursorPos.x = newRealX;
-  realCursorPos.y = newRealY;
-});
-
 // ── Canvas click input ─────────────────────────────────────────
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('auxclick',    e => e.preventDefault());
@@ -1473,8 +1442,8 @@ canvas.addEventListener('mousedown', e => {
   if (gameState.phase === 'gameover') { initState(); return; }
   if (gameState.phase !== 'playing' && gameState.phase !== 'hovering') return;
 
-  const cx = virtualCursor.x;
-  const cy = virtualCursor.y;
+  const cx = cursor.x;
+  const cy = cursor.y;
   const b  = gameState.ball;
   const dx = cx - b.x;
   const dy = cy - b.y;
@@ -1589,8 +1558,9 @@ document.getElementById('hitbox-slider').addEventListener('input', e => {
 
 // ── Cursor sensitivity slider ──────────────────────────────────
 document.getElementById('cursor-sens-slider').addEventListener('input', e => {
-  cursorSensitivity = parseInt(e.target.value, 10) / 100;
-  document.getElementById('cursor-sens-val').textContent = cursorSensitivity.toFixed(2) + '×';
+  const sens = parseInt(e.target.value, 10) / 100;
+  cursor.setSensitivity(sens);
+  document.getElementById('cursor-sens-val').textContent = sens.toFixed(2) + '×';
 });
 
 // ── In-settings analytics display ─────────────────────────────
@@ -1837,6 +1807,31 @@ document.getElementById('btn-clear-analytics').addEventListener('click', () => {
   refreshAnalyticsScreen();
 });
 
+// ── Responsive scaling ─────────────────────────────────────────
+// The canvas has a fixed internal resolution (460x620) so all game math
+// stays unchanged. This function scales the whole wrapper visually via
+// CSS transform so it fills the viewport at any window size.
+function fitGameToViewport() {
+  const wrapper = document.getElementById('wrapper');
+  if (!wrapper || getComputedStyle(wrapper).display === 'none') return;
+
+  // Measure natural size with no transform applied
+  wrapper.style.transform = 'none';
+  const rect = wrapper.getBoundingClientRect();
+  const natW = rect.width;
+  const natH = rect.height;
+  if (natW === 0 || natH === 0) return;
+
+  // Fit to 92% of viewport, cap so it never gets absurdly large
+  const maxW = window.innerWidth  * 0.92;
+  const maxH = window.innerHeight * 0.92;
+  const scale = Math.min(maxW / natW, maxH / natH, 2.2);
+
+  wrapper.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener('resize', fitGameToViewport);
+
 // ── Mode navigation ────────────────────────────────────────────
 function startMode(mode) {
   appMode = mode;
@@ -1852,10 +1847,14 @@ function startMode(mode) {
   lastTime = null;
   advOpen  = false;
   initState();
+  fitGameToViewport();
 }
 
 document.getElementById('btn-practice-menu').addEventListener('click', () => startMode('practice'));
 document.getElementById('btn-game-menu').addEventListener('click',     () => startMode('game'));
+document.getElementById('btn-launcher').addEventListener('click',      () => {
+  window.location.href = '../../index.html';
+});
 
 document.getElementById('btn-back').addEventListener('click', () => {
   saveSessionToPersistent();
