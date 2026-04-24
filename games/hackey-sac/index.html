@@ -1,1853 +1,2098 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>BCI Hackey Sac</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      background: #0d1117;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      font-family: 'Courier New', monospace;
-      color: #e8e4d9;
-      user-select: none;
-    }
-
-    /* ── Menu Screen ─────────────────────────────────────────── */
-    #menu-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 40px;
-    }
-
-    #menu-header { text-align: center; }
-
-    #menu-title {
-      font-size: 44px;
-      font-weight: bold;
-      letter-spacing: 3px;
-      color: #e8e4d9;
-    }
-
-    #menu-subtitle {
-      font-size: 12px;
-      color: #7d8590;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      margin-top: 8px;
-    }
-
-    .menu-btn-row { display: flex; gap: 24px; }
-
-    .menu-btn {
-      width: 210px;
-      padding: 24px 20px;
-      background: #161b22;
-      border: 1px solid #2d333b;
-      border-radius: 6px;
-      cursor: pointer;
-      text-align: center;
-      transition: border-color 0.15s, background 0.15s;
-      color: #e8e4d9;
-      font-family: 'Courier New', monospace;
-    }
-
-    .menu-btn:hover { background: #1c2128; border-color: #4488ff; }
-    .menu-btn-title { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
-    .menu-btn-desc  { font-size: 11px; color: #7d8590; line-height: 1.6; }
-
-    .menu-link {
-      font-size: 12px;
-      color: #7d8590;
-      cursor: pointer;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      transition: color 0.15s;
-      background: none;
-      border: none;
-      font-family: 'Courier New', monospace;
-    }
-    .menu-link:hover { color: #e8e4d9; }
-
-    /* ── Analytics Screen ────────────────────────────────────── */
-    #analytics-screen {
-      display: none;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
-      width: 800px;
-    }
-
-    #analytics-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    #analytics-title {
-      font-size: 22px;
-      font-weight: bold;
-      letter-spacing: 3px;
-      color: #e8e4d9;
-    }
-
-    /* Two-column body */
-    #analytics-body {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-
-    #analytics-col-left {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      min-width: 0;
-    }
-
-    #analytics-col-right {
-      width: 240px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .analytics-section {
-      background: #161b22;
-      border: 1px solid #2d333b;
-      border-radius: 6px;
-      padding: 16px 18px;
-    }
-
-    .analytics-section-label {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-      margin-bottom: 12px;
-    }
-
-    .analytics-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-
-    .analytics-table th {
-      color: #7d8590;
-      font-weight: normal;
-      text-align: right;
-      padding: 3px 6px 6px;
-      border-bottom: 1px solid #2d333b;
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .analytics-table th:first-child { text-align: left; }
-
-    .analytics-table td {
-      color: #e8e4d9;
-      padding: 6px 6px;
-      text-align: right;
-      border-bottom: 1px solid #1c2128;
-    }
-
-    .analytics-table td:first-child { text-align: left; }
-    .analytics-table tr:last-child td { border-bottom: none; }
-
-    .analytics-dot {
-      display: inline-block;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-
-    .analytics-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .analytics-note { font-size: 11px; color: #7d8590; }
-
-    #btn-clear-analytics {
-      background: none;
-      border: 1px solid #2d333b;
-      border-radius: 4px;
-      color: #7d8590;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      padding: 6px 12px;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    #btn-clear-analytics:hover { color: #e05c5c; border-color: #e05c5c; }
-
-    /* ── Session History ─────────────────────────────────────── */
-    #session-history-section {
-      background: #161b22;
-      border: 1px solid #2d333b;
-      border-radius: 6px;
-      padding: 16px 14px;
-      flex: 1;
-    }
-
-    #session-history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .session-item {
-      background: #1c2128;
-      border: 1px solid #2d333b;
-      border-radius: 4px;
-      padding: 9px 11px;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-
-    .session-item:hover { background: #222a34; border-color: #4488ff; }
-
-    .session-item-date {
-      font-size: 11px;
-      color: #e8e4d9;
-      margin-bottom: 5px;
-    }
-
-    .session-item-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .session-mode-badge {
-      font-size: 9px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 2px 6px;
-      border-radius: 2px;
-      font-weight: bold;
-    }
-
-    .session-mode-badge.practice { background: #1a2a1a; color: #6bc46b; border: 1px solid #2d4a2d; }
-    .session-mode-badge.game     { background: #1a1a2a; color: #4488ff; border: 1px solid #2d2d4a; }
-
-    .session-score {
-      font-size: 11px;
-      color: #7d8590;
-    }
-
-    .session-score .s-ok  { color: #6bc46b; }
-    .session-score .s-bad { color: #e05c5c; }
-
-    .session-history-empty {
-      font-size: 11px;
-      color: #7d8590;
-      line-height: 1.6;
-    }
-
-    /* ── Session Detail Modal ────────────────────────────────── */
-    #session-detail-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(10,14,20,0.82);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #session-detail-panel {
-      background: #161b22;
-      border: 1px solid #2d333b;
-      border-radius: 6px;
-      width: 440px;
-      padding: 20px 22px 22px;
-    }
-
-    #session-detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #2d333b;
-    }
-
-    #session-detail-title {
-      font-size: 13px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-    }
-
-    #session-detail-close {
-      background: none;
-      border: 1px solid #2d333b;
-      border-radius: 3px;
-      color: #7d8590;
-      font-size: 12px;
-      width: 24px; height: 24px;
-      cursor: pointer;
-      font-family: 'Courier New', monospace;
-      transition: color 0.15s, border-color 0.15s;
-      display: flex; align-items: center; justify-content: center;
-    }
-    #session-detail-close:hover { color: #e8e4d9; border-color: #7d8590; }
-
-    #session-detail-body { }
-
-    .detail-stat-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      padding: 4px 0;
-      border-bottom: 1px solid #1c2128;
-      color: #e8e4d9;
-    }
-    .detail-stat-row:last-child { border-bottom: none; }
-    .detail-stat-label { color: #7d8590; }
-
-    .detail-section-label {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-      margin: 14px 0 8px;
-    }
-
-    /* ── Game Wrapper — CSS Grid ─────────────────────────────── */
-    #wrapper {
-      display: none;
-      grid-template-columns: 460px 220px;
-      grid-template-rows: 620px auto;
-      border: 1px solid #3a4150;
-      border-radius: 10px;
-      overflow: hidden;
-      transform-origin: center center;
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.03),
-        0 16px 48px rgba(0, 0, 0, 0.5),
-        0 0 80px rgba(68, 136, 255, 0.06);
-    }
-
-    /* ── Canvas area ─────────────────────────────────────────── */
-    #game-area {
-      grid-column: 1;
-      grid-row: 1;
-      position: relative;
-    }
-
-    canvas {
-      display: block;
-      cursor: none;
-      background: #0a0e14;
-      outline: 1px solid #3a4150;
-    }
-
-    #btn-back {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(22, 27, 34, 0.88);
-      border: 1px solid #2d333b;
-      border-radius: 4px;
-      color: #7d8590;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      padding: 5px 10px;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-      z-index: 10;
-    }
-    #btn-back:hover { color: #e8e4d9; border-color: #7d8590; }
-
-    /* ── Advanced Settings Overlay ───────────────────────────── */
-    #adv-overlay {
-      display: none;
-      position: absolute;
-      inset: 0;
-      background: rgba(10, 14, 20, 0.78);
-      z-index: 20;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #adv-panel {
-      background: #161b22;
-      border: 1px solid #2d333b;
-      border-radius: 6px;
-      width: 320px;
-      padding: 18px 20px 20px;
-    }
-
-    #adv-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #2d333b;
-    }
-
-    #adv-title {
-      font-size: 13px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-    }
-
-    #adv-close {
-      background: none;
-      border: 1px solid #2d333b;
-      border-radius: 3px;
-      color: #7d8590;
-      font-size: 12px;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      font-family: 'Courier New', monospace;
-      transition: color 0.15s, border-color 0.15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #adv-close:hover { color: #e8e4d9; border-color: #7d8590; }
-
-    /* ── Tabs ────────────────────────────────────────────────── */
-    .adv-tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 16px;
-    }
-
-    .adv-tab-btn {
-      flex: 1;
-      padding: 6px 4px;
-      background: none;
-      border: 1px solid #2d333b;
-      border-radius: 3px;
-      color: #7d8590;
-      font-family: 'Courier New', monospace;
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s, background 0.15s;
-    }
-    .adv-tab-btn:hover { color: #e8e4d9; border-color: #7d8590; }
-    .adv-tab-btn.active { background: #1c2128; border-color: #4488ff; color: #e8e4d9; }
-
-    .adv-tab-content { display: none; }
-    .adv-tab-content.active { display: block; }
-
-    .adv-section { margin-bottom: 16px; }
-    .adv-section:last-child { margin-bottom: 0; }
-
-    .adv-section-label {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-      margin-bottom: 10px;
-    }
-
-    /* ── Bottom Bar ──────────────────────────────────────────── */
-    #bottom-bar {
-      grid-column: 1;
-      grid-row: 2;
-      background: #111720;
-      border-top: 1px solid #2d333b;
-      display: flex;
-      align-items: stretch;
-    }
-
-    .stat-cell {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 8px;
-      border-right: 1px solid #2d333b;
-    }
-    .stat-cell:last-child { border-right: none; }
-
-    .stat-label {
-      font-size: 9px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-      margin-bottom: 4px;
-    }
-
-    .stat-value {
-      font-size: 22px;
-      font-weight: bold;
-      color: #e8e4d9;
-      line-height: 1;
-    }
-
-    .stat-value.correct { color: #6bc46b; }
-    .stat-value.wrong   { color: #e05c5c; }
-
-    /* ── Slim Sidebar ────────────────────────────────────────── */
-    .sidebar {
-      grid-column: 2;
-      grid-row: 1 / 3;
-      background: #161b22;
-      border-left: 1px solid #2d333b;
-      display: none;
-      flex-direction: column;
-      padding: 16px 14px;
-      gap: 14px;
-    }
-
-    .panel {
-      background: #1c2128;
-      border: 1px solid #2d333b;
-      border-radius: 4px;
-      padding: 10px 12px 12px;
-    }
-
-    .panel-label {
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #7d8590;
-      margin-bottom: 8px;
-    }
-
-    .required-indicator {
-      width: 100%;
-      height: 54px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      font-weight: bold;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      transition: background 0.15s;
-    }
-
-    .big-number { font-size: 38px; font-weight: bold; line-height: 1; color: #e8e4d9; }
-    .sub-number { font-size: 13px; color: #7d8590; margin-top: 4px; }
-
-    .speed-display { display: flex; align-items: baseline; gap: 4px; }
-    .speed-num     { font-size: 32px; font-weight: bold; color: #e8e4d9; }
-    .speed-denom   { font-size: 12px; color: #7d8590; }
-
-    .speed-bar-track {
-      margin-top: 8px; height: 4px;
-      background: #2d333b; border-radius: 2px; overflow: hidden;
-    }
-
-    .speed-bar-fill {
-      height: 100%; background: #4488ff; border-radius: 2px;
-      transition: width 0.4s, background 0.4s;
-    }
-
-    .legend-row  { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
-    .legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-    .legend-text { font-size: 12px; color: #7d8590; line-height: 1.4; }
-
-    #btn-adv, .btn-adv-shared {
-      margin-top: auto;
-      width: 100%;
-      padding: 10px;
-      background: #1c2128;
-      border: 1px solid #2d333b;
-      border-radius: 4px;
-      color: #7d8590;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s, background 0.15s;
-      text-transform: uppercase;
-    }
-    #btn-adv:hover, .btn-adv-shared:hover { color: #e8e4d9; border-color: #4488ff; background: #222a34; }
-
-    /* Sliders */
-    .slider-block { margin-top: 0; }
-
-    .slider-top {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-bottom: 7px;
-    }
-
-    .slider-name { font-size: 12px; color: #7d8590; }
-    .slider-val  { font-size: 15px; font-weight: bold; color: #e8e4d9; min-width: 46px; text-align: right; }
-
-    input[type=range] {
-      width: 100%; -webkit-appearance: none; appearance: none;
-      height: 4px; background: #2d333b; border-radius: 2px; outline: none; cursor: pointer;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 16px; height: 16px;
-      border-radius: 50%; background: #4488ff; cursor: pointer;
-    }
-    input[type=range]::-moz-range-thumb {
-      width: 16px; height: 16px; border-radius: 50%;
-      background: #4488ff; cursor: pointer; border: none;
-    }
-
-    /* Click toggles */
-    .click-toggle-row {
-      display: flex; align-items: center;
-      gap: 8px; margin-top: 9px;
-    }
-    .click-toggle-label { font-size: 12px; color: #7d8590; flex: 1; }
-    .click-toggle-row input[type=checkbox] {
-      width: 15px; height: 15px;
-      accent-color: #4488ff; cursor: pointer; flex-shrink: 0;
-    }
-
-    /* In-settings analytics table */
-    .adv-analytics-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .adv-analytics-table th {
-      color: #7d8590;
-      font-weight: normal;
-      font-size: 9px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 2px 4px 6px;
-      border-bottom: 1px solid #2d333b;
-      text-align: right;
-    }
-    .adv-analytics-table th:first-child { text-align: left; }
-    .adv-analytics-table td {
-      color: #e8e4d9;
-      padding: 5px 4px;
-      text-align: right;
-      border-bottom: 1px solid #1c2128;
-      font-size: 11px;
-    }
-    .adv-analytics-table td:first-child { text-align: left; }
-    .adv-analytics-table tr:last-child td { border-bottom: none; }
-
-    .adv-dot {
-      display: inline-block;
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      margin-right: 5px;
-      vertical-align: middle;
-    }
-
-    .adv-analytics-note {
-      font-size: 10px;
-      color: #7d8590;
-      margin-top: 12px;
-      letter-spacing: 0.5px;
-    }
-  </style>
-</head>
-<body>
-
-<!-- ── Main Menu ──────────────────────────────────────────────── -->
-<div id="menu-screen">
-  <div id="menu-header">
-    <div id="menu-title">BCI Hackey Sac</div>
-    <div id="menu-subtitle">Brain-Computer Interface Training</div>
-  </div>
-  <div class="menu-btn-row">
-    <div class="menu-btn" id="btn-practice-menu">
-      <div class="menu-btn-title">Practice</div>
-      <div class="menu-btn-desc">Adjust ball size &amp; gravity.<br>Dial in your BCI at your own pace.</div>
-    </div>
-    <div class="menu-btn" id="btn-game-menu">
-      <div class="menu-btn-title">Game</div>
-      <div class="menu-btn-desc">Auto-scaling difficulty.<br>How long can you last?</div>
-    </div>
-  </div>
-  <button class="menu-link" id="btn-analytics-menu">&#9632; Analytics</button>
-  <button class="menu-link" id="btn-launcher">&#8592; Back to Launcher</button>
-</div>
-
-<!-- ── Analytics Screen ───────────────────────────────────────── -->
-<div id="analytics-screen">
-  <div id="analytics-header">
-    <div id="analytics-title">BCI Analytics</div>
-    <button class="menu-link" id="btn-analytics-back">&#8592; Menu</button>
-  </div>
-
-  <!-- Two-column body -->
-  <div id="analytics-body">
-
-    <!-- Left: all-time stats -->
-    <div id="analytics-col-left">
-      <div class="analytics-section">
-        <div class="analytics-section-label">All-Time Per-Finger Stats</div>
-        <table class="analytics-table">
-          <thead>
-            <tr>
-              <th>Finger</th>
-              <th>Attempts</th>
-              <th>Correct</th>
-              <th>Accuracy</th>
-              <th>Avg Hold</th>
-              <th>Avg React</th>
-            </tr>
-          </thead>
-          <tbody id="analytics-all-time-body"></tbody>
-        </table>
-        <div style="font-size:10px;color:#7d8590;margin-top:10px;line-height:1.7;">
-          <strong style="color:#4d5561;">Hold</strong> &mdash; avg ms finger stays pressed<br>
-          <strong style="color:#4d5561;">React</strong> &mdash; avg ms from color change to correct click
+  <head>
+    <meta charset="UTF-8" />
+    <title>BCI Hackey Sac</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #0d1117;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: #e8e4d9;
+        user-select: none;
+      }
+
+      /* ── Menu Screen ─────────────────────────────────────────── */
+      #menu-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 40px;
+      }
+
+      #menu-header {
+        text-align: center;
+      }
+
+      #menu-title {
+        font-size: 44px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        color: #e8e4d9;
+      }
+
+      #menu-subtitle {
+        font-size: 12px;
+        color: #7d8590;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 8px;
+      }
+
+      .menu-btn-row {
+        display: flex;
+        gap: 24px;
+      }
+
+      .menu-btn {
+        width: 210px;
+        padding: 24px 20px;
+        background: #161b22;
+        border: 1px solid #2d333b;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: center;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        color: #e8e4d9;
+        font-family: 'Courier New', monospace;
+      }
+
+      .menu-btn:hover {
+        background: #1c2128;
+        border-color: #4488ff;
+      }
+      .menu-btn-title {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .menu-btn-desc {
+        font-size: 11px;
+        color: #7d8590;
+        line-height: 1.6;
+      }
+
+      .menu-link {
+        font-size: 12px;
+        color: #7d8590;
+        cursor: pointer;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        transition: color 0.15s;
+        background: none;
+        border: none;
+        font-family: 'Courier New', monospace;
+      }
+      .menu-link:hover {
+        color: #e8e4d9;
+      }
+
+      /* ── Analytics Screen ────────────────────────────────────── */
+      #analytics-screen {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        width: 800px;
+      }
+
+      #analytics-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      #analytics-title {
+        font-size: 22px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        color: #e8e4d9;
+      }
+
+      /* Two-column body */
+      #analytics-body {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      #analytics-col-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      #analytics-col-right {
+        width: 240px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .analytics-section {
+        background: #161b22;
+        border: 1px solid #2d333b;
+        border-radius: 6px;
+        padding: 16px 18px;
+      }
+
+      .analytics-section-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+        margin-bottom: 12px;
+      }
+
+      .analytics-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .analytics-table th {
+        color: #7d8590;
+        font-weight: normal;
+        text-align: right;
+        padding: 3px 6px 6px;
+        border-bottom: 1px solid #2d333b;
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .analytics-table th:first-child {
+        text-align: left;
+      }
+
+      .analytics-table td {
+        color: #e8e4d9;
+        padding: 6px 6px;
+        text-align: right;
+        border-bottom: 1px solid #1c2128;
+      }
+
+      .analytics-table td:first-child {
+        text-align: left;
+      }
+      .analytics-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .analytics-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      .analytics-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .analytics-note {
+        font-size: 11px;
+        color: #7d8590;
+      }
+
+      #btn-clear-analytics {
+        background: none;
+        border: 1px solid #2d333b;
+        border-radius: 4px;
+        color: #7d8590;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      #btn-clear-analytics:hover {
+        color: #e05c5c;
+        border-color: #e05c5c;
+      }
+
+      /* ── Session History ─────────────────────────────────────── */
+      #session-history-section {
+        background: #161b22;
+        border: 1px solid #2d333b;
+        border-radius: 6px;
+        padding: 16px 14px;
+        flex: 1;
+      }
+
+      #session-history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .session-item {
+        background: #1c2128;
+        border: 1px solid #2d333b;
+        border-radius: 4px;
+        padding: 9px 11px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+
+      .session-item:hover {
+        background: #222a34;
+        border-color: #4488ff;
+      }
+
+      .session-item-date {
+        font-size: 11px;
+        color: #e8e4d9;
+        margin-bottom: 5px;
+      }
+
+      .session-item-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .session-mode-badge {
+        font-size: 9px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border-radius: 2px;
+        font-weight: bold;
+      }
+
+      .session-mode-badge.practice {
+        background: #1a2a1a;
+        color: #6bc46b;
+        border: 1px solid #2d4a2d;
+      }
+      .session-mode-badge.game {
+        background: #1a1a2a;
+        color: #4488ff;
+        border: 1px solid #2d2d4a;
+      }
+
+      .session-score {
+        font-size: 11px;
+        color: #7d8590;
+      }
+
+      .session-score .s-ok {
+        color: #6bc46b;
+      }
+      .session-score .s-bad {
+        color: #e05c5c;
+      }
+
+      .session-history-empty {
+        font-size: 11px;
+        color: #7d8590;
+        line-height: 1.6;
+      }
+
+      /* ── Session Detail Modal ────────────────────────────────── */
+      #session-detail-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.82);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #session-detail-panel {
+        background: #161b22;
+        border: 1px solid #2d333b;
+        border-radius: 6px;
+        width: 440px;
+        padding: 20px 22px 22px;
+      }
+
+      #session-detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2d333b;
+      }
+
+      #session-detail-title {
+        font-size: 13px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+      }
+
+      #session-detail-close {
+        background: none;
+        border: 1px solid #2d333b;
+        border-radius: 3px;
+        color: #7d8590;
+        font-size: 12px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #session-detail-close:hover {
+        color: #e8e4d9;
+        border-color: #7d8590;
+      }
+
+      #session-detail-body {
+      }
+
+      .detail-stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        padding: 4px 0;
+        border-bottom: 1px solid #1c2128;
+        color: #e8e4d9;
+      }
+      .detail-stat-row:last-child {
+        border-bottom: none;
+      }
+      .detail-stat-label {
+        color: #7d8590;
+      }
+
+      .detail-section-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+        margin: 14px 0 8px;
+      }
+
+      /* ── Game Wrapper — CSS Grid ─────────────────────────────── */
+      #wrapper {
+        display: none;
+        grid-template-columns: 460px 220px;
+        grid-template-rows: 620px auto;
+        border: 1px solid #3a4150;
+        border-radius: 10px;
+        overflow: hidden;
+        transform-origin: center center;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.03),
+          0 16px 48px rgba(0, 0, 0, 0.5),
+          0 0 80px rgba(68, 136, 255, 0.06);
+      }
+
+      /* ── Canvas area ─────────────────────────────────────────── */
+      #game-area {
+        grid-column: 1;
+        grid-row: 1;
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+        background: #0a0e14;
+        outline: 1px solid #3a4150;
+      }
+
+      #btn-back {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(22, 27, 34, 0.88);
+        border: 1px solid #2d333b;
+        border-radius: 4px;
+        color: #7d8590;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+        z-index: 10;
+      }
+      #btn-back:hover {
+        color: #e8e4d9;
+        border-color: #7d8590;
+      }
+
+      /* ── Advanced Settings Overlay ───────────────────────────── */
+      #adv-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.78);
+        z-index: 20;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #adv-panel {
+        background: #161b22;
+        border: 1px solid #2d333b;
+        border-radius: 6px;
+        width: 320px;
+        padding: 18px 20px 20px;
+      }
+
+      #adv-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2d333b;
+      }
+
+      #adv-title {
+        font-size: 13px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+      }
+
+      #adv-close {
+        background: none;
+        border: 1px solid #2d333b;
+        border-radius: 3px;
+        color: #7d8590;
+        font-size: 12px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #adv-close:hover {
+        color: #e8e4d9;
+        border-color: #7d8590;
+      }
+
+      /* ── Tabs ────────────────────────────────────────────────── */
+      .adv-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+      }
+
+      .adv-tab-btn {
+        flex: 1;
+        padding: 6px 4px;
+        background: none;
+        border: 1px solid #2d333b;
+        border-radius: 3px;
+        color: #7d8590;
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .adv-tab-btn:hover {
+        color: #e8e4d9;
+        border-color: #7d8590;
+      }
+      .adv-tab-btn.active {
+        background: #1c2128;
+        border-color: #4488ff;
+        color: #e8e4d9;
+      }
+
+      .adv-tab-content {
+        display: none;
+      }
+      .adv-tab-content.active {
+        display: block;
+      }
+
+      .adv-section {
+        margin-bottom: 16px;
+      }
+      .adv-section:last-child {
+        margin-bottom: 0;
+      }
+
+      .adv-section-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+        margin-bottom: 10px;
+      }
+
+      /* ── Bottom Bar ──────────────────────────────────────────── */
+      #bottom-bar {
+        grid-column: 1;
+        grid-row: 2;
+        background: #111720;
+        border-top: 1px solid #2d333b;
+        display: flex;
+        align-items: stretch;
+      }
+
+      .stat-cell {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 8px;
+        border-right: 1px solid #2d333b;
+      }
+      .stat-cell:last-child {
+        border-right: none;
+      }
+
+      .stat-label {
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: #e8e4d9;
+        line-height: 1;
+      }
+
+      .stat-value.correct {
+        color: #6bc46b;
+      }
+      .stat-value.wrong {
+        color: #e05c5c;
+      }
+
+      /* ── Slim Sidebar ────────────────────────────────────────── */
+      .sidebar {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        background: #161b22;
+        border-left: 1px solid #2d333b;
+        display: none;
+        flex-direction: column;
+        padding: 16px 14px;
+        gap: 14px;
+      }
+
+      .panel {
+        background: #1c2128;
+        border: 1px solid #2d333b;
+        border-radius: 4px;
+        padding: 10px 12px 12px;
+      }
+
+      .panel-label {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #7d8590;
+        margin-bottom: 8px;
+      }
+
+      .required-indicator {
+        width: 100%;
+        height: 54px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        transition: background 0.15s;
+      }
+
+      .big-number {
+        font-size: 38px;
+        font-weight: bold;
+        line-height: 1;
+        color: #e8e4d9;
+      }
+      .sub-number {
+        font-size: 13px;
+        color: #7d8590;
+        margin-top: 4px;
+      }
+
+      .speed-display {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+      }
+      .speed-num {
+        font-size: 32px;
+        font-weight: bold;
+        color: #e8e4d9;
+      }
+      .speed-denom {
+        font-size: 12px;
+        color: #7d8590;
+      }
+
+      .speed-bar-track {
+        margin-top: 8px;
+        height: 4px;
+        background: #2d333b;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .speed-bar-fill {
+        height: 100%;
+        background: #4488ff;
+        border-radius: 2px;
+        transition:
+          width 0.4s,
+          background 0.4s;
+      }
+
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 7px;
+      }
+      .legend-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .legend-text {
+        font-size: 12px;
+        color: #7d8590;
+        line-height: 1.4;
+      }
+
+      #btn-adv,
+      .btn-adv-shared {
+        margin-top: auto;
+        width: 100%;
+        padding: 10px;
+        background: #1c2128;
+        border: 1px solid #2d333b;
+        border-radius: 4px;
+        color: #7d8590;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+        text-transform: uppercase;
+      }
+      #btn-adv:hover,
+      .btn-adv-shared:hover {
+        color: #e8e4d9;
+        border-color: #4488ff;
+        background: #222a34;
+      }
+
+      /* Sliders */
+      .slider-block {
+        margin-top: 0;
+      }
+
+      .slider-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 7px;
+      }
+
+      .slider-name {
+        font-size: 12px;
+        color: #7d8590;
+      }
+      .slider-val {
+        font-size: 15px;
+        font-weight: bold;
+        color: #e8e4d9;
+        min-width: 46px;
+        text-align: right;
+      }
+
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: #2d333b;
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #4488ff;
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #4488ff;
+        cursor: pointer;
+        border: none;
+      }
+
+      /* Click toggles */
+      .click-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 9px;
+      }
+      .click-toggle-label {
+        font-size: 12px;
+        color: #7d8590;
+        flex: 1;
+      }
+      .click-toggle-row input[type='checkbox'] {
+        width: 15px;
+        height: 15px;
+        accent-color: #4488ff;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      /* In-settings analytics table */
+      .adv-analytics-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .adv-analytics-table th {
+        color: #7d8590;
+        font-weight: normal;
+        font-size: 9px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 2px 4px 6px;
+        border-bottom: 1px solid #2d333b;
+        text-align: right;
+      }
+      .adv-analytics-table th:first-child {
+        text-align: left;
+      }
+      .adv-analytics-table td {
+        color: #e8e4d9;
+        padding: 5px 4px;
+        text-align: right;
+        border-bottom: 1px solid #1c2128;
+        font-size: 11px;
+      }
+      .adv-analytics-table td:first-child {
+        text-align: left;
+      }
+      .adv-analytics-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .adv-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+
+      .adv-analytics-note {
+        font-size: 10px;
+        color: #7d8590;
+        margin-top: 12px;
+        letter-spacing: 0.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Main Menu ──────────────────────────────────────────────── -->
+    <div id="menu-screen">
+      <div id="menu-header">
+        <div id="menu-title">BCI Hackey Sac</div>
+        <div id="menu-subtitle">Brain-Computer Interface Training</div>
+      </div>
+      <div class="menu-btn-row">
+        <div class="menu-btn" id="btn-practice-menu">
+          <div class="menu-btn-title">Practice</div>
+          <div class="menu-btn-desc">
+            Adjust ball size &amp; gravity.<br />Dial in your BCI at your own pace.
+          </div>
+        </div>
+        <div class="menu-btn" id="btn-game-menu">
+          <div class="menu-btn-title">Game</div>
+          <div class="menu-btn-desc">Auto-scaling difficulty.<br />How long can you last?</div>
         </div>
       </div>
-
-      <div class="analytics-section">
-        <div class="analytics-section-label">All-Time Totals</div>
-        <table class="analytics-table">
-          <tbody id="analytics-totals-body"></tbody>
-        </table>
-      </div>
-
-      <div class="analytics-section">
-        <div class="analytics-section-label">Observations</div>
-        <div id="analytics-insights-body" style="min-height:20px;"></div>
-      </div>
+      <button class="menu-link" id="btn-analytics-menu">&#9632; Analytics</button>
+      <button class="menu-link" id="btn-launcher">&#8592; Back to Launcher</button>
     </div>
 
-    <!-- Right: session history -->
-    <div id="analytics-col-right">
-      <div id="session-history-section">
-        <div class="analytics-section-label">Session History</div>
-        <div id="session-history-list"></div>
+    <!-- ── Analytics Screen ───────────────────────────────────────── -->
+    <div id="analytics-screen">
+      <div id="analytics-header">
+        <div id="analytics-title">BCI Analytics</div>
+        <button class="menu-link" id="btn-analytics-back">&#8592; Menu</button>
       </div>
-    </div>
 
-  </div>
-
-  <div class="analytics-footer">
-    <div class="analytics-note">Data saved locally in your browser.</div>
-    <button id="btn-clear-analytics">Clear All Data</button>
-  </div>
-</div>
-
-<!-- ── Session Detail Modal ───────────────────────────────────── -->
-<div id="session-detail-modal">
-  <div id="session-detail-panel">
-    <div id="session-detail-header">
-      <div id="session-detail-title">Session</div>
-      <button id="session-detail-close">&#10005;</button>
-    </div>
-    <div id="session-detail-body"></div>
-  </div>
-</div>
-
-<!-- ── Game Wrapper (CSS Grid) ───────────────────────────────── -->
-<div id="wrapper">
-
-  <!-- Col 1 Row 1: Canvas -->
-  <div id="game-area">
-    <canvas id="game" width="460" height="620"></canvas>
-    <button id="btn-back">&#8592; Menu</button>
-
-    <!-- Advanced Settings Overlay -->
-    <div id="adv-overlay">
-      <div id="adv-panel">
-        <div id="adv-header">
-          <span id="adv-title">Settings</span>
-          <button id="adv-close">&#10005;</button>
-        </div>
-
-        <!-- Tab buttons -->
-        <div class="adv-tabs">
-          <button class="adv-tab-btn active" data-tab="physics">Physics</button>
-          <button class="adv-tab-btn" data-tab="input">Input</button>
-          <button class="adv-tab-btn" data-tab="analytics">Analytics</button>
-        </div>
-
-        <!-- Physics Tab -->
-        <div class="adv-tab-content active" id="tab-physics">
-
-          <!-- Practice-only: Ball Size + Gravity -->
-          <div id="adv-practice-only">
-            <div class="adv-section">
-              <div class="adv-section-label">Ball Size</div>
-              <div class="slider-block">
-                <div class="slider-top">
-                  <span class="slider-name">1 &nbsp;—&nbsp; 10</span>
-                  <span class="slider-val" id="p-size-val">5</span>
-                </div>
-                <input type="range" id="p-size-slider" min="1" max="10" value="5">
-              </div>
-            </div>
-            <div class="adv-section">
-              <div class="adv-section-label">Gravity</div>
-              <div class="slider-block">
-                <div class="slider-top">
-                  <span class="slider-name">1 &nbsp;—&nbsp; 10</span>
-                  <span class="slider-val" id="p-grav-val">5</span>
-                </div>
-                <input type="range" id="p-grav-slider" min="1" max="10" value="5">
-              </div>
-            </div>
-          </div>
-
-          <!-- Both modes: Hitbox Size -->
-          <div class="adv-section" style="margin-bottom:0">
-            <div class="adv-section-label">Hitbox Size</div>
-            <div class="slider-block">
-              <div class="slider-top">
-                <span class="slider-name">0 &nbsp;—&nbsp; 50</span>
-                <span class="slider-val" id="hitbox-val">20</span>
-              </div>
-              <input type="range" id="hitbox-slider" min="0" max="50" value="20">
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Input Tab -->
-        <div class="adv-tab-content" id="tab-input">
-
-          <div class="adv-section">
-            <div class="adv-section-label">Active Clicks</div>
-            <div class="click-toggle-row">
-              <div class="legend-dot" style="background:#4488ff"></div>
-              <span class="click-toggle-label">Left click &mdash; Pointer (P)</span>
-              <input type="checkbox" id="toggle-0" checked>
-            </div>
-            <div class="click-toggle-row">
-              <div class="legend-dot" style="background:#aa44ff"></div>
-              <span class="click-toggle-label">Middle click &mdash; Ring (M)</span>
-              <input type="checkbox" id="toggle-1" checked>
-            </div>
-            <div class="click-toggle-row">
-              <div class="legend-dot" style="background:#ff8833"></div>
-              <span class="click-toggle-label">Right click &mdash; Middle (R)</span>
-              <input type="checkbox" id="toggle-2" checked>
-            </div>
-          </div>
-
-          <div class="adv-section">
-            <div class="adv-section-label">Kick Strength</div>
-            <div class="slider-block">
-              <div class="slider-top">
-                <span class="slider-name">0.5× &nbsp;—&nbsp; 2.0×</span>
-                <span class="slider-val" id="kick-strength-val">1.0×</span>
-              </div>
-              <input type="range" id="kick-strength-slider" min="50" max="200" step="5" value="100">
-            </div>
-          </div>
-
-          <div class="adv-section" style="margin-bottom:0">
-            <div class="adv-section-label">Cursor Sensitivity</div>
-            <div class="slider-block">
-              <div class="slider-top">
-                <span class="slider-name">0.25× &nbsp;—&nbsp; 2.0×</span>
-                <span class="slider-val" id="cursor-sens-val">1.00×</span>
-              </div>
-              <input type="range" id="cursor-sens-slider" min="25" max="200" step="5" value="100">
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Analytics Tab -->
-        <div class="adv-tab-content" id="tab-analytics">
-          <div class="adv-section" style="margin-bottom:0">
-            <div class="adv-section-label">Session Stats</div>
-            <table class="adv-analytics-table">
+      <!-- Two-column body -->
+      <div id="analytics-body">
+        <!-- Left: all-time stats -->
+        <div id="analytics-col-left">
+          <div class="analytics-section">
+            <div class="analytics-section-label">All-Time Per-Finger Stats</div>
+            <table class="analytics-table">
               <thead>
                 <tr>
                   <th>Finger</th>
-                  <th>Att</th>
-                  <th>OK</th>
-                  <th>Acc</th>
-                  <th>Hold</th>
-                  <th>React</th>
+                  <th>Attempts</th>
+                  <th>Correct</th>
+                  <th>Accuracy</th>
+                  <th>Avg Hold</th>
+                  <th>Avg React</th>
                 </tr>
               </thead>
-              <tbody id="adv-analytics-body"></tbody>
+              <tbody id="analytics-all-time-body"></tbody>
             </table>
-            <div class="adv-analytics-note">Hold = avg press duration &nbsp;|&nbsp; React = avg response time</div>
+            <div style="font-size: 10px; color: #7d8590; margin-top: 10px; line-height: 1.7">
+              <strong style="color: #4d5561">Hold</strong> &mdash; avg ms finger stays pressed<br />
+              <strong style="color: #4d5561">React</strong> &mdash; avg ms from color change to
+              correct click
+            </div>
+          </div>
+
+          <div class="analytics-section">
+            <div class="analytics-section-label">All-Time Totals</div>
+            <table class="analytics-table">
+              <tbody id="analytics-totals-body"></tbody>
+            </table>
+          </div>
+
+          <div class="analytics-section">
+            <div class="analytics-section-label">Observations</div>
+            <div id="analytics-insights-body" style="min-height: 20px"></div>
           </div>
         </div>
 
+        <!-- Right: session history -->
+        <div id="analytics-col-right">
+          <div id="session-history-section">
+            <div class="analytics-section-label">Session History</div>
+            <div id="session-history-list"></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Col 1 Row 2: Bottom Stats Bar -->
-  <div id="bottom-bar">
-    <div class="stat-cell">
-      <div class="stat-label">Correct</div>
-      <div class="stat-value correct" id="b-correct">0</div>
+      <div class="analytics-footer">
+        <div class="analytics-note">Data saved locally in your browser.</div>
+        <button id="btn-clear-analytics">Clear All Data</button>
+      </div>
     </div>
-    <div class="stat-cell">
-      <div class="stat-label">Wrong</div>
-      <div class="stat-value wrong" id="b-wrong">0</div>
-    </div>
-    <div class="stat-cell">
-      <div class="stat-label" id="b-rate-label">Kicks / Min</div>
-      <div class="stat-value" id="b-rate">0</div>
-    </div>
-    <div class="stat-cell" id="b-speed-cell" style="display:none">
-      <div class="stat-label">Speed</div>
-      <div class="stat-value" id="b-speed">1</div>
-    </div>
-  </div>
 
-  <!-- Col 2 Rows 1-2: Practice Sidebar -->
-  <div id="sidebar-practice" class="sidebar">
-    <div class="panel">
-      <div class="panel-label">Required</div>
-      <div class="required-indicator" id="req-p" style="background:#2d333b;color:#7d8590;">—</div>
-    </div>
-    <div class="panel">
-      <div class="panel-label">Streak</div>
-      <div class="big-number" id="p-streak">0</div>
-      <div class="sub-number"  id="p-best">Best: 0</div>
-    </div>
-    <div class="panel">
-      <div class="panel-label">Controls</div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#4488ff"></div>
-        <div class="legend-text">Left &mdash; Pointer (P)</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#aa44ff"></div>
-        <div class="legend-text">Middle &mdash; Ring (M)</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#ff8833"></div>
-        <div class="legend-text">Right &mdash; Middle (R)</div>
+    <!-- ── Session Detail Modal ───────────────────────────────────── -->
+    <div id="session-detail-modal">
+      <div id="session-detail-panel">
+        <div id="session-detail-header">
+          <div id="session-detail-title">Session</div>
+          <button id="session-detail-close">&#10005;</button>
+        </div>
+        <div id="session-detail-body"></div>
       </div>
     </div>
-    <button id="btn-adv">&#9881; Settings</button>
-  </div>
 
-  <!-- Col 2 Rows 1-2: Game Sidebar -->
-  <div id="sidebar-game" class="sidebar">
-    <div class="panel">
-      <div class="panel-label">Required</div>
-      <div class="required-indicator" id="req-g" style="background:#2d333b;color:#7d8590;">—</div>
-    </div>
-    <div class="panel">
-      <div class="panel-label">Streak</div>
-      <div class="big-number" id="g-streak">0</div>
-      <div class="sub-number"  id="g-best">Best: 0</div>
-    </div>
-    <div class="panel">
-      <div class="panel-label">Speed Level</div>
-      <div class="speed-display">
-        <span class="speed-num" id="g-speed-num">1</span>
-        <span class="speed-denom">/ 10</span>
-      </div>
-      <div class="speed-bar-track">
-        <div class="speed-bar-fill" id="g-speed-bar" style="width:10%"></div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-label">Controls</div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#4488ff"></div>
-        <div class="legend-text">Left &mdash; Pointer (P)</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#aa44ff"></div>
-        <div class="legend-text">Middle &mdash; Ring (M)</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#ff8833"></div>
-        <div class="legend-text">Right &mdash; Middle (R)</div>
-      </div>
-    </div>
-    <button id="btn-adv-g" class="btn-adv-shared">&#9881; Settings</button>
-  </div>
+    <!-- ── Game Wrapper (CSS Grid) ───────────────────────────────── -->
+    <div id="wrapper">
+      <!-- Col 1 Row 1: Canvas -->
+      <div id="game-area">
+        <canvas id="game" width="460" height="620"></canvas>
+        <button id="btn-back">&#8592; Menu</button>
 
-</div>
+        <!-- Advanced Settings Overlay -->
+        <div id="adv-overlay">
+          <div id="adv-panel">
+            <div id="adv-header">
+              <span id="adv-title">Settings</span>
+              <button id="adv-close">&#10005;</button>
+            </div>
 
-<!-- Shared BCI modules — see /shared/README.md -->
-<script src="../../shared/bci-input.js"></script>
-<script src="../../shared/bci-settings.js"></script>
-<script src="../../shared/bci-analytics.js"></script>
+            <!-- Tab buttons -->
+            <div class="adv-tabs">
+              <button class="adv-tab-btn active" data-tab="physics">Physics</button>
+              <button class="adv-tab-btn" data-tab="input">Input</button>
+              <button class="adv-tab-btn" data-tab="analytics">Analytics</button>
+            </div>
 
-<script>
-/* ─────────────────────────────────────────────────────────────
+            <!-- Physics Tab -->
+            <div class="adv-tab-content active" id="tab-physics">
+              <!-- Practice-only: Ball Size + Gravity -->
+              <div id="adv-practice-only">
+                <div class="adv-section">
+                  <div class="adv-section-label">Ball Size</div>
+                  <div class="slider-block">
+                    <div class="slider-top">
+                      <span class="slider-name">1 &nbsp;—&nbsp; 10</span>
+                      <span class="slider-val" id="p-size-val">5</span>
+                    </div>
+                    <input type="range" id="p-size-slider" min="1" max="10" value="5" />
+                  </div>
+                </div>
+                <div class="adv-section">
+                  <div class="adv-section-label">Gravity</div>
+                  <div class="slider-block">
+                    <div class="slider-top">
+                      <span class="slider-name">1 &nbsp;—&nbsp; 10</span>
+                      <span class="slider-val" id="p-grav-val">5</span>
+                    </div>
+                    <input type="range" id="p-grav-slider" min="1" max="10" value="5" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Both modes: Hitbox Size -->
+              <div class="adv-section" style="margin-bottom: 0">
+                <div class="adv-section-label">Hitbox Size</div>
+                <div class="slider-block">
+                  <div class="slider-top">
+                    <span class="slider-name">0 &nbsp;—&nbsp; 50</span>
+                    <span class="slider-val" id="hitbox-val">20</span>
+                  </div>
+                  <input type="range" id="hitbox-slider" min="0" max="50" value="20" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Input Tab -->
+            <div class="adv-tab-content" id="tab-input">
+              <div class="adv-section">
+                <div class="adv-section-label">Active Clicks</div>
+                <div class="click-toggle-row">
+                  <div class="legend-dot" style="background: #4488ff"></div>
+                  <span class="click-toggle-label">Left click &mdash; Pointer (P)</span>
+                  <input type="checkbox" id="toggle-0" checked />
+                </div>
+                <div class="click-toggle-row">
+                  <div class="legend-dot" style="background: #aa44ff"></div>
+                  <span class="click-toggle-label">Middle click &mdash; Ring (M)</span>
+                  <input type="checkbox" id="toggle-1" checked />
+                </div>
+                <div class="click-toggle-row">
+                  <div class="legend-dot" style="background: #ff8833"></div>
+                  <span class="click-toggle-label">Right click &mdash; Middle (R)</span>
+                  <input type="checkbox" id="toggle-2" checked />
+                </div>
+              </div>
+
+              <div class="adv-section">
+                <div class="adv-section-label">Kick Strength</div>
+                <div class="slider-block">
+                  <div class="slider-top">
+                    <span class="slider-name">0.5× &nbsp;—&nbsp; 2.0×</span>
+                    <span class="slider-val" id="kick-strength-val">1.0×</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="kick-strength-slider"
+                    min="50"
+                    max="200"
+                    step="5"
+                    value="100"
+                  />
+                </div>
+              </div>
+
+              <div class="adv-section" style="margin-bottom: 0">
+                <div class="adv-section-label">Cursor Sensitivity</div>
+                <div class="slider-block">
+                  <div class="slider-top">
+                    <span class="slider-name">0.25× &nbsp;—&nbsp; 2.0×</span>
+                    <span class="slider-val" id="cursor-sens-val">1.00×</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="cursor-sens-slider"
+                    min="25"
+                    max="200"
+                    step="5"
+                    value="100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="adv-tab-content" id="tab-analytics">
+              <div class="adv-section" style="margin-bottom: 0">
+                <div class="adv-section-label">Session Stats</div>
+                <table class="adv-analytics-table">
+                  <thead>
+                    <tr>
+                      <th>Finger</th>
+                      <th>Att</th>
+                      <th>OK</th>
+                      <th>Acc</th>
+                      <th>Hold</th>
+                      <th>React</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adv-analytics-body"></tbody>
+                </table>
+                <div class="adv-analytics-note">
+                  Hold = avg press duration &nbsp;|&nbsp; React = avg response time
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Col 1 Row 2: Bottom Stats Bar -->
+      <div id="bottom-bar">
+        <div class="stat-cell">
+          <div class="stat-label">Correct</div>
+          <div class="stat-value correct" id="b-correct">0</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Wrong</div>
+          <div class="stat-value wrong" id="b-wrong">0</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label" id="b-rate-label">Kicks / Min</div>
+          <div class="stat-value" id="b-rate">0</div>
+        </div>
+        <div class="stat-cell" id="b-speed-cell" style="display: none">
+          <div class="stat-label">Speed</div>
+          <div class="stat-value" id="b-speed">1</div>
+        </div>
+      </div>
+
+      <!-- Col 2 Rows 1-2: Practice Sidebar -->
+      <div id="sidebar-practice" class="sidebar">
+        <div class="panel">
+          <div class="panel-label">Required</div>
+          <div class="required-indicator" id="req-p" style="background: #2d333b; color: #7d8590">
+            —
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Streak</div>
+          <div class="big-number" id="p-streak">0</div>
+          <div class="sub-number" id="p-best">Best: 0</div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Controls</div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background: #4488ff"></div>
+            <div class="legend-text">Left &mdash; Pointer (P)</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background: #aa44ff"></div>
+            <div class="legend-text">Middle &mdash; Ring (M)</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background: #ff8833"></div>
+            <div class="legend-text">Right &mdash; Middle (R)</div>
+          </div>
+        </div>
+        <button id="btn-adv">&#9881; Settings</button>
+      </div>
+
+      <!-- Col 2 Rows 1-2: Game Sidebar -->
+      <div id="sidebar-game" class="sidebar">
+        <div class="panel">
+          <div class="panel-label">Required</div>
+          <div class="required-indicator" id="req-g" style="background: #2d333b; color: #7d8590">
+            —
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Streak</div>
+          <div class="big-number" id="g-streak">0</div>
+          <div class="sub-number" id="g-best">Best: 0</div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Speed Level</div>
+          <div class="speed-display">
+            <span class="speed-num" id="g-speed-num">1</span>
+            <span class="speed-denom">/ 10</span>
+          </div>
+          <div class="speed-bar-track">
+            <div class="speed-bar-fill" id="g-speed-bar" style="width: 10%"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Controls</div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background: #4488ff"></div>
+            <div class="legend-text">Left &mdash; Pointer (P)</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background: #aa44ff"></div>
+            <div class="legend-text">Middle &mdash; Ring (M)</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background: #ff8833"></div>
+            <div class="legend-text">Right &mdash; Middle (R)</div>
+          </div>
+        </div>
+        <button id="btn-adv-g" class="btn-adv-shared">&#9881; Settings</button>
+      </div>
+    </div>
+
+    <!-- Shared BCI modules — see /shared/README.md -->
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+
+    <script>
+      /* ─────────────────────────────────────────────────────────────
    One-time migration from the legacy localStorage keys to the
    namespaced keys the shared analytics module uses. Runs once
    per machine — after that the old keys are gone.
    ───────────────────────────────────────────────────────────── */
-(function migrateLegacyAnalytics() {
-  const oldAllTime = localStorage.getItem('bciAnalyticsV1');
-  const oldHistory = localStorage.getItem('bciSessionHistoryV1');
-
-  if (oldAllTime) {
-    if (!localStorage.getItem('bciAllTime:hackey-sac')) {
-      localStorage.setItem('bciAllTime:hackey-sac', oldAllTime);
-    }
-    localStorage.removeItem('bciAnalyticsV1');
-  }
-
-  if (oldHistory) {
-    if (!localStorage.getItem('bciSessionHistory:hackey-sac')) {
-      localStorage.setItem('bciSessionHistory:hackey-sac', oldHistory);
-    }
-    localStorage.removeItem('bciSessionHistoryV1');
-  }
-})();
-</script>
-
-<script>
-const canvas = document.getElementById('game');
-const ctx    = canvas.getContext('2d');
-const W = canvas.width;
-const H = canvas.height;
-
-// ── Click types ────────────────────────────────────────────────
-// Color, button, and textColor come from the shared BCI.CLICKS table.
-// Hackey Sac adds its own game-specific finger-name and short label.
-const CLICKS = BCI.CLICKS.map(c => ({
-  ...c,
-  display:    c.label,                                    // "Left" / "Middle" / "Right"
-  fingerName: ['Pointer', 'Ring', 'Middle'][c.id],
-  label:      ['P', 'M', 'R'][c.id],                      // short label drawn on the ball
-}));
-
-// ── Config ─────────────────────────────────────────────────────
-const CONFIG = {
-  BASE_GRAVITY:         0.04,
-  BASE_KICK_UP:        -5.5,
-  BALL_RADIUS:          42,
-  WALL_RESTITUTION:     0.55,
-  AIR_FRICTION:         0.992,
-  SPEED_PER_HITS:       25,
-  MAX_SPEED_LEVEL:      10,
-  GRAVITY_PER_LEVEL:    0.025,
-  KICK_PER_LEVEL:       0.2,
-  RADIUS_SHRINK_LEVEL:  1.5,
-  MIN_RADIUS:           14,
-  WRONG_FLASH_FRAMES:   20,
-  CORRECT_FLASH_FRAMES: 12,
-  KPS_WINDOW_MS:        10000,
-  CPM_WINDOW_MS:        60000,
-};
-
-// ── Mutable settings ───────────────────────────────────────────
-let hitboxPadding     = 20;
-let kickStrengthMult  = 1.0;
-
-// ── Practice settings ──────────────────────────────────────────
-const practice = { sizeLevel: 5, gravLevel: 5, enabled: { 0: true, 1: true, 2: true } };
-
-function practiceRadius()  { return 22 + (practice.sizeLevel - 1) * 4; }
-function practiceGravity() { return 0.01 + (practice.gravLevel - 1) * 0.015; }
-function practiceKickUp()  { return -6  - (practice.gravLevel - 1) * 0.45; }
-
-// ── Virtual cursor (from shared/bci-input.js) ──────────────────
-const cursor = BCI.createVirtualCursor(canvas, { sensitivity: 1.0 });
-
-// ── App state ──────────────────────────────────────────────────
-let appMode        = 'menu';
-let advOpen        = false;
-let activeAdvTab   = 'physics';
-let kickTimestamps = [];
-let gameState      = {};
-let lastTime       = null;
-
-// ── Analytics (uses shared/bci-analytics.js) ───────────────────
-let sessionAnalytics = BCI.createSession();
-let pendingHold      = { button: -1, time: 0 };
-let sessionSaved     = false;
-let sessionStartTime = 0;
-
-function saveSessionToPersistent() {
-  if (sessionSaved) return;
-  sessionSaved = true;
-  BCI.saveSession('hackey-sac', sessionAnalytics, {
-    mode:        appMode,
-    correctHits: gameState.correctHits || 0,
-    wrongHits:   gameState.wrongHits   || 0,
-    bestStreak:  gameState.bestStreak  || 0,
-  });
-}
-
-// ── Helpers ────────────────────────────────────────────────────
-function randomClick() {
-  const pool = appMode === 'practice'
-    ? CLICKS.filter(c => practice.enabled[c.id])
-    : CLICKS;
-  const safe = pool.length > 0 ? pool : CLICKS;
-  return safe[Math.floor(Math.random() * safe.length)];
-}
-
-function speedLevel(hits) {
-  return Math.min(CONFIG.MAX_SPEED_LEVEL, 1 + Math.floor(hits / CONFIG.SPEED_PER_HITS));
-}
-
-function gravityForLevel(lv) { return CONFIG.BASE_GRAVITY + (lv - 1) * CONFIG.GRAVITY_PER_LEVEL; }
-function kickUpForLevel(lv)  { return CONFIG.BASE_KICK_UP  - (lv - 1) * CONFIG.KICK_PER_LEVEL; }
-function ballRadiusForLevel(lv) {
-  return Math.max(CONFIG.MIN_RADIUS, CONFIG.BALL_RADIUS - (lv - 1) * CONFIG.RADIUS_SHRINK_LEVEL);
-}
-
-// ── Init game state ────────────────────────────────────────────
-function initState() {
-  kickTimestamps   = [];
-  sessionAnalytics = BCI.createSession();
-  sessionSaved     = false;
-  sessionStartTime = Date.now();
-  cursor.reset();
-
-  const savedBest = parseInt(localStorage.getItem('bciBestStreak') || '0', 10);
-  const r = appMode === 'practice' ? practiceRadius() : CONFIG.BALL_RADIUS;
-  gameState = {
-    phase:        'hovering',
-    hoverTime:    0,
-    ball: {
-      x: W / 2, y: H * 0.38,
-      vx: 0, vy: 0,
-      radius:   r,
-      required: randomClick(),
-    },
-    bursts:           [],
-    correctHits:      0,
-    wrongHits:        0,
-    streak:           0,
-    bestStreak:       gameState?.bestStreak ?? savedBest,
-    wrongFlash:       0,
-    correctFlash:     0,
-    requireTimestamp: performance.now(),
-  };
-}
-
-// ── Update ─────────────────────────────────────────────────────
-function update(dt) {
-  const s = gameState;
-  const b = s.ball;
-
-  s.bursts = s.bursts.filter(bst => bst.age < bst.maxAge);
-  s.bursts.forEach(bst => { bst.age += dt; });
-
-  if (s.phase === 'hovering') {
-    s.hoverTime += dt;
-    b.y      = H * 0.38 + Math.sin(s.hoverTime * 0.06) * 6;
-    b.radius = appMode === 'practice' ? practiceRadius() : CONFIG.BALL_RADIUS;
-    if (s.wrongFlash > 0) s.wrongFlash -= dt;
-    return;
-  }
-
-  if (advOpen) return;
-  if (s.phase !== 'playing') return;
-
-  const lv = speedLevel(s.correctHits);
-  const g  = appMode === 'practice' ? practiceGravity() : gravityForLevel(lv);
-
-  b.vy += g * dt;
-  b.x  += b.vx * dt;
-  b.y  += b.vy * dt;
-
-  if (b.y - b.radius < 0) {
-    b.y  = b.radius;
-    b.vy = Math.abs(b.vy) * CONFIG.WALL_RESTITUTION;
-  }
-  if (b.x - b.radius < 0) {
-    b.x  = b.radius;
-    b.vx = Math.abs(b.vx) * CONFIG.WALL_RESTITUTION;
-  }
-  if (b.x + b.radius > W) {
-    b.x  = W - b.radius;
-    b.vx = -Math.abs(b.vx) * CONFIG.WALL_RESTITUTION;
-  }
-
-  b.vx *= Math.pow(CONFIG.AIR_FRICTION, dt);
-  b.radius = appMode === 'practice' ? practiceRadius() : ballRadiusForLevel(lv);
-
-  if (b.y - b.radius > H) {
-    if (s.streak > s.bestStreak) {
-      s.bestStreak = s.streak;
-      localStorage.setItem('bciBestStreak', s.bestStreak);
-    }
-    saveSessionToPersistent();
-    s.phase = 'gameover';
-  }
-
-  if (s.wrongFlash   > 0) s.wrongFlash   -= dt;
-  if (s.correctFlash > 0) s.correctFlash -= dt;
-
-  const now = performance.now();
-  const win = appMode === 'practice' ? CONFIG.CPM_WINDOW_MS : CONFIG.KPS_WINDOW_MS;
-  kickTimestamps = kickTimestamps.filter(t => now - t < win);
-}
-
-// ── Draw ───────────────────────────────────────────────────────
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-
-  const s  = gameState;
-  const b  = s.ball;
-  const lv = speedLevel(s.correctHits);
-
-  drawBursts(s.bursts);
-
-  if (s.phase === 'hovering' || s.phase === 'playing') {
-    drawBall(b, s);
-
-    // Hitbox ring shown when settings overlay is open
-    if (advOpen) {
-      ctx.save();
-      ctx.setLineDash([5, 3]);
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.radius + hitboxPadding, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-      ctx.lineWidth   = 1;
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  if (s.phase === 'hovering') {
-    const alpha = 0.5 + 0.38 * Math.sin(s.hoverTime * 0.07);
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle    = `rgba(232,228,217,${alpha})`;
-    ctx.font         = '13px Courier New';
-    ctx.fillText('Kick to serve', W / 2, b.y + b.radius + 26);
-  }
-
-  if (s.phase === 'gameover') {
-    ctx.fillStyle = 'rgba(10,14,20,0.84)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle    = '#e8e4d9';
-    ctx.font         = 'bold 38px Courier New';
-    ctx.fillText('GAME OVER', W / 2, H / 2 - 60);
-    ctx.font         = '16px Courier New';
-    ctx.fillStyle    = '#7d8590';
-    ctx.fillText(`Correct kicks: ${s.correctHits}`, W / 2, H / 2 - 10);
-    ctx.fillText(`Best streak:   ${s.bestStreak}`,  W / 2, H / 2 + 22);
-    ctx.font         = 'bold 14px Courier New';
-    ctx.fillStyle    = '#e8e4d9';
-    ctx.fillText('[ Click anywhere to restart ]', W / 2, H / 2 + 72);
-  }
-
-  // Virtual cursor dot (hidden during game over screen)
-  if (s.phase !== 'gameover') {
-    drawCursorDot();
-  }
-
-  updateSidebar(s, lv);
-}
-
-function drawCursorDot() {
-  BCI.drawCursorDot(ctx, cursor.x, cursor.y);
-}
-
-function drawBursts(bursts) {
-  bursts.forEach(bst => {
-    const p = bst.age / bst.maxAge;
-    [0, 0.18].forEach(offset => {
-      const rp = Math.min(1, p + offset);
-      const r  = 10 + 60 * rp;
-      const a  = (1 - rp) * 0.6;
-      if (a <= 0.01) return;
-      ctx.save();
-      ctx.globalAlpha = a;
-      ctx.beginPath();
-      ctx.arc(bst.x, bst.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = bst.color;
-      ctx.lineWidth   = Math.max(0.5, 3.5 * (1 - rp));
-      ctx.stroke();
-      ctx.restore();
-    });
-  });
-}
-
-function drawBall(b, s) {
-  const r   = b.radius;
-  const req = b.required;
-
-  let fillColor = req.color;
-  if (s.wrongFlash > 0) {
-    fillColor = (Math.floor(s.wrongFlash / 4) % 2 === 0) ? '#ffffff' : req.color;
-  }
-  if (s.correctFlash > 0) {
-    const t = s.correctFlash / CONFIG.CORRECT_FLASH_FRAMES;
-    fillColor = lerpColor(req.color, '#ffffff', t * 0.6);
-  }
-
-  ctx.save();
-  ctx.shadowBlur  = 26;
-  ctx.shadowColor = req.color;
-
-  ctx.beginPath();
-  ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = fillColor;
-  ctx.fill();
-
-  ctx.shadowBlur  = 0;
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-  ctx.lineWidth   = 1.5;
-
-  ctx.beginPath();
-  ctx.arc(b.x, b.y - r * 0.25, r * 0.6, 0, Math.PI);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(b.x, b.y + r * 0.25, r * 0.6, Math.PI, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(b.x - r * 0.5, b.y);
-  ctx.lineTo(b.x + r * 0.5, b.y);
-  ctx.stroke();
-
-  ctx.fillStyle    = req.textColor;
-  ctx.font         = `bold ${Math.round(r * 0.62)}px Courier New`;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(req.label, b.x, b.y + 1);
-  ctx.restore();
-}
-
-// ── Sidebar + bottom bar update ────────────────────────────────
-function updateSidebar(s, lv) {
-  const isP   = appMode === 'practice';
-  const indEl = document.getElementById(isP ? 'req-p' : 'req-g');
-
-  if (s.phase === 'playing' || s.phase === 'hovering') {
-    const req = s.ball.required;
-    indEl.style.background = req.color;
-    indEl.style.color      = req.textColor;
-    indEl.textContent      = req.display;
-  } else {
-    indEl.style.background = '#2d333b';
-    indEl.style.color      = '#7d8590';
-    indEl.textContent      = '—';
-  }
-
-  if (isP) {
-    document.getElementById('p-streak').textContent = s.streak;
-    document.getElementById('p-best').textContent   = `Best: ${s.bestStreak}`;
-  } else {
-    document.getElementById('g-streak').textContent = s.streak;
-    document.getElementById('g-best').textContent   = `Best: ${s.bestStreak}`;
-
-    document.getElementById('g-speed-num').textContent = lv;
-    const pct = (lv / CONFIG.MAX_SPEED_LEVEL) * 100;
-    const bar = document.getElementById('g-speed-bar');
-    bar.style.width      = `${pct}%`;
-    const hue            = Math.round(120 - (lv-1) * (120 / (CONFIG.MAX_SPEED_LEVEL-1)));
-    bar.style.background = `hsl(${hue},70%,55%)`;
-  }
-
-  document.getElementById('b-correct').textContent = s.correctHits;
-  document.getElementById('b-wrong').textContent   = s.wrongHits;
-  document.getElementById('b-rate').textContent    = kickTimestamps.length;
-  if (!isP) document.getElementById('b-speed').textContent = lv;
-}
-
-// ── Color utils ────────────────────────────────────────────────
-function lerpColor(hex1, hex2, t) {
-  const a = hexToRgb(hex1), b = hexToRgb(hex2);
-  return `rgb(${Math.round(a.r+(b.r-a.r)*t)},${Math.round(a.g+(b.g-a.g)*t)},${Math.round(a.b+(b.b-a.b)*t)})`;
-}
-
-function hexToRgb(hex) {
-  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return r ? {r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)} : {r:255,g:255,b:255};
-}
-
-// ── Canvas click input ─────────────────────────────────────────
-canvas.addEventListener('contextmenu', e => e.preventDefault());
-canvas.addEventListener('auxclick',    e => e.preventDefault());
-
-canvas.addEventListener('mouseup', e => {
-  if (e.button === 1) e.preventDefault();
-  if (pendingHold.button === e.button && e.button >= 0 && e.button <= 2) {
-    const dur     = performance.now() - pendingHold.time;
-    const clickId = CLICKS.find(c => c.button === e.button)?.id;
-    if (clickId !== undefined) {
-      BCI.recordHold(sessionAnalytics, clickId, dur);
-    }
-    pendingHold.button = -1;
-  }
-});
-
-canvas.addEventListener('mousedown', e => {
-  e.preventDefault();
-
-  // Record mousedown time for hold-duration tracking
-  if (e.button >= 0 && e.button <= 2) {
-    pendingHold = { button: e.button, time: performance.now() };
-  }
-
-  if (advOpen) return;
-
-  if (gameState.phase === 'gameover') { initState(); return; }
-  if (gameState.phase !== 'playing' && gameState.phase !== 'hovering') return;
-
-  const cx = cursor.x;
-  const cy = cursor.y;
-  const b  = gameState.ball;
-  const dx = cx - b.x;
-  const dy = cy - b.y;
-
-  if (Math.sqrt(dx*dx + dy*dy) > b.radius + hitboxPadding) return;
-
-  const usedClick = CLICKS.find(c => c.button === e.button);
-  if (!usedClick) return;
-
-  const wasCorrect = (usedClick.id === gameState.ball.required.id);
-  BCI.recordAttempt(sessionAnalytics, usedClick.id, wasCorrect);
-
-  if (wasCorrect) {
-    // Record reaction time (from when this color was assigned → now)
-    const reactionMs = performance.now() - gameState.requireTimestamp;
-    BCI.recordReaction(sessionAnalytics, usedClick.id, reactionMs);
-
-    gameState.correctHits++;
-    gameState.streak++;
-    gameState.phase = 'playing';
-
-    kickTimestamps.push(performance.now());
-    gameState.bursts.push({ x: cx, y: cy, color: gameState.ball.required.color, age: 0, maxAge: 24 });
-
-    const lv     = speedLevel(gameState.correctHits);
-    const kuBase = appMode === 'practice' ? practiceKickUp() : kickUpForLevel(lv);
-    const ku     = kuBase * kickStrengthMult;
-    const minVy  = -4 * kickStrengthMult;
-
-    b.vx = Math.max(-9, Math.min(9, -dx * 0.2));
-    b.vy = Math.min(minVy, ku + Math.max(0, dy * 0.1));
-
-    b.required               = randomClick();
-    gameState.requireTimestamp = performance.now();  // reset clock for next color
-    gameState.correctFlash   = CONFIG.CORRECT_FLASH_FRAMES;
-
-  } else {
-    gameState.wrongHits++;
-    gameState.streak     = 0;
-    gameState.wrongFlash = CONFIG.WRONG_FLASH_FRAMES;
-  }
-});
-
-// ── Tab switching ──────────────────────────────────────────────
-document.querySelectorAll('.adv-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    activeAdvTab = tab;
-    document.querySelectorAll('.adv-tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.adv-tab-content').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(`tab-${tab}`).classList.add('active');
-    if (tab === 'analytics') updateAdvAnalytics();
-  });
-});
-
-// ── Advanced Settings open/close ───────────────────────────────
-function openAdv() {
-  advOpen = true;
-  document.getElementById('adv-practice-only').style.display =
-    appMode === 'practice' ? 'block' : 'none';
-  document.getElementById('adv-overlay').style.display = 'flex';
-  if (activeAdvTab === 'analytics') updateAdvAnalytics();
-}
-
-function closeAdv() {
-  advOpen = false;
-  document.getElementById('adv-overlay').style.display = 'none';
-}
-
-document.getElementById('btn-adv').addEventListener('click',   openAdv);
-document.getElementById('btn-adv-g').addEventListener('click', openAdv);
-document.getElementById('adv-close').addEventListener('click', closeAdv);
-
-document.getElementById('adv-overlay').addEventListener('mousedown', e => {
-  if (e.target === document.getElementById('adv-overlay')) closeAdv();
-});
-
-// ── Physics sliders ────────────────────────────────────────────
-document.getElementById('p-size-slider').addEventListener('input', e => {
-  practice.sizeLevel = parseInt(e.target.value, 10);
-  document.getElementById('p-size-val').textContent = practice.sizeLevel;
-  if (gameState.ball) gameState.ball.radius = practiceRadius();
-});
-
-document.getElementById('p-grav-slider').addEventListener('input', e => {
-  practice.gravLevel = parseInt(e.target.value, 10);
-  document.getElementById('p-grav-val').textContent = practice.gravLevel;
-});
-
-document.getElementById('kick-strength-slider').addEventListener('input', e => {
-  kickStrengthMult = parseInt(e.target.value, 10) / 100;
-  document.getElementById('kick-strength-val').textContent = kickStrengthMult.toFixed(1) + '×';
-});
-
-document.getElementById('hitbox-slider').addEventListener('input', e => {
-  hitboxPadding = parseInt(e.target.value, 10);
-  document.getElementById('hitbox-val').textContent = hitboxPadding;
-});
-
-// ── Click toggles (saved as per-game overrides) ────────────────
-[0, 1, 2].forEach(id => {
-  document.getElementById(`toggle-${id}`).addEventListener('change', e => {
-    practice.enabled[id] = e.target.checked;
-    if (!e.target.checked && gameState.ball && gameState.ball.required.id === id) {
-      gameState.ball.required = randomClick();
-    }
-    const current = BCI.getGameSettings('hackey-sac');
-    const enabledClicks = { ...(current.enabledClicks || practice.enabled), [id]: e.target.checked };
-    BCI.saveGameSettings('hackey-sac', { enabledClicks });
-  });
-});
-
-// ── Cursor sensitivity slider (saved as per-game override) ─────
-document.getElementById('cursor-sens-slider').addEventListener('input', e => {
-  const sens = parseInt(e.target.value, 10) / 100;
-  cursor.setSensitivity(sens);
-  document.getElementById('cursor-sens-val').textContent = sens.toFixed(2) + '×';
-  BCI.saveGameSettings('hackey-sac', { cursorSensitivity: sens });
-});
-
-// ── In-settings analytics display ─────────────────────────────
-function updateAdvAnalytics() {
-  const tbody = document.getElementById('adv-analytics-body');
-  tbody.innerHTML = '';
-  CLICKS.forEach(c => {
-    const f     = sessionAnalytics.fingers[c.id];
-    const acc   = f.attempts > 0
-      ? Math.round(f.correct / f.attempts * 100) + '%'
-      : '—';
-    const avgH  = f.holds.length > 0
-      ? Math.round(f.holds.reduce((a, b) => a + b, 0) / f.holds.length) + 'ms'
-      : '—';
-    const avgR  = f.reactions.length > 0
-      ? Math.round(f.reactions.reduce((a, b) => a + b, 0) / f.reactions.length) + 'ms'
-      : '—';
-    const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td><span class="adv-dot" style="background:${c.color}"></span>${c.name}</td>` +
-      `<td>${f.attempts}</td><td>${f.correct}</td><td>${acc}</td><td>${avgH}</td><td>${avgR}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-// ── Main menu analytics screen ─────────────────────────────────
-// ── Session history ────────────────────────────────────────────
-function loadSessionHistory() {
-  return BCI.getSessionHistory('hackey-sac');
-}
-
-function renderSessionHistory() {
-  const list    = document.getElementById('session-history-list');
-  const history = loadSessionHistory();
-  list.innerHTML = '';
-
-  if (history.length === 0) {
-    list.innerHTML = '<div class="session-history-empty">No sessions yet.<br>Complete a practice or game session to see your history here.</div>';
-    return;
-  }
-
-  history.forEach(entry => {
-    const totalAtt = Object.values(entry.fingers).reduce((a, f) => a + f.attempts, 0);
-    const item = document.createElement('div');
-    item.className = 'session-item';
-    item.dataset.id = entry.id;
-    item.innerHTML =
-      `<div class="session-item-date">${entry.dateStr}</div>` +
-      `<div class="session-item-meta">` +
-        `<span class="session-mode-badge ${entry.mode}">${entry.mode}</span>` +
-        `<span class="session-score">` +
-          `<span class="s-ok">&#10003; ${entry.correctHits}</span>` +
-          `&nbsp;&nbsp;<span class="s-bad">&#10005; ${entry.wrongHits}</span>` +
-        `</span>` +
-      `</div>`;
-    item.addEventListener('click', () => openSessionDetail(entry));
-    list.appendChild(item);
-  });
-}
-
-function openSessionDetail(entry) {
-  document.getElementById('session-detail-title').textContent =
-    entry.dateStr + '  ·  ' + entry.mode.toUpperCase();
-
-  const body = document.getElementById('session-detail-body');
-  body.innerHTML = '';
-
-  // Summary rows
-  const summaryLabel = document.createElement('div');
-  summaryLabel.className = 'detail-section-label';
-  summaryLabel.textContent = 'Session Summary';
-  body.appendChild(summaryLabel);
-
-  const totalCorrect = entry.correctHits;
-  const totalWrong   = entry.wrongHits;
-  const totalAtt     = totalCorrect + totalWrong;
-  const overallAcc   = totalAtt > 0 ? Math.round(totalCorrect / totalAtt * 100) + '%' : '—';
-
-  [
-    ['Correct Kicks',   totalCorrect],
-    ['Wrong Clicks',    totalWrong],
-    ['Overall Accuracy', overallAcc],
-    ['Best Streak',     entry.bestStreak],
-  ].forEach(([label, val]) => {
-    const row = document.createElement('div');
-    row.className = 'detail-stat-row';
-    row.innerHTML = `<span class="detail-stat-label">${label}</span><span>${val}</span>`;
-    body.appendChild(row);
-  });
-
-  // Per-finger breakdown
-  const fingerLabel = document.createElement('div');
-  fingerLabel.className = 'detail-section-label';
-  fingerLabel.textContent = 'Per-Finger Breakdown';
-  body.appendChild(fingerLabel);
-
-  const table = document.createElement('table');
-  table.className = 'analytics-table';
-  table.style.fontSize = '11px';
-  table.innerHTML =
-    `<thead><tr>
+      (function migrateLegacyAnalytics() {
+        const oldAllTime = localStorage.getItem('bciAnalyticsV1');
+        const oldHistory = localStorage.getItem('bciSessionHistoryV1');
+
+        if (oldAllTime) {
+          if (!localStorage.getItem('bciAllTime:hackey-sac')) {
+            localStorage.setItem('bciAllTime:hackey-sac', oldAllTime);
+          }
+          localStorage.removeItem('bciAnalyticsV1');
+        }
+
+        if (oldHistory) {
+          if (!localStorage.getItem('bciSessionHistory:hackey-sac')) {
+            localStorage.setItem('bciSessionHistory:hackey-sac', oldHistory);
+          }
+          localStorage.removeItem('bciSessionHistoryV1');
+        }
+      })();
+    </script>
+
+    <script>
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // ── Click types ────────────────────────────────────────────────
+      // Color, button, and textColor come from the shared BCI.CLICKS table.
+      // Hackey Sac adds its own game-specific finger-name and short label.
+      const CLICKS = BCI.CLICKS.map((c) => ({
+        ...c,
+        display: c.label, // "Left" / "Middle" / "Right"
+        fingerName: ['Pointer', 'Ring', 'Middle'][c.id],
+        label: ['P', 'M', 'R'][c.id], // short label drawn on the ball
+      }));
+
+      // ── Config ─────────────────────────────────────────────────────
+      const CONFIG = {
+        BASE_GRAVITY: 0.04,
+        BASE_KICK_UP: -5.5,
+        BALL_RADIUS: 42,
+        WALL_RESTITUTION: 0.55,
+        AIR_FRICTION: 0.992,
+        SPEED_PER_HITS: 25,
+        MAX_SPEED_LEVEL: 10,
+        GRAVITY_PER_LEVEL: 0.025,
+        KICK_PER_LEVEL: 0.2,
+        RADIUS_SHRINK_LEVEL: 1.5,
+        MIN_RADIUS: 14,
+        WRONG_FLASH_FRAMES: 20,
+        CORRECT_FLASH_FRAMES: 12,
+        KPS_WINDOW_MS: 10000,
+        CPM_WINDOW_MS: 60000,
+      };
+
+      // ── Mutable settings ───────────────────────────────────────────
+      let hitboxPadding = 20;
+      let kickStrengthMult = 1.0;
+
+      // ── Practice settings ──────────────────────────────────────────
+      const practice = { sizeLevel: 5, gravLevel: 5, enabled: { 0: true, 1: true, 2: true } };
+
+      function practiceRadius() {
+        return 22 + (practice.sizeLevel - 1) * 4;
+      }
+      function practiceGravity() {
+        return 0.01 + (practice.gravLevel - 1) * 0.015;
+      }
+      function practiceKickUp() {
+        return -6 - (practice.gravLevel - 1) * 0.45;
+      }
+
+      // ── Virtual cursor (from shared/bci-input.js) ──────────────────
+      const cursor = BCI.createVirtualCursor(canvas, { sensitivity: 1.0 });
+
+      // ── App state ──────────────────────────────────────────────────
+      let appMode = 'menu';
+      let advOpen = false;
+      let activeAdvTab = 'physics';
+      let kickTimestamps = [];
+      let gameState = {};
+      let lastTime = null;
+
+      // ── Analytics (uses shared/bci-analytics.js) ───────────────────
+      let sessionAnalytics = BCI.createSession();
+      let pendingHold = { button: -1, time: 0 };
+      let sessionSaved = false;
+      let sessionStartTime = 0;
+
+      function saveSessionToPersistent() {
+        if (sessionSaved) return;
+        sessionSaved = true;
+        BCI.saveSession('hackey-sac', sessionAnalytics, {
+          mode: appMode,
+          correctHits: gameState.correctHits || 0,
+          wrongHits: gameState.wrongHits || 0,
+          bestStreak: gameState.bestStreak || 0,
+        });
+      }
+
+      // ── Helpers ────────────────────────────────────────────────────
+      function randomClick() {
+        const pool = appMode === 'practice' ? CLICKS.filter((c) => practice.enabled[c.id]) : CLICKS;
+        const safe = pool.length > 0 ? pool : CLICKS;
+        return safe[Math.floor(Math.random() * safe.length)];
+      }
+
+      function speedLevel(hits) {
+        return Math.min(CONFIG.MAX_SPEED_LEVEL, 1 + Math.floor(hits / CONFIG.SPEED_PER_HITS));
+      }
+
+      function gravityForLevel(lv) {
+        return CONFIG.BASE_GRAVITY + (lv - 1) * CONFIG.GRAVITY_PER_LEVEL;
+      }
+      function kickUpForLevel(lv) {
+        return CONFIG.BASE_KICK_UP - (lv - 1) * CONFIG.KICK_PER_LEVEL;
+      }
+      function ballRadiusForLevel(lv) {
+        return Math.max(
+          CONFIG.MIN_RADIUS,
+          CONFIG.BALL_RADIUS - (lv - 1) * CONFIG.RADIUS_SHRINK_LEVEL
+        );
+      }
+
+      // ── Init game state ────────────────────────────────────────────
+      function initState() {
+        kickTimestamps = [];
+        sessionAnalytics = BCI.createSession();
+        sessionSaved = false;
+        sessionStartTime = Date.now();
+        cursor.reset();
+
+        const savedBest = parseInt(localStorage.getItem('bciBestStreak') || '0', 10);
+        const r = appMode === 'practice' ? practiceRadius() : CONFIG.BALL_RADIUS;
+        gameState = {
+          phase: 'hovering',
+          hoverTime: 0,
+          ball: {
+            x: W / 2,
+            y: H * 0.38,
+            vx: 0,
+            vy: 0,
+            radius: r,
+            required: randomClick(),
+          },
+          bursts: [],
+          correctHits: 0,
+          wrongHits: 0,
+          streak: 0,
+          bestStreak: gameState?.bestStreak ?? savedBest,
+          wrongFlash: 0,
+          correctFlash: 0,
+          requireTimestamp: performance.now(),
+        };
+      }
+
+      // ── Update ─────────────────────────────────────────────────────
+      function update(dt) {
+        const s = gameState;
+        const b = s.ball;
+
+        s.bursts = s.bursts.filter((bst) => bst.age < bst.maxAge);
+        s.bursts.forEach((bst) => {
+          bst.age += dt;
+        });
+
+        if (s.phase === 'hovering') {
+          s.hoverTime += dt;
+          b.y = H * 0.38 + Math.sin(s.hoverTime * 0.06) * 6;
+          b.radius = appMode === 'practice' ? practiceRadius() : CONFIG.BALL_RADIUS;
+          if (s.wrongFlash > 0) s.wrongFlash -= dt;
+          return;
+        }
+
+        if (advOpen) return;
+        if (s.phase !== 'playing') return;
+
+        const lv = speedLevel(s.correctHits);
+        const g = appMode === 'practice' ? practiceGravity() : gravityForLevel(lv);
+
+        b.vy += g * dt;
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+
+        if (b.y - b.radius < 0) {
+          b.y = b.radius;
+          b.vy = Math.abs(b.vy) * CONFIG.WALL_RESTITUTION;
+        }
+        if (b.x - b.radius < 0) {
+          b.x = b.radius;
+          b.vx = Math.abs(b.vx) * CONFIG.WALL_RESTITUTION;
+        }
+        if (b.x + b.radius > W) {
+          b.x = W - b.radius;
+          b.vx = -Math.abs(b.vx) * CONFIG.WALL_RESTITUTION;
+        }
+
+        b.vx *= Math.pow(CONFIG.AIR_FRICTION, dt);
+        b.radius = appMode === 'practice' ? practiceRadius() : ballRadiusForLevel(lv);
+
+        if (b.y - b.radius > H) {
+          if (s.streak > s.bestStreak) {
+            s.bestStreak = s.streak;
+            localStorage.setItem('bciBestStreak', s.bestStreak);
+          }
+          saveSessionToPersistent();
+          s.phase = 'gameover';
+        }
+
+        if (s.wrongFlash > 0) s.wrongFlash -= dt;
+        if (s.correctFlash > 0) s.correctFlash -= dt;
+
+        const now = performance.now();
+        const win = appMode === 'practice' ? CONFIG.CPM_WINDOW_MS : CONFIG.KPS_WINDOW_MS;
+        kickTimestamps = kickTimestamps.filter((t) => now - t < win);
+      }
+
+      // ── Draw ───────────────────────────────────────────────────────
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        const s = gameState;
+        const b = s.ball;
+        const lv = speedLevel(s.correctHits);
+
+        drawBursts(s.bursts);
+
+        if (s.phase === 'hovering' || s.phase === 'playing') {
+          drawBall(b, s);
+
+          // Hitbox ring shown when settings overlay is open
+          if (advOpen) {
+            ctx.save();
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius + hitboxPadding, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        if (s.phase === 'hovering') {
+          const alpha = 0.5 + 0.38 * Math.sin(s.hoverTime * 0.07);
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillStyle = `rgba(232,228,217,${alpha})`;
+          ctx.font = '13px Courier New';
+          ctx.fillText('Kick to serve', W / 2, b.y + b.radius + 26);
+        }
+
+        if (s.phase === 'gameover') {
+          ctx.fillStyle = 'rgba(10,14,20,0.84)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#e8e4d9';
+          ctx.font = 'bold 38px Courier New';
+          ctx.fillText('GAME OVER', W / 2, H / 2 - 60);
+          ctx.font = '16px Courier New';
+          ctx.fillStyle = '#7d8590';
+          ctx.fillText(`Correct kicks: ${s.correctHits}`, W / 2, H / 2 - 10);
+          ctx.fillText(`Best streak:   ${s.bestStreak}`, W / 2, H / 2 + 22);
+          ctx.font = 'bold 14px Courier New';
+          ctx.fillStyle = '#e8e4d9';
+          ctx.fillText('[ Click anywhere to restart ]', W / 2, H / 2 + 72);
+        }
+
+        // Virtual cursor dot (hidden during game over screen)
+        if (s.phase !== 'gameover') {
+          drawCursorDot();
+        }
+
+        updateSidebar(s, lv);
+      }
+
+      function drawCursorDot() {
+        BCI.drawCursorDot(ctx, cursor.x, cursor.y);
+      }
+
+      function drawBursts(bursts) {
+        bursts.forEach((bst) => {
+          const p = bst.age / bst.maxAge;
+          [0, 0.18].forEach((offset) => {
+            const rp = Math.min(1, p + offset);
+            const r = 10 + 60 * rp;
+            const a = (1 - rp) * 0.6;
+            if (a <= 0.01) return;
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.beginPath();
+            ctx.arc(bst.x, bst.y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = bst.color;
+            ctx.lineWidth = Math.max(0.5, 3.5 * (1 - rp));
+            ctx.stroke();
+            ctx.restore();
+          });
+        });
+      }
+
+      function drawBall(b, s) {
+        const r = b.radius;
+        const req = b.required;
+
+        let fillColor = req.color;
+        if (s.wrongFlash > 0) {
+          fillColor = Math.floor(s.wrongFlash / 4) % 2 === 0 ? '#ffffff' : req.color;
+        }
+        if (s.correctFlash > 0) {
+          const t = s.correctFlash / CONFIG.CORRECT_FLASH_FRAMES;
+          fillColor = lerpColor(req.color, '#ffffff', t * 0.6);
+        }
+
+        ctx.save();
+        ctx.shadowBlur = 26;
+        ctx.shadowColor = req.color;
+
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 1.5;
+
+        ctx.beginPath();
+        ctx.arc(b.x, b.y - r * 0.25, r * 0.6, 0, Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(b.x, b.y + r * 0.25, r * 0.6, Math.PI, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(b.x - r * 0.5, b.y);
+        ctx.lineTo(b.x + r * 0.5, b.y);
+        ctx.stroke();
+
+        ctx.fillStyle = req.textColor;
+        ctx.font = `bold ${Math.round(r * 0.62)}px Courier New`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(req.label, b.x, b.y + 1);
+        ctx.restore();
+      }
+
+      // ── Sidebar + bottom bar update ────────────────────────────────
+      function updateSidebar(s, lv) {
+        const isP = appMode === 'practice';
+        const indEl = document.getElementById(isP ? 'req-p' : 'req-g');
+
+        if (s.phase === 'playing' || s.phase === 'hovering') {
+          const req = s.ball.required;
+          indEl.style.background = req.color;
+          indEl.style.color = req.textColor;
+          indEl.textContent = req.display;
+        } else {
+          indEl.style.background = '#2d333b';
+          indEl.style.color = '#7d8590';
+          indEl.textContent = '—';
+        }
+
+        if (isP) {
+          document.getElementById('p-streak').textContent = s.streak;
+          document.getElementById('p-best').textContent = `Best: ${s.bestStreak}`;
+        } else {
+          document.getElementById('g-streak').textContent = s.streak;
+          document.getElementById('g-best').textContent = `Best: ${s.bestStreak}`;
+
+          document.getElementById('g-speed-num').textContent = lv;
+          const pct = (lv / CONFIG.MAX_SPEED_LEVEL) * 100;
+          const bar = document.getElementById('g-speed-bar');
+          bar.style.width = `${pct}%`;
+          const hue = Math.round(120 - (lv - 1) * (120 / (CONFIG.MAX_SPEED_LEVEL - 1)));
+          bar.style.background = `hsl(${hue},70%,55%)`;
+        }
+
+        document.getElementById('b-correct').textContent = s.correctHits;
+        document.getElementById('b-wrong').textContent = s.wrongHits;
+        document.getElementById('b-rate').textContent = kickTimestamps.length;
+        if (!isP) document.getElementById('b-speed').textContent = lv;
+      }
+
+      // ── Color utils ────────────────────────────────────────────────
+      function lerpColor(hex1, hex2, t) {
+        const a = hexToRgb(hex1),
+          b = hexToRgb(hex2);
+        return `rgb(${Math.round(a.r + (b.r - a.r) * t)},${Math.round(a.g + (b.g - a.g) * t)},${Math.round(a.b + (b.b - a.b) * t)})`;
+      }
+
+      function hexToRgb(hex) {
+        const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return r
+          ? { r: parseInt(r[1], 16), g: parseInt(r[2], 16), b: parseInt(r[3], 16) }
+          : { r: 255, g: 255, b: 255 };
+      }
+
+      // ── Canvas click input ─────────────────────────────────────────
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+      canvas.addEventListener('auxclick', (e) => e.preventDefault());
+
+      canvas.addEventListener('mouseup', (e) => {
+        if (e.button === 1) e.preventDefault();
+        if (pendingHold.button === e.button && e.button >= 0 && e.button <= 2) {
+          const dur = performance.now() - pendingHold.time;
+          const clickId = CLICKS.find((c) => c.button === e.button)?.id;
+          if (clickId !== undefined) {
+            BCI.recordHold(sessionAnalytics, clickId, dur);
+          }
+          pendingHold.button = -1;
+        }
+      });
+
+      canvas.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+
+        // Record mousedown time for hold-duration tracking
+        if (e.button >= 0 && e.button <= 2) {
+          pendingHold = { button: e.button, time: performance.now() };
+        }
+
+        if (advOpen) return;
+
+        if (gameState.phase === 'gameover') {
+          initState();
+          return;
+        }
+        if (gameState.phase !== 'playing' && gameState.phase !== 'hovering') return;
+
+        const cx = cursor.x;
+        const cy = cursor.y;
+        const b = gameState.ball;
+        const dx = cx - b.x;
+        const dy = cy - b.y;
+
+        if (Math.sqrt(dx * dx + dy * dy) > b.radius + hitboxPadding) return;
+
+        const usedClick = CLICKS.find((c) => c.button === e.button);
+        if (!usedClick) return;
+
+        const wasCorrect = usedClick.id === gameState.ball.required.id;
+        BCI.recordAttempt(sessionAnalytics, usedClick.id, wasCorrect);
+
+        if (wasCorrect) {
+          // Record reaction time (from when this color was assigned → now)
+          const reactionMs = performance.now() - gameState.requireTimestamp;
+          BCI.recordReaction(sessionAnalytics, usedClick.id, reactionMs);
+
+          gameState.correctHits++;
+          gameState.streak++;
+          gameState.phase = 'playing';
+
+          kickTimestamps.push(performance.now());
+          gameState.bursts.push({
+            x: cx,
+            y: cy,
+            color: gameState.ball.required.color,
+            age: 0,
+            maxAge: 24,
+          });
+
+          const lv = speedLevel(gameState.correctHits);
+          const kuBase = appMode === 'practice' ? practiceKickUp() : kickUpForLevel(lv);
+          const ku = kuBase * kickStrengthMult;
+          const minVy = -4 * kickStrengthMult;
+
+          b.vx = Math.max(-9, Math.min(9, -dx * 0.2));
+          b.vy = Math.min(minVy, ku + Math.max(0, dy * 0.1));
+
+          b.required = randomClick();
+          gameState.requireTimestamp = performance.now(); // reset clock for next color
+          gameState.correctFlash = CONFIG.CORRECT_FLASH_FRAMES;
+        } else {
+          gameState.wrongHits++;
+          gameState.streak = 0;
+          gameState.wrongFlash = CONFIG.WRONG_FLASH_FRAMES;
+        }
+      });
+
+      // ── Tab switching ──────────────────────────────────────────────
+      document.querySelectorAll('.adv-tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          activeAdvTab = tab;
+          document.querySelectorAll('.adv-tab-btn').forEach((b) => b.classList.remove('active'));
+          document
+            .querySelectorAll('.adv-tab-content')
+            .forEach((c) => c.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`tab-${tab}`).classList.add('active');
+          if (tab === 'analytics') updateAdvAnalytics();
+        });
+      });
+
+      // ── Advanced Settings open/close ───────────────────────────────
+      function openAdv() {
+        advOpen = true;
+        document.getElementById('adv-practice-only').style.display =
+          appMode === 'practice' ? 'block' : 'none';
+        document.getElementById('adv-overlay').style.display = 'flex';
+        if (activeAdvTab === 'analytics') updateAdvAnalytics();
+      }
+
+      function closeAdv() {
+        advOpen = false;
+        document.getElementById('adv-overlay').style.display = 'none';
+      }
+
+      document.getElementById('btn-adv').addEventListener('click', openAdv);
+      document.getElementById('btn-adv-g').addEventListener('click', openAdv);
+      document.getElementById('adv-close').addEventListener('click', closeAdv);
+
+      document.getElementById('adv-overlay').addEventListener('mousedown', (e) => {
+        if (e.target === document.getElementById('adv-overlay')) closeAdv();
+      });
+
+      // ── Physics sliders ────────────────────────────────────────────
+      document.getElementById('p-size-slider').addEventListener('input', (e) => {
+        practice.sizeLevel = parseInt(e.target.value, 10);
+        document.getElementById('p-size-val').textContent = practice.sizeLevel;
+        if (gameState.ball) gameState.ball.radius = practiceRadius();
+      });
+
+      document.getElementById('p-grav-slider').addEventListener('input', (e) => {
+        practice.gravLevel = parseInt(e.target.value, 10);
+        document.getElementById('p-grav-val').textContent = practice.gravLevel;
+      });
+
+      document.getElementById('kick-strength-slider').addEventListener('input', (e) => {
+        kickStrengthMult = parseInt(e.target.value, 10) / 100;
+        document.getElementById('kick-strength-val').textContent =
+          kickStrengthMult.toFixed(1) + '×';
+      });
+
+      document.getElementById('hitbox-slider').addEventListener('input', (e) => {
+        hitboxPadding = parseInt(e.target.value, 10);
+        document.getElementById('hitbox-val').textContent = hitboxPadding;
+      });
+
+      // ── Click toggles (saved as per-game overrides) ────────────────
+      [0, 1, 2].forEach((id) => {
+        document.getElementById(`toggle-${id}`).addEventListener('change', (e) => {
+          practice.enabled[id] = e.target.checked;
+          if (!e.target.checked && gameState.ball && gameState.ball.required.id === id) {
+            gameState.ball.required = randomClick();
+          }
+          const current = BCI.getGameSettings('hackey-sac');
+          const enabledClicks = {
+            ...(current.enabledClicks || practice.enabled),
+            [id]: e.target.checked,
+          };
+          BCI.saveGameSettings('hackey-sac', { enabledClicks });
+        });
+      });
+
+      // ── Cursor sensitivity slider (saved as per-game override) ─────
+      document.getElementById('cursor-sens-slider').addEventListener('input', (e) => {
+        const sens = parseInt(e.target.value, 10) / 100;
+        cursor.setSensitivity(sens);
+        document.getElementById('cursor-sens-val').textContent = sens.toFixed(2) + '×';
+        BCI.saveGameSettings('hackey-sac', { cursorSensitivity: sens });
+      });
+
+      // ── In-settings analytics display ─────────────────────────────
+      function updateAdvAnalytics() {
+        const tbody = document.getElementById('adv-analytics-body');
+        tbody.innerHTML = '';
+        CLICKS.forEach((c) => {
+          const f = sessionAnalytics.fingers[c.id];
+          const acc = f.attempts > 0 ? Math.round((f.correct / f.attempts) * 100) + '%' : '—';
+          const avgH =
+            f.holds.length > 0
+              ? Math.round(f.holds.reduce((a, b) => a + b, 0) / f.holds.length) + 'ms'
+              : '—';
+          const avgR =
+            f.reactions.length > 0
+              ? Math.round(f.reactions.reduce((a, b) => a + b, 0) / f.reactions.length) + 'ms'
+              : '—';
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            `<td><span class="adv-dot" style="background:${c.color}"></span>${c.name}</td>` +
+            `<td>${f.attempts}</td><td>${f.correct}</td><td>${acc}</td><td>${avgH}</td><td>${avgR}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // ── Main menu analytics screen ─────────────────────────────────
+      // ── Session history ────────────────────────────────────────────
+      function loadSessionHistory() {
+        return BCI.getSessionHistory('hackey-sac');
+      }
+
+      function renderSessionHistory() {
+        const list = document.getElementById('session-history-list');
+        const history = loadSessionHistory();
+        list.innerHTML = '';
+
+        if (history.length === 0) {
+          list.innerHTML =
+            '<div class="session-history-empty">No sessions yet.<br>Complete a practice or game session to see your history here.</div>';
+          return;
+        }
+
+        history.forEach((entry) => {
+          const totalAtt = Object.values(entry.fingers).reduce((a, f) => a + f.attempts, 0);
+          const item = document.createElement('div');
+          item.className = 'session-item';
+          item.dataset.id = entry.id;
+          item.innerHTML =
+            `<div class="session-item-date">${entry.dateStr}</div>` +
+            `<div class="session-item-meta">` +
+            `<span class="session-mode-badge ${entry.mode}">${entry.mode}</span>` +
+            `<span class="session-score">` +
+            `<span class="s-ok">&#10003; ${entry.correctHits}</span>` +
+            `&nbsp;&nbsp;<span class="s-bad">&#10005; ${entry.wrongHits}</span>` +
+            `</span>` +
+            `</div>`;
+          item.addEventListener('click', () => openSessionDetail(entry));
+          list.appendChild(item);
+        });
+      }
+
+      function openSessionDetail(entry) {
+        document.getElementById('session-detail-title').textContent =
+          entry.dateStr + '  ·  ' + entry.mode.toUpperCase();
+
+        const body = document.getElementById('session-detail-body');
+        body.innerHTML = '';
+
+        // Summary rows
+        const summaryLabel = document.createElement('div');
+        summaryLabel.className = 'detail-section-label';
+        summaryLabel.textContent = 'Session Summary';
+        body.appendChild(summaryLabel);
+
+        const totalCorrect = entry.correctHits;
+        const totalWrong = entry.wrongHits;
+        const totalAtt = totalCorrect + totalWrong;
+        const overallAcc = totalAtt > 0 ? Math.round((totalCorrect / totalAtt) * 100) + '%' : '—';
+
+        [
+          ['Correct Kicks', totalCorrect],
+          ['Wrong Clicks', totalWrong],
+          ['Overall Accuracy', overallAcc],
+          ['Best Streak', entry.bestStreak],
+        ].forEach(([label, val]) => {
+          const row = document.createElement('div');
+          row.className = 'detail-stat-row';
+          row.innerHTML = `<span class="detail-stat-label">${label}</span><span>${val}</span>`;
+          body.appendChild(row);
+        });
+
+        // Per-finger breakdown
+        const fingerLabel = document.createElement('div');
+        fingerLabel.className = 'detail-section-label';
+        fingerLabel.textContent = 'Per-Finger Breakdown';
+        body.appendChild(fingerLabel);
+
+        const table = document.createElement('table');
+        table.className = 'analytics-table';
+        table.style.fontSize = '11px';
+        table.innerHTML = `<thead><tr>
       <th>Finger</th><th>Att</th><th>OK</th><th>Acc</th><th>Avg Hold</th><th>Avg React</th>
     </tr></thead>`;
-  const tbody = document.createElement('tbody');
+        const tbody = document.createElement('tbody');
 
-  CLICKS.forEach(c => {
-    const f   = entry.fingers[c.id];
-    const acc = f.attempts > 0 ? Math.round(f.correct / f.attempts * 100) + '%' : '—';
-    const hld = f.avgHoldMs     != null ? f.avgHoldMs     + 'ms' : '—';
-    const rct = f.avgReactionMs != null ? f.avgReactionMs + 'ms' : '—';
-    const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td><span class="analytics-dot" style="background:${c.color}"></span>${c.name}</td>` +
-      `<td>${f.attempts}</td><td>${f.correct}</td><td>${acc}</td><td>${hld}</td><td>${rct}</td>`;
-    tbody.appendChild(tr);
-  });
+        CLICKS.forEach((c) => {
+          const f = entry.fingers[c.id];
+          const acc = f.attempts > 0 ? Math.round((f.correct / f.attempts) * 100) + '%' : '—';
+          const hld = f.avgHoldMs != null ? f.avgHoldMs + 'ms' : '—';
+          const rct = f.avgReactionMs != null ? f.avgReactionMs + 'ms' : '—';
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            `<td><span class="analytics-dot" style="background:${c.color}"></span>${c.name}</td>` +
+            `<td>${f.attempts}</td><td>${f.correct}</td><td>${acc}</td><td>${hld}</td><td>${rct}</td>`;
+          tbody.appendChild(tr);
+        });
 
-  table.appendChild(tbody);
-  body.appendChild(table);
+        table.appendChild(tbody);
+        body.appendChild(table);
 
-  document.getElementById('session-detail-modal').style.display = 'flex';
-}
+        document.getElementById('session-detail-modal').style.display = 'flex';
+      }
 
-function closeSessionDetail() {
-  document.getElementById('session-detail-modal').style.display = 'none';
-}
+      function closeSessionDetail() {
+        document.getElementById('session-detail-modal').style.display = 'none';
+      }
 
-document.getElementById('session-detail-close').addEventListener('click', closeSessionDetail);
+      document.getElementById('session-detail-close').addEventListener('click', closeSessionDetail);
 
-document.getElementById('session-detail-modal').addEventListener('mousedown', e => {
-  if (e.target === document.getElementById('session-detail-modal')) closeSessionDetail();
-});
+      document.getElementById('session-detail-modal').addEventListener('mousedown', (e) => {
+        if (e.target === document.getElementById('session-detail-modal')) closeSessionDetail();
+      });
 
-function showAnalyticsScreen() {
-  document.getElementById('menu-screen').style.display      = 'none';
-  document.getElementById('analytics-screen').style.display = 'flex';
-  refreshAnalyticsScreen();
-}
+      function showAnalyticsScreen() {
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('analytics-screen').style.display = 'flex';
+        refreshAnalyticsScreen();
+      }
 
-function hideAnalyticsScreen() {
-  document.getElementById('analytics-screen').style.display = 'none';
-  document.getElementById('menu-screen').style.display      = 'flex';
-}
+      function hideAnalyticsScreen() {
+        document.getElementById('analytics-screen').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'flex';
+      }
 
-function refreshAnalyticsScreen() {
-  const pa    = BCI.getAllTimeStats('hackey-sac');
-  const tbody = document.getElementById('analytics-all-time-body');
-  tbody.innerHTML = '';
+      function refreshAnalyticsScreen() {
+        const pa = BCI.getAllTimeStats('hackey-sac');
+        const tbody = document.getElementById('analytics-all-time-body');
+        tbody.innerHTML = '';
 
-  CLICKS.forEach(c => {
-    const f    = pa.fingers[c.id];
-    const acc  = f.attempts > 0
-      ? Math.round(f.correct / f.attempts * 100) + '%'
-      : '—';
-    const avgH = (f.correct > 0 && f.totalHoldMs > 0)
-      ? Math.round(f.totalHoldMs / f.correct) + 'ms'
-      : '—';
-    const avgR = (f.correct > 0 && f.totalReactionMs > 0)
-      ? Math.round(f.totalReactionMs / f.correct) + 'ms'
-      : '—';
-    const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td><span class="analytics-dot" style="background:${c.color}"></span>${c.name} (${c.label})</td>` +
-      `<td>${f.attempts}</td><td>${f.correct}</td><td>${acc}</td><td>${avgH}</td><td>${avgR}</td>`;
-    tbody.appendChild(tr);
-  });
+        CLICKS.forEach((c) => {
+          const f = pa.fingers[c.id];
+          const acc = f.attempts > 0 ? Math.round((f.correct / f.attempts) * 100) + '%' : '—';
+          const avgH =
+            f.correct > 0 && f.totalHoldMs > 0 ? Math.round(f.totalHoldMs / f.correct) + 'ms' : '—';
+          const avgR =
+            f.correct > 0 && f.totalReactionMs > 0
+              ? Math.round(f.totalReactionMs / f.correct) + 'ms'
+              : '—';
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            `<td><span class="analytics-dot" style="background:${c.color}"></span>${c.name} (${c.label})</td>` +
+            `<td>${f.attempts}</td><td>${f.correct}</td><td>${acc}</td><td>${avgH}</td><td>${avgR}</td>`;
+          tbody.appendChild(tr);
+        });
 
-  const totalAtt = Object.values(pa.fingers).reduce((a, f) => a + f.attempts, 0);
-  const totalOk  = Object.values(pa.fingers).reduce((a, f) => a + f.correct,  0);
-  const overallAcc = totalAtt > 0
-    ? Math.round(totalOk / totalAtt * 100) + '%'
-    : '—';
+        const totalAtt = Object.values(pa.fingers).reduce((a, f) => a + f.attempts, 0);
+        const totalOk = Object.values(pa.fingers).reduce((a, f) => a + f.correct, 0);
+        const overallAcc = totalAtt > 0 ? Math.round((totalOk / totalAtt) * 100) + '%' : '—';
 
-  document.getElementById('analytics-totals-body').innerHTML =
-    `<tr><td style="color:#7d8590">Total Attempts</td><td>${totalAtt}</td></tr>` +
-    `<tr><td style="color:#7d8590">Total Correct</td><td>${totalOk}</td></tr>` +
-    `<tr><td style="color:#7d8590">Overall Accuracy</td><td>${overallAcc}</td></tr>`;
+        document.getElementById('analytics-totals-body').innerHTML =
+          `<tr><td style="color:#7d8590">Total Attempts</td><td>${totalAtt}</td></tr>` +
+          `<tr><td style="color:#7d8590">Total Correct</td><td>${totalOk}</td></tr>` +
+          `<tr><td style="color:#7d8590">Overall Accuracy</td><td>${overallAcc}</td></tr>`;
 
-  renderAnalyticsInsights(pa, totalAtt);
-  renderSessionHistory();
-}
+        renderAnalyticsInsights(pa, totalAtt);
+        renderSessionHistory();
+      }
 
-function renderAnalyticsInsights(pa, totalAtt) {
-  const el = document.getElementById('analytics-insights-body');
-  if (!el) return;
-  const lines = [];
+      function renderAnalyticsInsights(pa, totalAtt) {
+        const el = document.getElementById('analytics-insights-body');
+        if (!el) return;
+        const lines = [];
 
-  // Find slowest reaction finger
-  const reactFingers = CLICKS
-    .map(c => ({ c, avg: pa.fingers[c.id].correct > 0 ? pa.fingers[c.id].totalReactionMs / pa.fingers[c.id].correct : null }))
-    .filter(x => x.avg !== null);
-  if (reactFingers.length >= 2) {
-    reactFingers.sort((a, b) => b.avg - a.avg);
-    const slow = reactFingers[0];
-    const fast = reactFingers[reactFingers.length - 1];
-    const diff = Math.round(slow.avg - fast.avg);
-    if (diff > 100) {
-      lines.push(`<span style="color:${slow.c.color}">${slow.c.name}</span> reacts ~${diff}ms slower than <span style="color:${fast.c.color}">${fast.c.name}</span>. Consider lowering Gravity so the ball stays up longer when using that finger.`);
-    }
-  }
+        // Find slowest reaction finger
+        const reactFingers = CLICKS.map((c) => ({
+          c,
+          avg:
+            pa.fingers[c.id].correct > 0
+              ? pa.fingers[c.id].totalReactionMs / pa.fingers[c.id].correct
+              : null,
+        })).filter((x) => x.avg !== null);
+        if (reactFingers.length >= 2) {
+          reactFingers.sort((a, b) => b.avg - a.avg);
+          const slow = reactFingers[0];
+          const fast = reactFingers[reactFingers.length - 1];
+          const diff = Math.round(slow.avg - fast.avg);
+          if (diff > 100) {
+            lines.push(
+              `<span style="color:${slow.c.color}">${slow.c.name}</span> reacts ~${diff}ms slower than <span style="color:${fast.c.color}">${fast.c.name}</span>. Consider lowering Gravity so the ball stays up longer when using that finger.`
+            );
+          }
+        }
 
-  // Find lowest accuracy finger
-  const accFingers = CLICKS
-    .map(c => ({ c, acc: pa.fingers[c.id].attempts > 0 ? pa.fingers[c.id].correct / pa.fingers[c.id].attempts : null }))
-    .filter(x => x.acc !== null && pa.fingers[x.c.id].attempts >= 5);
-  if (accFingers.length >= 2) {
-    accFingers.sort((a, b) => a.acc - b.acc);
-    const weakest = accFingers[0];
-    if (weakest.acc < 0.7) {
-      lines.push(`<span style="color:${weakest.c.color}">${weakest.c.name}</span> accuracy is ${Math.round(weakest.acc * 100)}%. Try enabling only that click (Active Clicks) and practicing it in isolation.`);
-    }
-  }
+        // Find lowest accuracy finger
+        const accFingers = CLICKS.map((c) => ({
+          c,
+          acc:
+            pa.fingers[c.id].attempts > 0
+              ? pa.fingers[c.id].correct / pa.fingers[c.id].attempts
+              : null,
+        })).filter((x) => x.acc !== null && pa.fingers[x.c.id].attempts >= 5);
+        if (accFingers.length >= 2) {
+          accFingers.sort((a, b) => a.acc - b.acc);
+          const weakest = accFingers[0];
+          if (weakest.acc < 0.7) {
+            lines.push(
+              `<span style="color:${weakest.c.color}">${weakest.c.name}</span> accuracy is ${Math.round(weakest.acc * 100)}%. Try enabling only that click (Active Clicks) and practicing it in isolation.`
+            );
+          }
+        }
 
-  // Find longest hold finger
-  const holdFingers = CLICKS
-    .map(c => ({ c, avg: pa.fingers[c.id].correct > 0 ? pa.fingers[c.id].totalHoldMs / pa.fingers[c.id].correct : null }))
-    .filter(x => x.avg !== null);
-  if (holdFingers.length >= 2) {
-    holdFingers.sort((a, b) => b.avg - a.avg);
-    const longest = holdFingers[0];
-    const shortest = holdFingers[holdFingers.length - 1];
-    const holdDiff = Math.round(longest.avg - shortest.avg);
-    if (holdDiff > 60) {
-      lines.push(`<span style="color:${longest.c.color}">${longest.c.name}</span> holds ~${holdDiff}ms longer than <span style="color:${shortest.c.color}">${shortest.c.name}</span>. If your BCI has a hold-duration threshold, you may want to adjust it for that finger.`);
-    }
-  }
+        // Find longest hold finger
+        const holdFingers = CLICKS.map((c) => ({
+          c,
+          avg:
+            pa.fingers[c.id].correct > 0
+              ? pa.fingers[c.id].totalHoldMs / pa.fingers[c.id].correct
+              : null,
+        })).filter((x) => x.avg !== null);
+        if (holdFingers.length >= 2) {
+          holdFingers.sort((a, b) => b.avg - a.avg);
+          const longest = holdFingers[0];
+          const shortest = holdFingers[holdFingers.length - 1];
+          const holdDiff = Math.round(longest.avg - shortest.avg);
+          if (holdDiff > 60) {
+            lines.push(
+              `<span style="color:${longest.c.color}">${longest.c.name}</span> holds ~${holdDiff}ms longer than <span style="color:${shortest.c.color}">${shortest.c.name}</span>. If your BCI has a hold-duration threshold, you may want to adjust it for that finger.`
+            );
+          }
+        }
 
-  if (lines.length === 0) {
-    el.innerHTML = totalAtt < 10
-      ? '<div style="color:#7d8590;font-size:11px;">Play a few sessions to generate insights.</div>'
-      : '<div style="color:#6bc46b;font-size:11px;">All fingers look balanced. Keep playing to refine these numbers.</div>';
-  } else {
-    el.innerHTML = lines.map(l => `<div style="font-size:11px;color:#e8e4d9;margin-bottom:8px;line-height:1.5;">${l}</div>`).join('');
-  }
-}
+        if (lines.length === 0) {
+          el.innerHTML =
+            totalAtt < 10
+              ? '<div style="color:#7d8590;font-size:11px;">Play a few sessions to generate insights.</div>'
+              : '<div style="color:#6bc46b;font-size:11px;">All fingers look balanced. Keep playing to refine these numbers.</div>';
+        } else {
+          el.innerHTML = lines
+            .map(
+              (l) =>
+                `<div style="font-size:11px;color:#e8e4d9;margin-bottom:8px;line-height:1.5;">${l}</div>`
+            )
+            .join('');
+        }
+      }
 
+      document.getElementById('btn-analytics-menu').addEventListener('click', showAnalyticsScreen);
+      document.getElementById('btn-analytics-back').addEventListener('click', hideAnalyticsScreen);
 
-document.getElementById('btn-analytics-menu').addEventListener('click', showAnalyticsScreen);
-document.getElementById('btn-analytics-back').addEventListener('click', hideAnalyticsScreen);
+      document.getElementById('btn-clear-analytics').addEventListener('click', () => {
+        BCI.clearAnalytics('hackey-sac');
+        refreshAnalyticsScreen();
+      });
 
-document.getElementById('btn-clear-analytics').addEventListener('click', () => {
-  BCI.clearAnalytics('hackey-sac');
-  refreshAnalyticsScreen();
-});
+      // ── Apply effective settings (global + any per-game overrides) ─
+      function applyEffectiveSettings() {
+        const s = BCI.getEffectiveSettings('hackey-sac');
 
-// ── Apply effective settings (global + any per-game overrides) ─
-function applyEffectiveSettings() {
-  const s = BCI.getEffectiveSettings('hackey-sac');
+        cursor.setSensitivity(s.cursorSensitivity);
+        document.getElementById('cursor-sens-slider').value = Math.round(s.cursorSensitivity * 100);
+        document.getElementById('cursor-sens-val').textContent =
+          s.cursorSensitivity.toFixed(2) + '×';
 
-  cursor.setSensitivity(s.cursorSensitivity);
-  document.getElementById('cursor-sens-slider').value       = Math.round(s.cursorSensitivity * 100);
-  document.getElementById('cursor-sens-val').textContent    = s.cursorSensitivity.toFixed(2) + '×';
+        practice.enabled = { ...s.enabledClicks };
+        [0, 1, 2].forEach((id) => {
+          document.getElementById(`toggle-${id}`).checked = !!s.enabledClicks[id];
+        });
+      }
 
-  practice.enabled = { ...s.enabledClicks };
-  [0, 1, 2].forEach(id => {
-    document.getElementById(`toggle-${id}`).checked = !!s.enabledClicks[id];
-  });
-}
+      // ── Responsive scaling (from shared/bci-shell.js) ──────────────
+      // The canvas has a fixed internal resolution (460x620) so all game
+      // math is unchanged. BCI.createViewportFitter scales the wrapper
+      // visually via CSS transform to fill the viewport at any size.
+      const viewportFitter = BCI.createViewportFitter(document.getElementById('wrapper'));
 
-// ── Responsive scaling ─────────────────────────────────────────
-// The canvas has a fixed internal resolution (460x620) so all game math
-// stays unchanged. This function scales the whole wrapper visually via
-// CSS transform so it fills the viewport at any window size.
-function fitGameToViewport() {
-  const wrapper = document.getElementById('wrapper');
-  if (!wrapper || getComputedStyle(wrapper).display === 'none') return;
+      // ── Mode navigation ────────────────────────────────────────────
+      function startMode(mode) {
+        appMode = mode;
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('analytics-screen').style.display = 'none';
+        document.getElementById('wrapper').style.display = 'grid';
+        document.getElementById('sidebar-practice').style.display =
+          mode === 'practice' ? 'flex' : 'none';
+        document.getElementById('sidebar-game').style.display = mode === 'game' ? 'flex' : 'none';
 
-  // Measure natural size with no transform applied
-  wrapper.style.transform = 'none';
-  const rect = wrapper.getBoundingClientRect();
-  const natW = rect.width;
-  const natH = rect.height;
-  if (natW === 0 || natH === 0) return;
+        document.getElementById('b-speed-cell').style.display = mode === 'game' ? 'flex' : 'none';
+        document.getElementById('b-rate-label').textContent =
+          mode === 'practice' ? 'Kicks / Min' : 'Kicks / 10s';
 
-  // Fit to 92% of viewport, cap so it never gets absurdly large
-  const maxW = window.innerWidth  * 0.92;
-  const maxH = window.innerHeight * 0.92;
-  const scale = Math.min(maxW / natW, maxH / natH, 2.2);
+        lastTime = null;
+        advOpen = false;
+        applyEffectiveSettings();
+        initState();
+        viewportFitter.fit();
+      }
 
-  wrapper.style.transform = `scale(${scale})`;
-}
+      document
+        .getElementById('btn-practice-menu')
+        .addEventListener('click', () => startMode('practice'));
+      document.getElementById('btn-game-menu').addEventListener('click', () => startMode('game'));
+      document.getElementById('btn-launcher').addEventListener('click', () => BCI.goToLauncher());
 
-window.addEventListener('resize', fitGameToViewport);
+      document.getElementById('btn-back').addEventListener('click', () => {
+        saveSessionToPersistent();
+        closeAdv();
+        document.getElementById('wrapper').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'flex';
+        appMode = 'menu';
+      });
 
-// ── Mode navigation ────────────────────────────────────────────
-function startMode(mode) {
-  appMode = mode;
-  document.getElementById('menu-screen').style.display      = 'none';
-  document.getElementById('analytics-screen').style.display = 'none';
-  document.getElementById('wrapper').style.display          = 'grid';
-  document.getElementById('sidebar-practice').style.display = mode === 'practice' ? 'flex' : 'none';
-  document.getElementById('sidebar-game').style.display     = mode === 'game'     ? 'flex' : 'none';
+      // ── Game loop ──────────────────────────────────────────────────
+      function loop(timestamp) {
+        if (lastTime === null) lastTime = timestamp;
+        const dt = Math.min((timestamp - lastTime) / (1000 / 60), 3);
+        lastTime = timestamp;
 
-  document.getElementById('b-speed-cell').style.display = mode === 'game' ? 'flex' : 'none';
-  document.getElementById('b-rate-label').textContent   = mode === 'practice' ? 'Kicks / Min' : 'Kicks / 10s';
+        if (appMode !== 'menu') {
+          update(dt);
+          draw();
+        }
 
-  lastTime = null;
-  advOpen  = false;
-  applyEffectiveSettings();
-  initState();
-  fitGameToViewport();
-}
+        requestAnimationFrame(loop);
+      }
 
-document.getElementById('btn-practice-menu').addEventListener('click', () => startMode('practice'));
-document.getElementById('btn-game-menu').addEventListener('click',     () => startMode('game'));
-document.getElementById('btn-launcher').addEventListener('click',      () => {
-  window.location.href = '../../index.html';
-});
-
-document.getElementById('btn-back').addEventListener('click', () => {
-  saveSessionToPersistent();
-  closeAdv();
-  document.getElementById('wrapper').style.display     = 'none';
-  document.getElementById('menu-screen').style.display = 'flex';
-  appMode = 'menu';
-});
-
-// ── Game loop ──────────────────────────────────────────────────
-function loop(timestamp) {
-  if (lastTime === null) lastTime = timestamp;
-  const dt = Math.min((timestamp - lastTime) / (1000 / 60), 3);
-  lastTime = timestamp;
-
-  if (appMode !== 'menu') {
-    update(dt);
-    draw();
-  }
-
-  requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
-</script>
-</body>
+      requestAnimationFrame(loop);
+    </script>
+  </body>
 </html>

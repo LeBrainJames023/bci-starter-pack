@@ -42,4 +42,4 @@ The game world, environment, and overall aesthetic are free to look however fits
 
 ---
 
-*Add to this guide as new standards are established.*
+_Add to this guide as new standards are established._

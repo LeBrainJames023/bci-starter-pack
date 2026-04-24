@@ -15,26 +15,30 @@
 window.BCI = window.BCI || {};
 
 BCI.DEFAULT_GLOBAL_SETTINGS = {
-  cursorSensitivity: 1.0,            // 0.25 – 2.0
-  enabledClicks:     { 0: true, 1: true, 2: true }, // blue, purple, orange
+  cursorSensitivity: 1.0, // 0.25 – 2.0
+  enabledClicks: { 0: true, 1: true, 2: true }, // blue, purple, orange
 };
 
-const GLOBAL_KEY      = 'bciGlobalSettings';
+const GLOBAL_KEY = 'bciGlobalSettings';
 const GAME_KEY_PREFIX = 'bciGameSettings:';
 
 function safeParse(raw, fallback) {
-  try { return JSON.parse(raw) ?? fallback; } catch { return fallback; }
+  try {
+    return JSON.parse(raw) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 BCI.getGlobalSettings = function () {
-  const raw   = localStorage.getItem(GLOBAL_KEY);
+  const raw = localStorage.getItem(GLOBAL_KEY);
   const saved = safeParse(raw, {});
   return { ...BCI.DEFAULT_GLOBAL_SETTINGS, ...saved };
 };
 
 BCI.saveGlobalSettings = function (patch) {
   const current = BCI.getGlobalSettings();
-  const merged  = { ...current, ...patch };
+  const merged = { ...current, ...patch };
   localStorage.setItem(GLOBAL_KEY, JSON.stringify(merged));
   return merged;
 };
@@ -46,7 +50,7 @@ BCI.getGameSettings = function (gameId) {
 
 BCI.saveGameSettings = function (gameId, patch) {
   const current = BCI.getGameSettings(gameId);
-  const merged  = { ...current, ...patch };
+  const merged = { ...current, ...patch };
   localStorage.setItem(GAME_KEY_PREFIX + gameId, JSON.stringify(merged));
   return merged;
 };
@@ -58,6 +62,6 @@ BCI.clearGameSettings = function (gameId) {
 /* Effective settings = global defaults with per-game overrides applied on top */
 BCI.getEffectiveSettings = function (gameId) {
   const global = BCI.getGlobalSettings();
-  const game   = BCI.getGameSettings(gameId);
+  const game = BCI.getGameSettings(gameId);
   return { ...global, ...game };
 };

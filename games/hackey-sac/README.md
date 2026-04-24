@@ -8,11 +8,11 @@ Open `index.html` in any modern browser. No installation or server required.
 
 ## BCI Input Mapping
 
-| Finger | Click | Color | Label |
-|--------|-------|-------|-------|
-| Pointer (index) | Left click | Blue | P |
-| Ring | Middle click | Purple | M |
-| Middle | Right click | Orange | R |
+| Finger          | Click        | Color  | Label |
+| --------------- | ------------ | ------ | ----- |
+| Pointer (index) | Left click   | Blue   | P     |
+| Ring            | Middle click | Purple | M     |
+| Middle          | Right click  | Orange | R     |
 
 A colored ball falls due to gravity. Match the ball's color with the correct click to kick it back up. Clicking the left side of the ball sends it right; clicking the right side sends it left.
 
@@ -23,10 +23,10 @@ A colored ball falls due to gravity. Match the ball's color with the correct cli
 
 ## Settings (in-game ⚙ button)
 
-| Tab | Options |
-|-----|---------|
-| Physics | Ball Size, Gravity, Kick Strength, Hitbox Size |
-| Input | Active Clicks (per finger on/off), Cursor Sensitivity |
+| Tab       | Options                                                     |
+| --------- | ----------------------------------------------------------- |
+| Physics   | Ball Size, Gravity, Kick Strength, Hitbox Size              |
+| Input     | Active Clicks (per finger on/off), Cursor Sensitivity       |
 | Analytics | Live session stats — accuracy, hold duration, reaction time |
 
 ## Analytics (main menu)

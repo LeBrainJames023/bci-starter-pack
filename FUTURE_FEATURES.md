@@ -8,6 +8,7 @@ Nothing in this file gets built until the current feature is complete.
 ## Planned Games
 
 ### BCI Hoops (Basketball)
+
 - Floating cursor controls a glowing basketball
 - Rotating backboard/rim with 3 colored zones
 - Click matching color to shoot when ball is near the right zone
@@ -15,6 +16,7 @@ Nothing in this file gets built until the current feature is complete.
 - Analytics: per-click accuracy on different rim positions, reaction time, hold time
 
 ### BCI QB Targets (Football)
+
 - Cursor acts as quarterback aim
 - Moving receiver targets pop up with 3 colors/symbols
 - Click matching color/intent to throw before the window closes
@@ -22,16 +24,19 @@ Nothing in this file gets built until the current feature is complete.
 - Analytics: accuracy per target type, reaction time, success under speed pressure
 
 ### BCI Goalie / Striker (Soccer)
+
 - Two modes: Goalie (block incoming colored shots) and Striker (kick colored balls at goal)
 - Ball trajectory affected by which click is used
 - Analytics: blocks vs goals, reaction to shot color, cursor travel distance
 
 ### BCI Batter / Pitcher (Baseball)
+
 - Batter: color-coded pitch types, click matching intent at the right moment
 - Pitcher: control pitch type/speed by timing which click you use
 - Analytics: hit accuracy per pitch type, reaction to pitch color, streak tracking
 
 ### Golf
+
 - Putt-putt style through to full driving range
 - Click timing and hold duration control swing power and distance
 - Different clicks for club selection (chip, iron, driver)
@@ -39,6 +44,7 @@ Nothing in this file gets built until the current feature is complete.
 - Analytics: shot accuracy per club type, power consistency, distance control
 
 ### Hockey
+
 - Slap shot mode and goalie mode
 - Fast puck movement across ice with realistic physics
 - Click timing controls shot power and direction
@@ -46,6 +52,7 @@ Nothing in this file gets built until the current feature is complete.
 - Analytics: shot accuracy, save rate, reaction to puck speed
 
 ### Boxing
+
 - Move cursor to dodge incoming punches
 - Colored targets appear on opponent — click the matching intent to strike
 - Round-based with rest between rounds
@@ -53,6 +60,7 @@ Nothing in this file gets built until the current feature is complete.
 - Analytics: dodge accuracy, strike accuracy per color, reaction time under pressure
 
 ### Archery
+
 - Steady the cursor to hold aim on a moving or static target
 - Click timing determines release — too early or late affects trajectory
 - Wind and distance variables add challenge
@@ -60,23 +68,27 @@ Nothing in this file gets built until the current feature is complete.
 - Analytics: grouping accuracy, hold steadiness, release timing consistency
 
 ### BCI Rally (Tennis / Badminton)
+
 - Side-view court, cursor controls racket
 - Incoming shots with 3 colors, click matching color to return with spin/angle
 - Badminton variant: slower, higher arcs for more float time
 - Analytics: return accuracy per color, rally length, cursor positioning precision
 
 ### BCI Range (Sniper / Target Practice)
+
 - Cursor scans left/right across a range or facade
 - Targets pop up in windows with color codes
 - Friendlies must NOT be clicked — adds decision-making layer
 - Analytics: hit rate per color, false positives, reaction time, cursor scan speed
 
 ### Tower Defense
+
 - Wave-based click strategy game
 - Place and upgrade towers using click inputs
 - BCI-friendly large click targets for all placements
 
 ### Side Scroller
+
 - Action platformer with click-based movement/attack
 - Designed around BCI cursor and click constraints
 

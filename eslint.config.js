@@ -1,28 +1,34 @@
 import js from '@eslint/js';
 
+const browserGlobals = {
+  window: 'readonly',
+  document: 'readonly',
+  localStorage: 'readonly',
+  requestAnimationFrame: 'readonly',
+  performance: 'readonly',
+  console: 'readonly',
+  setTimeout: 'readonly',
+  clearTimeout: 'readonly',
+  getComputedStyle: 'readonly',
+};
+
 export default [
   js.configs.recommended,
   {
-    rules: {
-      'no-unused-vars': 'warn',
-      'no-console': 'off',
-    },
+    // Shared BCI modules are classic scripts loaded via <script> tags.
+    // They attach everything to the global BCI object.
+    files: ['shared/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',
       globals: {
-        document: 'readonly',
-        window: 'readonly',
-        localStorage: 'readonly',
-        requestAnimationFrame: 'readonly',
-        performance: 'readonly',
-        console: 'readonly',
-        Math: 'readonly',
-        JSON: 'readonly',
-        Date: 'readonly',
-        parseInt: 'readonly',
-        parseFloat: 'readonly',
+        ...browserGlobals,
+        BCI: 'writable',
       },
+    },
+    rules: {
+      'no-unused-vars': 'warn',
+      'no-console': 'off',
     },
   },
   {

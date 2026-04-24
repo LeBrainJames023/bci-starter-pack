@@ -20,11 +20,15 @@
 window.BCI = window.BCI || {};
 
 const ALL_TIME_PREFIX = 'bciAllTime:';
-const HISTORY_PREFIX  = 'bciSessionHistory:';
-const MAX_HISTORY     = 10;
+const HISTORY_PREFIX = 'bciSessionHistory:';
+const MAX_HISTORY = 10;
 
 function safeParse(raw, fallback) {
-  try { return JSON.parse(raw) ?? fallback; } catch { return fallback; }
+  try {
+    return JSON.parse(raw) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function emptyFinger() {
@@ -84,9 +88,9 @@ BCI.saveSession = function (gameId, session, extraStats = {}) {
     const s = session.fingers[i];
     if (s.attempts === 0) continue;
     const at = allTime.fingers[i];
-    at.attempts        += s.attempts;
-    at.correct         += s.correct;
-    at.totalHoldMs     += s.holds.reduce((a, b) => a + b, 0);
+    at.attempts += s.attempts;
+    at.correct += s.correct;
+    at.totalHoldMs += s.holds.reduce((a, b) => a + b, 0);
     at.totalReactionMs += s.reactions.reduce((a, b) => a + b, 0);
   }
   localStorage.setItem(allTimeKey, JSON.stringify(allTime));
@@ -99,23 +103,28 @@ BCI.saveSession = function (gameId, session, extraStats = {}) {
   for (let i = 0; i < 3; i++) {
     const f = session.fingers[i];
     fingers[i] = {
-      attempts:      f.attempts,
-      correct:       f.correct,
-      avgHoldMs:     f.holds.length     ? Math.round(f.holds.reduce((a, b) => a + b, 0)     / f.holds.length)     : null,
-      avgReactionMs: f.reactions.length ? Math.round(f.reactions.reduce((a, b) => a + b, 0) / f.reactions.length) : null,
+      attempts: f.attempts,
+      correct: f.correct,
+      avgHoldMs: f.holds.length
+        ? Math.round(f.holds.reduce((a, b) => a + b, 0) / f.holds.length)
+        : null,
+      avgReactionMs: f.reactions.length
+        ? Math.round(f.reactions.reduce((a, b) => a + b, 0) / f.reactions.length)
+        : null,
     };
   }
 
-  const now     = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                + ' · '
-                + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const now = new Date();
+  const dateStr =
+    now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    ' · ' +
+    now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   history.unshift({
-    id:        now.getTime(),
+    id: now.getTime(),
     gameId,
     startedAt: session.startedAt,
-    endedAt:   now.getTime(),
+    endedAt: now.getTime(),
     dateStr,
     fingers,
     ...extraStats,
@@ -137,5 +146,5 @@ BCI.getAllTimeStats = function (gameId) {
 
 BCI.clearAnalytics = function (gameId) {
   localStorage.removeItem(ALL_TIME_PREFIX + gameId);
-  localStorage.removeItem(HISTORY_PREFIX  + gameId);
+  localStorage.removeItem(HISTORY_PREFIX + gameId);
 };
