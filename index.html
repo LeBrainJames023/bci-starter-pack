@@ -92,6 +92,204 @@
     .count-live { color: var(--live-text); }
     .count-soon { color: var(--text-dim); }
 
+    /* ── Header right side (settings + counts) ───────────────── */
+    .hub-right {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+    }
+
+    .settings-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      width: 38px;
+      height: 38px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+
+    .settings-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--click-blue);
+      background: var(--bg-card-hover);
+    }
+
+    /* ── Settings Modal ──────────────────────────────────────── */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 14, 20, 0.84);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      width: 440px;
+      padding: 22px 26px 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      font-weight: bold;
+    }
+
+    .modal-close {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-muted);
+      font-size: 12px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .modal-close:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+    .settings-section { margin-bottom: 20px; }
+    .settings-section:last-of-type { margin-bottom: 16px; }
+
+    .settings-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .settings-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .slider-wrapper { margin-bottom: 4px; }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .slider-range { font-size: 11px; color: var(--text-muted); }
+    .slider-value {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--text-primary);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    input[type=range] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--click-blue);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--click-blue);
+      cursor: pointer;
+      border: none;
+    }
+
+    .click-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .click-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .click-name {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .click-toggle-row input[type=checkbox] {
+      width: 16px; height: 16px;
+      accent-color: var(--click-blue);
+      cursor: pointer;
+    }
+
+    .settings-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .settings-note {
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .settings-reset {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .settings-reset:hover {
+      color: var(--click-orange);
+      border-color: var(--click-orange);
+    }
+
     /* ── Main ────────────────────────────────────────────────── */
     .hub-main {
       max-width: 880px;
@@ -336,11 +534,60 @@
     <div class="hub-title">BCI Starter Pack</div>
     <div class="hub-subtitle">Brain-Computer Interface Training Games</div>
   </div>
-  <div class="hub-counts">
-    <div class="count-live">&#9632; 1 Game Live</div>
-    <div class="count-soon">&#9632; 12 Coming Soon</div>
+  <div class="hub-right">
+    <button id="btn-settings" class="settings-btn" title="Global BCI Settings">&#9881;</button>
+    <div class="hub-counts">
+      <div class="count-live">&#9632; 1 Game Live</div>
+      <div class="count-soon">&#9632; 12 Coming Soon</div>
+    </div>
   </div>
 </header>
+
+<!-- ── Global Settings Modal ─────────────────────────────────── -->
+<div id="settings-modal" class="modal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <div class="modal-title">Global BCI Settings</div>
+      <button class="modal-close" id="settings-close">&#10005;</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Cursor Sensitivity</div>
+      <div class="slider-wrapper">
+        <div class="slider-top">
+          <span class="slider-range">0.25× &nbsp;—&nbsp; 2.0×</span>
+          <span class="slider-value" id="settings-sens-val">1.00×</span>
+        </div>
+        <input type="range" id="settings-sens-slider" min="25" max="200" step="5" value="100">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Enabled Clicks</div>
+      <div class="settings-desc">Turn off any click you don't use. Every game will respect this.</div>
+      <div class="click-toggle-row">
+        <div class="click-dot" style="background: var(--click-blue)"></div>
+        <span class="click-name">Left click &mdash; Blue</span>
+        <input type="checkbox" id="settings-click-0" checked>
+      </div>
+      <div class="click-toggle-row">
+        <div class="click-dot" style="background: var(--click-purple)"></div>
+        <span class="click-name">Middle click &mdash; Purple</span>
+        <input type="checkbox" id="settings-click-1" checked>
+      </div>
+      <div class="click-toggle-row">
+        <div class="click-dot" style="background: var(--click-orange)"></div>
+        <span class="click-name">Right click &mdash; Orange</span>
+        <input type="checkbox" id="settings-click-2" checked>
+      </div>
+    </div>
+
+    <div class="settings-footer">
+      <span class="settings-note">Saves automatically. Individual games can override these per-game.</span>
+      <button class="settings-reset" id="settings-reset">Reset</button>
+    </div>
+  </div>
+</div>
 
 <main class="hub-main">
 
@@ -470,10 +717,65 @@
   <span>Cursor + 1–3 clicks &nbsp;·&nbsp; No keyboard required</span>
 </footer>
 
+<!-- Shared BCI modules -->
+<script src="shared/bci-input.js"></script>
+<script src="shared/bci-settings.js"></script>
+
 <script>
   function openGame(path) {
     window.location.href = path;
   }
+
+  /* ─── Settings modal ─────────────────────────────────────── */
+  const modal       = document.getElementById('settings-modal');
+  const sensSlider  = document.getElementById('settings-sens-slider');
+  const sensVal     = document.getElementById('settings-sens-val');
+  const clickToggle = id => document.getElementById('settings-click-' + id);
+
+  function loadSettingsIntoUI() {
+    const s = BCI.getGlobalSettings();
+    sensSlider.value   = Math.round(s.cursorSensitivity * 100);
+    sensVal.textContent = s.cursorSensitivity.toFixed(2) + '×';
+    [0, 1, 2].forEach(id => { clickToggle(id).checked = !!s.enabledClicks[id]; });
+  }
+
+  function openSettings() {
+    loadSettingsIntoUI();
+    modal.style.display = 'flex';
+  }
+
+  function closeSettings() {
+    modal.style.display = 'none';
+  }
+
+  document.getElementById('btn-settings').addEventListener('click', openSettings);
+  document.getElementById('settings-close').addEventListener('click', closeSettings);
+
+  modal.addEventListener('mousedown', e => {
+    if (e.target === modal) closeSettings();
+  });
+
+  sensSlider.addEventListener('input', e => {
+    const sens = parseInt(e.target.value, 10) / 100;
+    sensVal.textContent = sens.toFixed(2) + '×';
+    BCI.saveGlobalSettings({ cursorSensitivity: sens });
+  });
+
+  [0, 1, 2].forEach(id => {
+    clickToggle(id).addEventListener('change', e => {
+      const current = BCI.getGlobalSettings();
+      const enabledClicks = { ...current.enabledClicks, [id]: e.target.checked };
+      BCI.saveGlobalSettings({ enabledClicks });
+    });
+  });
+
+  document.getElementById('settings-reset').addEventListener('click', () => {
+    BCI.saveGlobalSettings({
+      cursorSensitivity: 1.0,
+      enabledClicks: { 0: true, 1: true, 2: true },
+    });
+    loadSettingsIntoUI();
+  });
 </script>
 
 </body>

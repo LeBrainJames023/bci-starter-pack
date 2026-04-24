@@ -978,6 +978,34 @@
 
 <!-- Shared BCI modules — see /shared/README.md -->
 <script src="../../shared/bci-input.js"></script>
+<script src="../../shared/bci-settings.js"></script>
+<script src="../../shared/bci-analytics.js"></script>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   One-time migration from the legacy localStorage keys to the
+   namespaced keys the shared analytics module uses. Runs once
+   per machine — after that the old keys are gone.
+   ───────────────────────────────────────────────────────────── */
+(function migrateLegacyAnalytics() {
+  const oldAllTime = localStorage.getItem('bciAnalyticsV1');
+  const oldHistory = localStorage.getItem('bciSessionHistoryV1');
+
+  if (oldAllTime) {
+    if (!localStorage.getItem('bciAllTime:hackey-sac')) {
+      localStorage.setItem('bciAllTime:hackey-sac', oldAllTime);
+    }
+    localStorage.removeItem('bciAnalyticsV1');
+  }
+
+  if (oldHistory) {
+    if (!localStorage.getItem('bciSessionHistory:hackey-sac')) {
+      localStorage.setItem('bciSessionHistory:hackey-sac', oldHistory);
+    }
+    localStorage.removeItem('bciSessionHistoryV1');
+  }
+})();
+</script>
 
 <script>
 const canvas = document.getElementById('game');
@@ -1036,96 +1064,21 @@ let kickTimestamps = [];
 let gameState      = {};
 let lastTime       = null;
 
-// ── Analytics ──────────────────────────────────────────────────
-let sessionAnalytics = makeEmptySession();
+// ── Analytics (uses shared/bci-analytics.js) ───────────────────
+let sessionAnalytics = BCI.createSession();
 let pendingHold      = { button: -1, time: 0 };
 let sessionSaved     = false;
 let sessionStartTime = 0;
 
-function makeEmptySession() {
-  return {
-    fingers: {
-      0: { attempts: 0, correct: 0, holds: [], reactions: [] },
-      1: { attempts: 0, correct: 0, holds: [], reactions: [] },
-      2: { attempts: 0, correct: 0, holds: [], reactions: [] },
-    }
-  };
-}
-
-function makeEmptyPersistent() {
-  return {
-    fingers: {
-      0: { attempts: 0, correct: 0, totalHoldMs: 0, totalReactionMs: 0 },
-      1: { attempts: 0, correct: 0, totalHoldMs: 0, totalReactionMs: 0 },
-      2: { attempts: 0, correct: 0, totalHoldMs: 0, totalReactionMs: 0 },
-    }
-  };
-}
-
-function loadPersistentAnalytics() {
-  try {
-    const raw = JSON.parse(localStorage.getItem('bciAnalyticsV1') || 'null') || makeEmptyPersistent();
-    // Migrate older saves that lack totalReactionMs
-    for (let i = 0; i < 3; i++) {
-      if (raw.fingers[i].totalReactionMs === undefined) raw.fingers[i].totalReactionMs = 0;
-    }
-    return raw;
-  } catch(e) {
-    return makeEmptyPersistent();
-  }
-}
-
 function saveSessionToPersistent() {
   if (sessionSaved) return;
   sessionSaved = true;
-
-  // Skip saving if nothing was attempted
-  const totalAtt = Object.values(sessionAnalytics.fingers).reduce((a, f) => a + f.attempts, 0);
-  if (totalAtt === 0) return;
-
-  // ── Persistent all-time aggregate ────────────────────────────
-  const pa = loadPersistentAnalytics();
-  for (let i = 0; i < 3; i++) {
-    const s = sessionAnalytics.fingers[i];
-    if (s.attempts === 0) continue;
-    pa.fingers[i].attempts        += s.attempts;
-    pa.fingers[i].correct         += s.correct;
-    pa.fingers[i].totalHoldMs     += s.holds.reduce((a, b) => a + b, 0);
-    pa.fingers[i].totalReactionMs += s.reactions.reduce((a, b) => a + b, 0);
-  }
-  localStorage.setItem('bciAnalyticsV1', JSON.stringify(pa));
-
-  // ── Session history entry ─────────────────────────────────────
-  const fingers = {};
-  for (let i = 0; i < 3; i++) {
-    const f = sessionAnalytics.fingers[i];
-    fingers[i] = {
-      attempts:     f.attempts,
-      correct:      f.correct,
-      avgHoldMs:    f.holds.length     > 0 ? Math.round(f.holds.reduce((a,b)=>a+b,0)     / f.holds.length)     : null,
-      avgReactionMs: f.reactions.length > 0 ? Math.round(f.reactions.reduce((a,b)=>a+b,0) / f.reactions.length) : null,
-    };
-  }
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { month:'short', day:'numeric' })
-    + ' · ' + now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
-
-  const entry = {
-    id:          now.getTime(),
-    dateStr,
+  BCI.saveSession('hackey-sac', sessionAnalytics, {
     mode:        appMode,
-    correctHits: gameState.correctHits  || 0,
-    wrongHits:   gameState.wrongHits    || 0,
-    bestStreak:  gameState.bestStreak   || 0,
-    fingers,
-  };
-
-  let history = [];
-  try { history = JSON.parse(localStorage.getItem('bciSessionHistoryV1') || '[]'); } catch(e) {}
-  history.unshift(entry);
-  if (history.length > 10) history = history.slice(0, 10);
-  localStorage.setItem('bciSessionHistoryV1', JSON.stringify(history));
+    correctHits: gameState.correctHits || 0,
+    wrongHits:   gameState.wrongHits   || 0,
+    bestStreak:  gameState.bestStreak  || 0,
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -1150,7 +1103,7 @@ function ballRadiusForLevel(lv) {
 // ── Init game state ────────────────────────────────────────────
 function initState() {
   kickTimestamps   = [];
-  sessionAnalytics = makeEmptySession();
+  sessionAnalytics = BCI.createSession();
   sessionSaved     = false;
   sessionStartTime = Date.now();
   cursor.reset();
@@ -1422,8 +1375,8 @@ canvas.addEventListener('mouseup', e => {
   if (pendingHold.button === e.button && e.button >= 0 && e.button <= 2) {
     const dur     = performance.now() - pendingHold.time;
     const clickId = CLICKS.find(c => c.button === e.button)?.id;
-    if (clickId !== undefined && dur > 0 && dur < 3000) {
-      sessionAnalytics.fingers[clickId].holds.push(dur);
+    if (clickId !== undefined) {
+      BCI.recordHold(sessionAnalytics, clickId, dur);
     }
     pendingHold.button = -1;
   }
@@ -1453,16 +1406,14 @@ canvas.addEventListener('mousedown', e => {
   const usedClick = CLICKS.find(c => c.button === e.button);
   if (!usedClick) return;
 
-  sessionAnalytics.fingers[usedClick.id].attempts++;
+  const wasCorrect = (usedClick.id === gameState.ball.required.id);
+  BCI.recordAttempt(sessionAnalytics, usedClick.id, wasCorrect);
 
-  if (usedClick.id === gameState.ball.required.id) {
+  if (wasCorrect) {
     // Record reaction time (from when this color was assigned → now)
     const reactionMs = performance.now() - gameState.requireTimestamp;
-    if (reactionMs > 50 && reactionMs < 30000) {
-      sessionAnalytics.fingers[usedClick.id].reactions.push(reactionMs);
-    }
+    BCI.recordReaction(sessionAnalytics, usedClick.id, reactionMs);
 
-    sessionAnalytics.fingers[usedClick.id].correct++;
     gameState.correctHits++;
     gameState.streak++;
     gameState.phase = 'playing';
@@ -1546,21 +1497,25 @@ document.getElementById('hitbox-slider').addEventListener('input', e => {
   document.getElementById('hitbox-val').textContent = hitboxPadding;
 });
 
-// ── Click toggles ──────────────────────────────────────────────
+// ── Click toggles (saved as per-game overrides) ────────────────
 [0, 1, 2].forEach(id => {
   document.getElementById(`toggle-${id}`).addEventListener('change', e => {
     practice.enabled[id] = e.target.checked;
     if (!e.target.checked && gameState.ball && gameState.ball.required.id === id) {
       gameState.ball.required = randomClick();
     }
+    const current = BCI.getGameSettings('hackey-sac');
+    const enabledClicks = { ...(current.enabledClicks || practice.enabled), [id]: e.target.checked };
+    BCI.saveGameSettings('hackey-sac', { enabledClicks });
   });
 });
 
-// ── Cursor sensitivity slider ──────────────────────────────────
+// ── Cursor sensitivity slider (saved as per-game override) ─────
 document.getElementById('cursor-sens-slider').addEventListener('input', e => {
   const sens = parseInt(e.target.value, 10) / 100;
   cursor.setSensitivity(sens);
   document.getElementById('cursor-sens-val').textContent = sens.toFixed(2) + '×';
+  BCI.saveGameSettings('hackey-sac', { cursorSensitivity: sens });
 });
 
 // ── In-settings analytics display ─────────────────────────────
@@ -1589,7 +1544,7 @@ function updateAdvAnalytics() {
 // ── Main menu analytics screen ─────────────────────────────────
 // ── Session history ────────────────────────────────────────────
 function loadSessionHistory() {
-  try { return JSON.parse(localStorage.getItem('bciSessionHistoryV1') || '[]'); } catch(e) { return []; }
+  return BCI.getSessionHistory('hackey-sac');
 }
 
 function renderSessionHistory() {
@@ -1706,7 +1661,7 @@ function hideAnalyticsScreen() {
 }
 
 function refreshAnalyticsScreen() {
-  const pa    = loadPersistentAnalytics();
+  const pa    = BCI.getAllTimeStats('hackey-sac');
   const tbody = document.getElementById('analytics-all-time-body');
   tbody.innerHTML = '';
 
@@ -1802,10 +1757,23 @@ document.getElementById('btn-analytics-menu').addEventListener('click', showAnal
 document.getElementById('btn-analytics-back').addEventListener('click', hideAnalyticsScreen);
 
 document.getElementById('btn-clear-analytics').addEventListener('click', () => {
-  localStorage.removeItem('bciAnalyticsV1');
-  localStorage.removeItem('bciSessionHistoryV1');
+  BCI.clearAnalytics('hackey-sac');
   refreshAnalyticsScreen();
 });
+
+// ── Apply effective settings (global + any per-game overrides) ─
+function applyEffectiveSettings() {
+  const s = BCI.getEffectiveSettings('hackey-sac');
+
+  cursor.setSensitivity(s.cursorSensitivity);
+  document.getElementById('cursor-sens-slider').value       = Math.round(s.cursorSensitivity * 100);
+  document.getElementById('cursor-sens-val').textContent    = s.cursorSensitivity.toFixed(2) + '×';
+
+  practice.enabled = { ...s.enabledClicks };
+  [0, 1, 2].forEach(id => {
+    document.getElementById(`toggle-${id}`).checked = !!s.enabledClicks[id];
+  });
+}
 
 // ── Responsive scaling ─────────────────────────────────────────
 // The canvas has a fixed internal resolution (460x620) so all game math
@@ -1846,6 +1814,7 @@ function startMode(mode) {
 
   lastTime = null;
   advOpen  = false;
+  applyEffectiveSettings();
   initState();
   fitGameToViewport();
 }
