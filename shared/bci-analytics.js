@@ -82,6 +82,7 @@ BCI.saveSession = function (gameId, session, extraStats = {}) {
   const allTimeKey = ALL_TIME_PREFIX + gameId;
   const allTime = safeParse(localStorage.getItem(allTimeKey), {
     fingers: { 0: emptyPersistentFinger(), 1: emptyPersistentFinger(), 2: emptyPersistentFinger() },
+    sessionCount: 0,
   });
 
   for (let i = 0; i < 3; i++) {
@@ -93,6 +94,7 @@ BCI.saveSession = function (gameId, session, extraStats = {}) {
     at.totalHoldMs += s.holds.reduce((a, b) => a + b, 0);
     at.totalReactionMs += s.reactions.reduce((a, b) => a + b, 0);
   }
+  allTime.sessionCount = (allTime.sessionCount ?? 0) + 1;
   localStorage.setItem(allTimeKey, JSON.stringify(allTime));
 
   /* Append to session history (cap at MAX_HISTORY) */
@@ -141,6 +143,7 @@ BCI.getSessionHistory = function (gameId) {
 BCI.getAllTimeStats = function (gameId) {
   return safeParse(localStorage.getItem(ALL_TIME_PREFIX + gameId), {
     fingers: { 0: emptyPersistentFinger(), 1: emptyPersistentFinger(), 2: emptyPersistentFinger() },
+    sessionCount: 0,
   });
 };
 

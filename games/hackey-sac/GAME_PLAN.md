@@ -24,7 +24,6 @@ Nothing active — game is live and functional.
 
 ## Up Next
 
-- **Menu polish (next session):** ambient blue radial glow behind title + top-border color accents on Practice/Game cards + small bouncing-ball motif that cycles through blue/purple/orange near the title + stats strip under the subtitle (best streak, total kicks, sessions played). Goal: give the menu visual life without being garish. Ball doubles as theme anchor.
 - Sound effects pass
 - Rainbow sequence mechanic (bonus multiplier for hitting all 3 colors in sequence)
 

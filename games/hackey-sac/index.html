@@ -31,6 +31,37 @@
 
       #menu-header {
         text-align: center;
+        position: relative;
+        padding: 56px 40px 8px;
+      }
+
+      #menu-header::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 560px;
+        height: 240px;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(68, 136, 255, 0.2) 0%,
+          rgba(68, 136, 255, 0) 65%
+        );
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      #menu-ball {
+        position: absolute;
+        top: 34px;
+        left: 50%;
+        margin-left: -11px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #4488ff;
+        box-shadow: 0 0 18px rgba(68, 136, 255, 0.65);
       }
 
       #menu-title {
@@ -48,6 +79,35 @@
         margin-top: 8px;
       }
 
+      #menu-stats {
+        display: flex;
+        gap: 40px;
+        justify-content: center;
+        margin-top: 22px;
+      }
+
+      .menu-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .menu-stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: #e8e4d9;
+        letter-spacing: 1px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .menu-stat-label {
+        font-size: 10px;
+        color: #7d8590;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
       .menu-btn-row {
         display: flex;
         gap: 24px;
@@ -58,6 +118,7 @@
         padding: 24px 20px;
         background: #161b22;
         border: 1px solid #2d333b;
+        border-top-width: 3px;
         border-radius: 6px;
         cursor: pointer;
         text-align: center;
@@ -68,9 +129,21 @@
         font-family: 'Courier New', monospace;
       }
 
+      #btn-practice-menu {
+        border-top-color: #4488ff;
+      }
+      #btn-game-menu {
+        border-top-color: #ff8833;
+      }
+
       .menu-btn:hover {
         background: #1c2128;
+      }
+      #btn-practice-menu:hover {
         border-color: #4488ff;
+      }
+      #btn-game-menu:hover {
+        border-color: #ff8833;
       }
       .menu-btn-title {
         font-size: 22px;
@@ -856,8 +929,23 @@
     <!-- ── Main Menu ──────────────────────────────────────────────── -->
     <div id="menu-screen">
       <div id="menu-header">
+        <div id="menu-ball"></div>
         <div id="menu-title">BCI Hackey Sac</div>
         <div id="menu-subtitle">Brain-Computer Interface Training</div>
+        <div id="menu-stats">
+          <div class="menu-stat">
+            <div class="menu-stat-value" id="stat-best-streak">0</div>
+            <div class="menu-stat-label">Best Streak</div>
+          </div>
+          <div class="menu-stat">
+            <div class="menu-stat-value" id="stat-total-kicks">0</div>
+            <div class="menu-stat-label">Total Kicks</div>
+          </div>
+          <div class="menu-stat">
+            <div class="menu-stat-value" id="stat-sessions">0</div>
+            <div class="menu-stat-label">Sessions Played</div>
+          </div>
+        </div>
       </div>
       <div class="menu-btn-row">
         <div class="menu-btn" id="btn-practice-menu">
@@ -1900,6 +1988,16 @@
       function hideAnalyticsScreen() {
         document.getElementById('analytics-screen').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'flex';
+        refreshMenuStats();
+      }
+
+      function refreshMenuStats() {
+        const pa = BCI.getAllTimeStats('hackey-sac');
+        const totalKicks = Object.values(pa.fingers).reduce((a, f) => a + f.correct, 0);
+        const bestStreak = parseInt(localStorage.getItem('bciBestStreak') || '0', 10);
+        document.getElementById('stat-best-streak').textContent = bestStreak;
+        document.getElementById('stat-total-kicks').textContent = totalKicks;
+        document.getElementById('stat-sessions').textContent = pa.sessionCount ?? 0;
       }
 
       function refreshAnalyticsScreen() {
@@ -2076,7 +2174,91 @@
         document.getElementById('wrapper').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'flex';
         appMode = 'menu';
+        refreshMenuStats();
       });
+
+      refreshMenuStats();
+
+      // ── Menu ball animation ───────────────────────────────────────
+      // Smooth arcing path across the title: BCI → Hackey → Sac → Hackey → BCI.
+      // Each word visit = arc landing + in-place bounce (two touches).
+      // Motion driven in JS so arcs use sine curves instead of rigid keyframes.
+      (function animateMenuBall() {
+        const ball = document.getElementById('menu-ball');
+        if (!ball) return;
+
+        const LEFT = -165; // BCI
+        const MID = 0; // Hackey
+        const RIGHT = 165; // Sac
+        const LOOP_MS = 5800;
+
+        const path = [
+          { t0: 0, t1: 900, type: 'arc', x0: LEFT, x1: MID, peak: 55 },
+          { t0: 900, t1: 1450, type: 'bounce', x: MID, h: 38 },
+          { t0: 1450, t1: 2350, type: 'arc', x0: MID, x1: RIGHT, peak: 55 },
+          { t0: 2350, t1: 2900, type: 'bounce', x: RIGHT, h: 38 },
+          { t0: 2900, t1: 3800, type: 'arc', x0: RIGHT, x1: MID, peak: 55 },
+          { t0: 3800, t1: 4350, type: 'bounce', x: MID, h: 38 },
+          { t0: 4350, t1: 5250, type: 'arc', x0: MID, x1: LEFT, peak: 55 },
+          { t0: 5250, t1: 5800, type: 'bounce', x: LEFT, h: 38 },
+        ];
+
+        const BLUE = [68, 136, 255];
+        const PURPLE = [170, 68, 255];
+        const ORANGE = [255, 136, 51];
+
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+        function lerpColor(c1, c2, t) {
+          return [
+            Math.round(lerp(c1[0], c2[0], t)),
+            Math.round(lerp(c1[1], c2[1], t)),
+            Math.round(lerp(c1[2], c2[2], t)),
+          ];
+        }
+
+        // Color is a function of X position: BCI=blue, Hackey=purple, Sac=orange.
+        // Smooth transitions during arcs.
+        function colorForX(x) {
+          if (x <= MID) return lerpColor(BLUE, PURPLE, (x - LEFT) / (MID - LEFT));
+          return lerpColor(PURPLE, ORANGE, (x - MID) / (RIGHT - MID));
+        }
+
+        let startTime = null;
+        function frame(now) {
+          if (startTime === null) startTime = now;
+          const t = (now - startTime) % LOOP_MS;
+
+          let x = LEFT;
+          let y = 0;
+          for (const s of path) {
+            if (t >= s.t0 && t < s.t1) {
+              const k = (t - s.t0) / (s.t1 - s.t0);
+              if (s.type === 'arc') {
+                x = s.x0 + (s.x1 - s.x0) * k;
+                y = -s.peak * Math.sin(Math.PI * k);
+              } else if (s.type === 'bounce') {
+                x = s.x;
+                y = -s.h * Math.sin(Math.PI * k);
+              } else {
+                x = s.x;
+              }
+              break;
+            }
+          }
+
+          const [r, g, b] = colorForX(x);
+          ball.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+          ball.style.background = `rgb(${r}, ${g}, ${b})`;
+          ball.style.boxShadow = `0 0 18px rgba(${r}, ${g}, ${b}, 0.65)`;
+
+          requestAnimationFrame(frame);
+        }
+
+        ball.style.transform = `translate(${LEFT}px, 0)`;
+        requestAnimationFrame(frame);
+      })();
 
       // ── Game loop ──────────────────────────────────────────────────
       function loop(timestamp) {
