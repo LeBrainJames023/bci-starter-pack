@@ -1,0 +1,1536 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebGrid &mdash; BCI Starter Pack</title>
+    <style>
+      :root {
+        --click-blue: #4488ff;
+        --click-purple: #aa44ff;
+        --click-orange: #ff8833;
+        --bg-page: #0d1117;
+        --bg-card: #161b22;
+        --bg-cell: #1f262f;
+        --bg-cell-hover: #2a323e;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+        --text-primary: #e8e4d9;
+        --text-muted: #7d8590;
+        --text-dim: #5d6670;
+        --good: #6bc46b;
+        --bad: #d65a5a;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      button {
+        font-family: inherit;
+        cursor: pointer;
+        color: inherit;
+      }
+
+      /* ── Screens ─────────────────────────────────────────────── */
+      .screen {
+        display: none;
+      }
+      .screen.active {
+        display: flex;
+      }
+
+      /* ── Menu Screen ─────────────────────────────────────────── */
+      #menu-screen {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        gap: 36px;
+        padding: 40px 20px;
+        position: relative;
+      }
+
+      #menu-header {
+        text-align: center;
+        position: relative;
+        padding: 30px 40px 10px;
+        z-index: 2;
+      }
+
+      #menu-header::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 560px;
+        height: 220px;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(68, 136, 255, 0.18) 0%,
+          rgba(68, 136, 255, 0) 65%
+        );
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      #menu-title {
+        font-size: 56px;
+        font-weight: bold;
+        letter-spacing: 5px;
+        color: var(--text-primary);
+      }
+
+      #menu-subtitle {
+        font-size: 12px;
+        color: var(--text-muted);
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-top: 12px;
+      }
+
+      .menu-btn-row {
+        display: flex;
+        gap: 24px;
+        z-index: 2;
+      }
+
+      .menu-btn {
+        width: 220px;
+        padding: 26px 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-top-width: 3px;
+        border-radius: 6px;
+        color: var(--text-primary);
+        text-align: center;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+
+      #btn-practice {
+        border-top-color: var(--click-blue);
+      }
+      #btn-game {
+        border-top-color: var(--click-orange);
+      }
+
+      .menu-btn:hover {
+        background: #1c2128;
+      }
+      #btn-practice:hover {
+        border-color: var(--click-blue);
+      }
+      #btn-game:hover {
+        border-color: var(--click-orange);
+      }
+
+      .menu-btn-title {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+      }
+      .menu-btn-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+
+      .menu-link-row {
+        display: flex;
+        gap: 24px;
+        z-index: 2;
+      }
+
+      .menu-link {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        transition: color 0.15s;
+      }
+      .menu-link:hover {
+        color: var(--text-primary);
+      }
+
+      /* ── Menu Motif (cell + ghost cursor) ────────────────────── */
+      #motif-cell {
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border-radius: 3px;
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+      }
+
+      .motif-color-blue {
+        background: rgba(68, 136, 255, 0.32);
+      }
+      .motif-color-purple {
+        background: rgba(170, 68, 255, 0.32);
+      }
+      .motif-color-orange {
+        background: rgba(255, 136, 51, 0.32);
+      }
+
+      #motif-cursor {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1px solid rgba(232, 228, 217, 0.32);
+        pointer-events: none;
+        z-index: 1;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition:
+          left 720ms cubic-bezier(0.4, 0, 0.2, 1),
+          top 720ms cubic-bezier(0.4, 0, 0.2, 1),
+          opacity 320ms;
+      }
+
+      #motif-cursor::after {
+        content: '';
+        position: absolute;
+        inset: 7px;
+        background: rgba(232, 228, 217, 0.48);
+        border-radius: 50%;
+      }
+
+      /* ── Modals (settings + analytics share styles) ──────────── */
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.84);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-panel {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        width: 480px;
+        max-width: 92vw;
+        padding: 24px 28px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .modal-title {
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+
+      .modal-close {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-muted);
+        font-size: 12px;
+        width: 26px;
+        height: 26px;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .modal-close:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      .settings-section {
+        margin-bottom: 22px;
+      }
+      .settings-section:last-child {
+        margin-bottom: 0;
+      }
+
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        background: var(--bg-cell);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        font-size: 12px;
+        padding: 8px 14px;
+        letter-spacing: 1px;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .pill:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .pill.selected {
+        background: rgba(68, 136, 255, 0.15);
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+      }
+
+      .click-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+      }
+
+      .click-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .click-name {
+        flex: 1;
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+
+      .click-toggle-row input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--click-blue);
+        cursor: pointer;
+      }
+
+      .settings-note {
+        font-size: 11px;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+
+      .modal-paragraph {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      /* ── Game Screen ─────────────────────────────────────────── */
+      #game-screen {
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 22px 28px 18px;
+        position: relative;
+      }
+
+      /* Naked corner HUD elements (Time and BPS) */
+      .hud-corner {
+        position: absolute;
+        top: 22px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hud-corner-label {
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+      }
+
+      .hud-corner-value {
+        font-size: 56px;
+        font-weight: bold;
+        line-height: 1;
+        letter-spacing: 1px;
+      }
+
+      #hud-time-corner {
+        left: 28px;
+      }
+
+      #hud-bps-corner {
+        right: 28px;
+        text-align: right;
+      }
+
+      #hud-bps-corner .hud-corner-value {
+        color: var(--click-blue);
+      }
+
+      /* Click legend below TIME on the left */
+      #hud-clicks-corner {
+        position: absolute;
+        top: 132px;
+        left: 28px;
+        width: 180px;
+      }
+
+      #hud-clicks-corner .hud-corner-label {
+        margin-bottom: 12px;
+      }
+
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+      }
+
+      .legend-row.disabled {
+        display: none;
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      /* Center HUD (boxed Correct + Wrong) */
+      #hud-center {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .hud-cell {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 8px 18px;
+        text-align: center;
+        min-width: 92px;
+      }
+
+      .hud-label {
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+      }
+
+      .hud-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hud-value.correct {
+        color: var(--good);
+      }
+      .hud-value.wrong {
+        color: var(--bad);
+      }
+
+      /* Right-side panel — Top Scores in Game mode, Last Runs in Practice mode */
+      #top-scores-panel,
+      #last-runs-panel {
+        position: absolute;
+        top: 132px;
+        right: 28px;
+        width: 180px;
+        text-align: right;
+        display: none;
+      }
+      body.mode-game #top-scores-panel {
+        display: block;
+      }
+      body.mode-practice #last-runs-panel {
+        display: block;
+      }
+
+      #top-scores-header,
+      #last-runs-header {
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+      }
+
+      .top-score {
+        display: flex;
+        justify-content: flex-end;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 12px;
+        line-height: 1.1;
+      }
+
+      .top-score-bps {
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+        font-size: 22px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+      }
+
+      .top-score-date {
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+
+      .top-score--1 {
+        margin-bottom: 16px;
+      }
+
+      .top-score--1 .top-score-bps {
+        font-size: 38px;
+        color: var(--click-blue);
+      }
+
+      .top-score--1 .top-score-date {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      /* Grid */
+      #grid-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+      }
+
+      #grid {
+        display: grid;
+        gap: 1px;
+        background: var(--border);
+        padding: 1px;
+        border-radius: 4px;
+        aspect-ratio: 1 / 1;
+        width: min(85vw, 78vh);
+        max-width: 760px;
+      }
+
+      /* Game mode: shrink grid to clear right-side Top Scores panel */
+      body.mode-game #grid {
+        width: min(72vw, 75vh);
+        max-width: 720px;
+      }
+
+      .cell {
+        background: var(--bg-cell);
+        border-radius: 1px;
+        cursor: crosshair;
+        transition: background 0.05s;
+      }
+      .cell:hover {
+        background: var(--bg-cell-hover);
+      }
+
+      .cell.target-blue {
+        background: var(--click-blue);
+        box-shadow:
+          0 0 12px rgba(68, 136, 255, 0.55) inset,
+          0 0 18px rgba(68, 136, 255, 0.45);
+      }
+      .cell.target-purple {
+        background: var(--click-purple);
+        box-shadow:
+          0 0 12px rgba(170, 68, 255, 0.55) inset,
+          0 0 18px rgba(170, 68, 255, 0.45);
+      }
+      .cell.target-orange {
+        background: var(--click-orange);
+        box-shadow:
+          0 0 12px rgba(255, 136, 51, 0.55) inset,
+          0 0 18px rgba(255, 136, 51, 0.45);
+      }
+      .cell.flash-correct {
+        background: var(--good) !important;
+        box-shadow: 0 0 14px rgba(107, 196, 107, 0.5);
+      }
+      .cell.flash-wrong {
+        background: var(--bad) !important;
+        box-shadow: 0 0 14px rgba(214, 90, 90, 0.5);
+      }
+
+      #game-bottom {
+        margin-top: 14px;
+        display: flex;
+        gap: 12px;
+      }
+
+      .game-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 18px;
+        border-radius: 4px;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .game-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      /* ── End Screen ──────────────────────────────────────────── */
+      #end-screen {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        gap: 28px;
+        padding: 40px 20px;
+      }
+
+      #end-title {
+        font-size: 22px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      #end-bps-block {
+        text-align: center;
+      }
+
+      #end-bps {
+        font-size: 88px;
+        font-weight: bold;
+        color: var(--click-blue);
+        letter-spacing: 2px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        text-shadow: 0 0 24px rgba(68, 136, 255, 0.4);
+      }
+
+      #end-bps-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-top: 10px;
+      }
+
+      #end-best {
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 10px;
+        color: var(--good);
+      }
+
+      #end-stats {
+        display: flex;
+        gap: 32px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .end-stat {
+        text-align: center;
+        min-width: 70px;
+      }
+
+      .end-stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .end-stat-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      .end-btn-row {
+        display: flex;
+        gap: 18px;
+      }
+
+      .end-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-top-width: 3px;
+        color: var(--text-primary);
+        padding: 14px 28px;
+        font-size: 13px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        border-radius: 6px;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+
+      #btn-replay {
+        border-top-color: var(--click-blue);
+      }
+      #btn-replay:hover {
+        border-color: var(--click-blue);
+        background: #1c2128;
+      }
+      #btn-end-menu:hover {
+        border-color: var(--border-strong);
+        background: #1c2128;
+      }
+    </style>
+  </head>
+  <body oncontextmenu="return false;">
+    <!-- ── Menu Screen ──────────────────────────────────────────── -->
+    <div id="menu-screen" class="screen active">
+      <div id="motif-cell"></div>
+      <div id="motif-cursor"></div>
+
+      <div id="menu-header">
+        <div id="menu-title">WebGrid</div>
+        <div id="menu-subtitle">Dial in your BCI &middot; See how far you can push it</div>
+      </div>
+
+      <div class="menu-btn-row">
+        <button class="menu-btn" id="btn-practice">
+          <div class="menu-btn-title">Practice</div>
+          <div class="menu-btn-desc">No pressure. Tune settings, run as long as you want.</div>
+        </button>
+        <button class="menu-btn" id="btn-game">
+          <div class="menu-btn-title">Game</div>
+          <div class="menu-btn-desc">25&times;25 locked. Top 3 scores saved.</div>
+        </button>
+      </div>
+
+      <div class="menu-link-row">
+        <button class="menu-link" id="btn-settings">&#9881; Settings</button>
+        <button class="menu-link" id="btn-analytics">&#9638; Analytics</button>
+        <button class="menu-link" id="btn-launcher">&larr; Launcher</button>
+      </div>
+    </div>
+
+    <!-- ── Settings Modal ──────────────────────────────────────── -->
+    <div id="settings-modal" class="modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">WebGrid Settings</div>
+          <button class="modal-close" id="settings-close">&#10005;</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Grid Size (Practice)</div>
+          <div class="pill-row" id="grid-size-pills"></div>
+          <div class="settings-note" style="margin-top: 8px">
+            Game mode is locked at 25&times;25 so all Top 3 scores are comparable.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Timer</div>
+          <div class="pill-row" id="timer-pills"></div>
+          <div class="settings-note" style="margin-top: 8px">
+            Game mode always runs the timer. "Off" only applies in Practice.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Enabled Click Colors</div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-blue)"></div>
+            <span class="click-name">Left click &mdash; Blue</span>
+            <input type="checkbox" id="color-0" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-purple)"></div>
+            <span class="click-name">Middle click &mdash; Purple</span>
+            <input type="checkbox" id="color-1" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-orange)"></div>
+            <span class="click-name">Right click &mdash; Orange</span>
+            <input type="checkbox" id="color-2" checked />
+          </div>
+          <div class="settings-note" style="margin-top: 8px">
+            Wrong color counts as a miss. At least one color must stay enabled.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Analytics Modal ─────────────────────────────────────── -->
+    <div id="analytics-modal" class="modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">WebGrid Analytics</div>
+          <button class="modal-close" id="analytics-close">&#10005;</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Coming Soon</div>
+          <div class="modal-paragraph">
+            A detailed analytics dashboard is being designed for a future update &mdash; BPS over
+            time, accuracy trends, per-configuration breakdowns, and cross-game stats from the
+            launcher.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-note">
+            For now, your last 10 sessions are recorded automatically on every run, and your Top 3
+            scores per click-color configuration are surfaced on the Game screen.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Game Screen ─────────────────────────────────────────── -->
+    <div id="game-screen" class="screen">
+      <!-- Corner HUD: Time (left) + BPS (right) — naked text, no boxes -->
+      <div id="hud-time-corner" class="hud-corner">
+        <div class="hud-corner-label">Time</div>
+        <div class="hud-corner-value" id="hud-time">&mdash;</div>
+      </div>
+      <div id="hud-bps-corner" class="hud-corner">
+        <div class="hud-corner-label">BPS</div>
+        <div class="hud-corner-value" id="hud-bps">0.00</div>
+      </div>
+
+      <!-- Click legend (below TIME on the left) — reflects enabled colors -->
+      <div id="hud-clicks-corner">
+        <div class="hud-corner-label">Clicks</div>
+        <div class="legend-row" data-color-id="0">
+          <div class="legend-dot" style="background: var(--click-blue)"></div>
+          <span>Left &mdash; Blue</span>
+        </div>
+        <div class="legend-row" data-color-id="1">
+          <div class="legend-dot" style="background: var(--click-purple)"></div>
+          <span>Middle &mdash; Purple</span>
+        </div>
+        <div class="legend-row" data-color-id="2">
+          <div class="legend-dot" style="background: var(--click-orange)"></div>
+          <span>Right &mdash; Orange</span>
+        </div>
+      </div>
+
+      <!-- Center HUD: Correct + Wrong — boxed -->
+      <div id="hud-center">
+        <div class="hud-cell">
+          <div class="hud-label">Correct</div>
+          <div class="hud-value correct" id="hud-correct">0</div>
+        </div>
+        <div class="hud-cell">
+          <div class="hud-label">Wrong</div>
+          <div class="hud-value wrong" id="hud-wrong">0</div>
+        </div>
+      </div>
+
+      <!-- Top Scores side panel — Game mode only -->
+      <div id="top-scores-panel">
+        <div id="top-scores-header">Top Scores</div>
+        <div class="top-score top-score--1" id="top-score-1">
+          <span class="top-score-bps">&mdash;</span>
+          <span class="top-score-date"></span>
+        </div>
+        <div class="top-score" id="top-score-2">
+          <span class="top-score-bps">&mdash;</span>
+          <span class="top-score-date"></span>
+        </div>
+        <div class="top-score" id="top-score-3">
+          <span class="top-score-bps">&mdash;</span>
+          <span class="top-score-date"></span>
+        </div>
+      </div>
+
+      <!-- Last Runs side panel — Practice mode only -->
+      <div id="last-runs-panel">
+        <div id="last-runs-header">Last Runs</div>
+        <div class="top-score top-score--1" id="last-run-1">
+          <span class="top-score-bps">&mdash;</span>
+          <span class="top-score-date"></span>
+        </div>
+        <div class="top-score" id="last-run-2">
+          <span class="top-score-bps">&mdash;</span>
+          <span class="top-score-date"></span>
+        </div>
+        <div class="top-score" id="last-run-3">
+          <span class="top-score-bps">&mdash;</span>
+          <span class="top-score-date"></span>
+        </div>
+      </div>
+
+      <div id="grid-wrap">
+        <div id="grid"></div>
+      </div>
+
+      <div id="game-bottom">
+        <button class="game-btn" id="btn-quit">Quit Run</button>
+      </div>
+    </div>
+
+    <!-- ── End Screen ──────────────────────────────────────────── -->
+    <div id="end-screen" class="screen">
+      <div id="end-title">Run Complete</div>
+
+      <div id="end-bps-block">
+        <div id="end-bps">0.00</div>
+        <div id="end-bps-label">BPS</div>
+        <div id="end-best" style="display: none">&#9733; New Top Score</div>
+      </div>
+
+      <div id="end-stats">
+        <div class="end-stat">
+          <div class="end-stat-value" id="end-correct">0</div>
+          <div class="end-stat-label">Correct</div>
+        </div>
+        <div class="end-stat">
+          <div class="end-stat-value" id="end-wrong">0</div>
+          <div class="end-stat-label">Wrong</div>
+        </div>
+        <div class="end-stat">
+          <div class="end-stat-value" id="end-acc">0%</div>
+          <div class="end-stat-label">Accuracy</div>
+        </div>
+        <div class="end-stat">
+          <div class="end-stat-value" id="end-grid">&mdash;</div>
+          <div class="end-stat-label">Grid</div>
+        </div>
+        <div class="end-stat">
+          <div class="end-stat-value" id="end-time">&mdash;</div>
+          <div class="end-stat-label">Time</div>
+        </div>
+      </div>
+
+      <div class="end-btn-row">
+        <button class="end-btn" id="btn-replay">Play Again</button>
+        <button class="end-btn" id="btn-end-menu">Menu</button>
+      </div>
+    </div>
+
+    <!-- Shared BCI modules -->
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+
+    <script>
+      const GAME_ID = 'webgrid';
+      const GRID_SIZES = [6, 9, 12, 16, 25];
+      const TIMER_OPTIONS = [60, 120, 180, 240, 300]; // seconds; 0 = Off (practice only)
+      const LOCKED_GAME_GRID_SIZE = 25;
+      const TOP_SCORES_KEEP = 10; // store up to 10, render top 3
+
+      const DEFAULT_SETTINGS = {
+        gridSize: 6,
+        timerSeconds: 60,
+        enabledColors: { 0: true, 1: true, 2: true },
+      };
+
+      /* ── Settings persistence (uses shared/bci-settings.js) ──── */
+      function loadSettings() {
+        const saved = BCI.getGameSettings(GAME_ID);
+        const ec = saved.enabledColors || {};
+        return {
+          gridSize: GRID_SIZES.includes(saved.gridSize)
+            ? saved.gridSize
+            : DEFAULT_SETTINGS.gridSize,
+          timerSeconds:
+            saved.timerSeconds === 0 || TIMER_OPTIONS.includes(saved.timerSeconds)
+              ? saved.timerSeconds
+              : DEFAULT_SETTINGS.timerSeconds,
+          enabledColors: {
+            0: ec[0] !== undefined ? !!ec[0] : true,
+            1: ec[1] !== undefined ? !!ec[1] : true,
+            2: ec[2] !== undefined ? !!ec[2] : true,
+          },
+        };
+      }
+
+      function saveSettings(patch) {
+        BCI.saveGameSettings(GAME_ID, patch);
+      }
+
+      let settings = loadSettings();
+      let currentMode = null; // 'practice' | 'game'
+
+      /* ── Screen navigation ───────────────────────────────────── */
+      function showScreen(id) {
+        document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        // Drive motif lifecycle off menu visibility
+        if (id === 'menu-screen') startMotif();
+        else stopMotif();
+      }
+
+      /* ── Settings modal ──────────────────────────────────────── */
+      const settingsModal = document.getElementById('settings-modal');
+      const analyticsModal = document.getElementById('analytics-modal');
+      const gridSizePills = document.getElementById('grid-size-pills');
+      const timerPills = document.getElementById('timer-pills');
+
+      function buildPills() {
+        gridSizePills.innerHTML = '';
+        GRID_SIZES.forEach((n) => {
+          const b = document.createElement('button');
+          b.className = 'pill' + (n === settings.gridSize ? ' selected' : '');
+          b.textContent = n + '×' + n;
+          b.onclick = () => {
+            settings.gridSize = n;
+            saveSettings({ gridSize: n });
+            buildPills();
+          };
+          gridSizePills.appendChild(b);
+        });
+
+        timerPills.innerHTML = '';
+        const opts = [
+          { label: 'Off', val: 0 },
+          ...TIMER_OPTIONS.map((s) => ({ label: s / 60 + ' min', val: s })),
+        ];
+        opts.forEach((opt) => {
+          const b = document.createElement('button');
+          b.className = 'pill' + (opt.val === settings.timerSeconds ? ' selected' : '');
+          b.textContent = opt.label;
+          b.onclick = () => {
+            settings.timerSeconds = opt.val;
+            saveSettings({ timerSeconds: opt.val });
+            buildPills();
+          };
+          timerPills.appendChild(b);
+        });
+      }
+
+      [0, 1, 2].forEach((id) => {
+        const cb = document.getElementById('color-' + id);
+        cb.checked = settings.enabledColors[id];
+        cb.addEventListener('change', () => {
+          const next = { ...settings.enabledColors, [id]: cb.checked };
+          // Don't allow disabling all three
+          if (![0, 1, 2].some((i) => next[i])) {
+            cb.checked = true;
+            return;
+          }
+          settings.enabledColors = next;
+          saveSettings({ enabledColors: next });
+        });
+      });
+
+      document.getElementById('btn-settings').onclick = () => {
+        buildPills();
+        [0, 1, 2].forEach((id) => {
+          document.getElementById('color-' + id).checked = settings.enabledColors[id];
+        });
+        settingsModal.classList.add('active');
+      };
+      document.getElementById('settings-close').onclick = () =>
+        settingsModal.classList.remove('active');
+      settingsModal.addEventListener('mousedown', (e) => {
+        if (e.target === settingsModal) settingsModal.classList.remove('active');
+      });
+
+      /* ── Analytics modal ─────────────────────────────────────── */
+      document.getElementById('btn-analytics').onclick = () => {
+        analyticsModal.classList.add('active');
+      };
+      document.getElementById('analytics-close').onclick = () =>
+        analyticsModal.classList.remove('active');
+      analyticsModal.addEventListener('mousedown', (e) => {
+        if (e.target === analyticsModal) analyticsModal.classList.remove('active');
+      });
+
+      /* ── Menu actions ────────────────────────────────────────── */
+      document.getElementById('btn-practice').onclick = () => startGame('practice');
+      document.getElementById('btn-game').onclick = () => startGame('game');
+      document.getElementById('btn-launcher').onclick = () => BCI.goToLauncher();
+
+      /* ── Menu motif (single cell + ghost cursor on a loop) ──── */
+      const motifCell = document.getElementById('motif-cell');
+      const motifCursor = document.getElementById('motif-cursor');
+      const MOTIF_COLORS = ['blue', 'purple', 'orange'];
+      let motifTimeoutId = null;
+      let motifAnimation = null;
+
+      function startMotif() {
+        if (motifTimeoutId) return;
+        // Defer first cycle slightly so layout has settled
+        motifTimeoutId = setTimeout(cycleMotif, 350);
+      }
+
+      function stopMotif() {
+        if (motifTimeoutId) {
+          clearTimeout(motifTimeoutId);
+          motifTimeoutId = null;
+        }
+        if (motifAnimation) {
+          motifAnimation.cancel();
+          motifAnimation = null;
+        }
+        motifCell.style.opacity = '0';
+        motifCursor.style.opacity = '0';
+      }
+
+      function isMenuActive() {
+        return document.getElementById('menu-screen').classList.contains('active');
+      }
+
+      function cycleMotif() {
+        motifTimeoutId = null;
+        if (!isMenuActive()) return;
+
+        const pos = pickMotifPosition();
+        if (!pos) {
+          motifTimeoutId = setTimeout(cycleMotif, 1100);
+          return;
+        }
+
+        const color = MOTIF_COLORS[Math.floor(Math.random() * MOTIF_COLORS.length)];
+
+        // Move ghost cursor toward the new spot (CSS transition handles easing)
+        motifCursor.style.left = pos.x + 'px';
+        motifCursor.style.top = pos.y + 'px';
+        motifCursor.style.opacity = '1';
+
+        // Place and color the cell
+        motifCell.style.left = pos.x + 'px';
+        motifCell.style.top = pos.y + 'px';
+        motifCell.className = 'motif-color-' + color;
+        motifCell.id = 'motif-cell'; // keep id intact after className overwrite
+
+        if (motifAnimation) motifAnimation.cancel();
+        motifAnimation = motifCell.animate(
+          [
+            { opacity: 0 },
+            { opacity: 1, offset: 0.18 },
+            { opacity: 1, offset: 0.78 },
+            { opacity: 0 },
+          ],
+          { duration: 950, easing: 'ease-out' }
+        );
+
+        motifTimeoutId = setTimeout(cycleMotif, 1100);
+      }
+
+      function pickMotifPosition() {
+        const screen = document.getElementById('menu-screen');
+        const sRect = screen.getBoundingClientRect();
+        const W = sRect.width;
+        const H = sRect.height;
+        if (W === 0 || H === 0) return null;
+
+        const safe = computeSafeZone(sRect);
+        const margin = 18; // edge padding so motif cells don't kiss the screen edge
+
+        for (let i = 0; i < 40; i++) {
+          const x = margin + Math.random() * (W - margin * 2);
+          const y = margin + Math.random() * (H - margin * 2);
+          if (x < safe.left || x > safe.right || y < safe.top || y > safe.bottom) {
+            return { x, y };
+          }
+        }
+        return null; // give up this cycle, try again next tick
+      }
+
+      function computeSafeZone(sRect) {
+        const padding = 70;
+        const targets = [
+          document.getElementById('menu-header'),
+          document.querySelector('.menu-btn-row'),
+          document.querySelector('.menu-link-row'),
+        ].filter(Boolean);
+
+        if (targets.length === 0) {
+          return { left: 0, right: 0, top: 0, bottom: 0 };
+        }
+
+        let left = Infinity,
+          right = -Infinity,
+          top = Infinity,
+          bottom = -Infinity;
+        targets.forEach((el) => {
+          const r = el.getBoundingClientRect();
+          // translate to menu-screen-local coords
+          const localLeft = r.left - sRect.left;
+          const localRight = r.right - sRect.left;
+          const localTop = r.top - sRect.top;
+          const localBottom = r.bottom - sRect.top;
+          if (localLeft < left) left = localLeft;
+          if (localRight > right) right = localRight;
+          if (localTop < top) top = localTop;
+          if (localBottom > bottom) bottom = localBottom;
+        });
+
+        return {
+          left: left - padding,
+          right: right + padding,
+          top: top - padding,
+          bottom: bottom + padding,
+        };
+      }
+
+      // Restart motif on resize (safe zone changes)
+      window.addEventListener('resize', () => {
+        if (isMenuActive()) {
+          stopMotif();
+          startMotif();
+        }
+      });
+
+      /* ── Game state ──────────────────────────────────────────── */
+      let game = null;
+
+      function startGame(mode) {
+        currentMode = mode;
+        const timerSec =
+          mode === 'game' && settings.timerSeconds === 0 ? 60 : settings.timerSeconds;
+        const N = mode === 'game' ? LOCKED_GAME_GRID_SIZE : settings.gridSize;
+        const enabledColorIds = [0, 1, 2].filter((id) => settings.enabledColors[id]);
+
+        game = {
+          mode,
+          N,
+          totalCells: N * N,
+          enabledColorIds,
+          enabledColorsSnapshot: { ...settings.enabledColors },
+          timerSec,
+          timeLeftMs: timerSec * 1000,
+          startMs: performance.now(),
+          correct: 0,
+          incorrect: 0,
+          targetIdx: -1,
+          targetColorId: -1,
+          session: BCI.createSession(),
+          rafId: null,
+          ended: false,
+        };
+
+        document.body.classList.remove('mode-practice', 'mode-game');
+        document.body.classList.add('mode-' + mode);
+
+        if (mode === 'game') renderTopScoresPanel();
+        if (mode === 'practice') renderLastRunsPanel();
+        renderClicksLegend();
+
+        buildGrid(N);
+        spawnTarget();
+        updateHud();
+        showScreen('game-screen');
+        game.rafId = requestAnimationFrame(tick);
+      }
+
+      function buildGrid(N) {
+        const grid = document.getElementById('grid');
+        grid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+        grid.style.gridTemplateRows = `repeat(${N}, 1fr)`;
+        grid.innerHTML = '';
+        for (let i = 0; i < N * N; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.idx = i;
+          cell.addEventListener('mousedown', onCellMouseDown);
+          cell.addEventListener('contextmenu', (e) => e.preventDefault());
+          grid.appendChild(cell);
+        }
+      }
+
+      const COLOR_CLASSES = ['target-blue', 'target-purple', 'target-orange'];
+
+      function spawnTarget() {
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach((c) => {
+          c.classList.remove(
+            'target-blue',
+            'target-purple',
+            'target-orange',
+            'flash-correct',
+            'flash-wrong'
+          );
+        });
+        let newIdx;
+        do {
+          newIdx = Math.floor(Math.random() * game.totalCells);
+        } while (game.totalCells > 1 && newIdx === game.targetIdx);
+        const colorId =
+          game.enabledColorIds[Math.floor(Math.random() * game.enabledColorIds.length)];
+        game.targetIdx = newIdx;
+        game.targetColorId = colorId;
+        cells[newIdx].classList.add(COLOR_CLASSES[colorId]);
+      }
+
+      function onCellMouseDown(e) {
+        if (!game || game.ended) return;
+        e.preventDefault();
+        const idx = parseInt(e.currentTarget.dataset.idx, 10);
+        const click = BCI.CLICK_BY_BUTTON[e.button];
+        if (!click) return;
+        const clickId = click.id;
+
+        const colorEnabled = !!game.enabledColorsSnapshot[clickId];
+        const isCorrectCell = idx === game.targetIdx;
+        const isCorrectColor = clickId === game.targetColorId && colorEnabled;
+        const isCorrect = isCorrectCell && isCorrectColor;
+
+        BCI.recordAttempt(game.session, clickId, isCorrect);
+
+        if (isCorrect) {
+          game.correct++;
+          flashCell(e.currentTarget, 'flash-correct');
+          spawnTarget();
+        } else {
+          game.incorrect++;
+          flashCell(e.currentTarget, 'flash-wrong');
+          // Sticky target — target unchanged
+        }
+        updateHud();
+      }
+
+      function flashCell(el, cls) {
+        el.classList.add(cls);
+        setTimeout(() => el.classList.remove(cls), 130);
+      }
+
+      function tick(now) {
+        if (!game || game.ended) return;
+        const elapsedMs = now - game.startMs;
+        if (game.timerSec > 0) {
+          game.timeLeftMs = Math.max(0, game.timerSec * 1000 - elapsedMs);
+          if (game.timeLeftMs <= 0) {
+            endGame(true);
+            return;
+          }
+        }
+        updateHud();
+        game.rafId = requestAnimationFrame(tick);
+      }
+
+      function elapsedSec() {
+        return Math.max(0, (performance.now() - game.startMs) / 1000);
+      }
+
+      function calcBPS() {
+        const N = game.N;
+        const seconds = elapsedSec();
+        if (seconds <= 0) return 0;
+        return (Math.log2(N * N) * Math.max(0, game.correct - game.incorrect)) / seconds;
+      }
+
+      function fmtMMSS(sec) {
+        const mm = Math.floor(sec / 60);
+        const ss = Math.floor(sec % 60);
+        return mm + ':' + (ss < 10 ? '0' : '') + ss;
+      }
+
+      function updateHud() {
+        const tEl = document.getElementById('hud-time');
+        if (game.timerSec > 0) {
+          tEl.textContent = fmtMMSS(Math.ceil(game.timeLeftMs / 1000));
+        } else {
+          tEl.textContent = fmtMMSS(elapsedSec());
+        }
+        document.getElementById('hud-correct').textContent = game.correct;
+        document.getElementById('hud-wrong').textContent = game.incorrect;
+        document.getElementById('hud-bps').textContent = calcBPS().toFixed(2);
+      }
+
+      /* ── Top Scores (Game mode only) ─────────────────────────── */
+      function topScoresKey() {
+        // Game mode locks gridSize to 25, so key only depends on click-color set + timer
+        const colors = [0, 1, 2].map((i) => (game.enabledColorsSnapshot[i] ? '1' : '0')).join('');
+        return `bciTopScores:${GAME_ID}:${colors}:${game.timerSec}`;
+      }
+
+      function topScoresKeyForCurrentSettings() {
+        // Used by renderTopScoresPanel before game has started — uses current settings
+        const colors = [0, 1, 2].map((i) => (settings.enabledColors[i] ? '1' : '0')).join('');
+        const t = settings.timerSeconds === 0 ? 60 : settings.timerSeconds;
+        return `bciTopScores:${GAME_ID}:${colors}:${t}`;
+      }
+
+      function loadTopScores(key) {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        try {
+          const arr = JSON.parse(raw);
+          return Array.isArray(arr) ? arr : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function pushTopScore(bps, correct, incorrect) {
+        const key = topScoresKey();
+        const list = loadTopScores(key);
+        const entry = {
+          bps: Number(bps.toFixed(3)),
+          correct,
+          incorrect,
+          timestamp: Date.now(),
+        };
+        list.push(entry);
+        list.sort((a, b) => b.bps - a.bps);
+        if (list.length > TOP_SCORES_KEEP) list.length = TOP_SCORES_KEEP;
+        localStorage.setItem(key, JSON.stringify(list));
+        const newRank = list.findIndex((e) => e.timestamp === entry.timestamp); // 0-based
+        return { isNewTop: newRank === 0, rank: newRank };
+      }
+
+      function fmtCompactDate(ts) {
+        const d = new Date(ts);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      function renderClicksLegend() {
+        if (!game) return;
+        document.querySelectorAll('#hud-clicks-corner .legend-row').forEach((row) => {
+          const id = parseInt(row.dataset.colorId, 10);
+          row.classList.toggle('disabled', !game.enabledColorsSnapshot[id]);
+        });
+      }
+
+      function renderTopScoresPanel() {
+        const key = game ? topScoresKey() : topScoresKeyForCurrentSettings();
+        const list = loadTopScores(key);
+        for (let i = 0; i < 3; i++) {
+          const row = document.getElementById('top-score-' + (i + 1));
+          if (!row) continue;
+          const bpsEl = row.querySelector('.top-score-bps');
+          const dateEl = row.querySelector('.top-score-date');
+          if (list[i]) {
+            bpsEl.textContent = list[i].bps.toFixed(2);
+            dateEl.textContent = fmtCompactDate(list[i].timestamp);
+          } else {
+            bpsEl.textContent = '—';
+            dateEl.textContent = '';
+          }
+        }
+      }
+
+      function renderLastRunsPanel() {
+        // Pull last 3 Practice runs from the shared session history
+        const history = BCI.getSessionHistory(GAME_ID) || [];
+        const recent = history.filter((h) => h.mode === 'practice').slice(0, 3);
+        for (let i = 0; i < 3; i++) {
+          const row = document.getElementById('last-run-' + (i + 1));
+          if (!row) continue;
+          const bpsEl = row.querySelector('.top-score-bps');
+          const dateEl = row.querySelector('.top-score-date');
+          const entry = recent[i];
+          if (entry && typeof entry.bps === 'number') {
+            bpsEl.textContent = entry.bps.toFixed(2);
+            dateEl.textContent = fmtCompactDate(entry.endedAt || entry.startedAt);
+          } else {
+            bpsEl.textContent = '—';
+            dateEl.textContent = '';
+          }
+        }
+      }
+
+      /* ── End game ────────────────────────────────────────────── */
+      function endGame(completedTimer) {
+        if (!game || game.ended) return;
+        game.ended = true;
+        if (game.rafId) cancelAnimationFrame(game.rafId);
+
+        const seconds = elapsedSec();
+        const bps = calcBPS();
+        const total = game.correct + game.incorrect;
+        const acc = total > 0 ? Math.round((game.correct / total) * 100) : 0;
+
+        // Top scores update — Game mode + completed timer + actually played
+        let isNewTop = false;
+        if (game.mode === 'game' && completedTimer && total > 0) {
+          ({ isNewTop } = pushTopScore(bps, game.correct, game.incorrect));
+        }
+
+        // Persist analytics via shared/bci-analytics.js
+        BCI.saveSession(GAME_ID, game.session, {
+          mode: game.mode,
+          gridSize: game.N,
+          timerSeconds: game.timerSec,
+          enabledColors: { ...game.enabledColorsSnapshot },
+          correct: game.correct,
+          incorrect: game.incorrect,
+          bps: Number(bps.toFixed(3)),
+          durationSeconds: Math.round(seconds),
+          completedTimer: !!completedTimer,
+        });
+
+        document.getElementById('end-bps').textContent = bps.toFixed(2);
+        document.getElementById('end-correct').textContent = game.correct;
+        document.getElementById('end-wrong').textContent = game.incorrect;
+        document.getElementById('end-acc').textContent = acc + '%';
+        document.getElementById('end-grid').textContent = game.N + '×' + game.N;
+        document.getElementById('end-time').textContent = fmtMMSS(seconds);
+        document.getElementById('end-best').style.display = isNewTop ? 'block' : 'none';
+        document.getElementById('end-title').textContent =
+          game.mode === 'practice' ? 'Practice Run Complete' : 'Run Complete';
+
+        document.body.classList.remove('mode-practice', 'mode-game');
+        showScreen('end-screen');
+      }
+
+      /* ── Quit / Replay / Menu ────────────────────────────────── */
+      document.getElementById('btn-quit').onclick = () => {
+        if (!game || game.ended) return;
+        endGame(false);
+      };
+      document.getElementById('btn-replay').onclick = () => {
+        startGame(currentMode || 'practice');
+      };
+      document.getElementById('btn-end-menu').onclick = () => {
+        showScreen('menu-screen');
+      };
+
+      /* ── Boot ────────────────────────────────────────────────── */
+      startMotif();
+    </script>
+  </body>
+</html>

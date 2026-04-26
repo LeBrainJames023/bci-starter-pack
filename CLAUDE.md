@@ -32,6 +32,7 @@ BCI Starter Pack/
 ├── index.html           # Game launcher hub — main entry point
 ├── games/
 │   ├── hackey-sac/      # LIVE
+│   ├── webgrid/         # LIVE
 │   ├── golf/
 │   ├── hoops/
 │   ├── qb-targets/
@@ -64,9 +65,10 @@ BCI Starter Pack/
 
 ## Game Lineup
 
-### Training (1)
+### Training (2)
 
 - Hackey Sac — LIVE at games/hackey-sac/index.html
+- WebGrid — LIVE at games/webgrid/index.html
 
 ### Sports (9 — all coming soon)
 

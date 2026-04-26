@@ -379,6 +379,14 @@
         color: var(--cat-action);
       }
 
+      /* ── Training row (2/3 Hackey Sac + 1/3 WebGrid) ─────────── */
+      .training-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--gap-card);
+        align-items: stretch;
+      }
+
       /* ── Featured card (live game) ───────────────────────────── */
       .featured-card {
         background: var(--bg-card);
@@ -392,6 +400,30 @@
           border-color 0.2s,
           background 0.2s;
         animation: glow-pulse 3s ease-in-out infinite;
+      }
+
+      /* Compact featured card variant — vertical layout for narrow widths */
+      .featured-card--compact {
+        padding: 22px 22px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .featured-card--compact .featured-name {
+        font-size: 22px;
+      }
+
+      .featured-card--compact .featured-desc {
+        font-size: 12px;
+        max-width: none;
+      }
+
+      .featured-card--compact .featured-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 18px;
       }
 
       .featured-card:hover {
@@ -588,8 +620,8 @@
       <div class="hub-right">
         <button id="btn-settings" class="settings-btn" title="Global BCI Settings">&#9881;</button>
         <div class="hub-counts">
-          <div class="count-live">&#9632; 1 Game Live</div>
-          <div class="count-soon">&#9632; 12 Coming Soon</div>
+          <div class="count-live">&#9632; 2 Games Live</div>
+          <div class="count-soon">&#9632; 11 Coming Soon</div>
         </div>
       </div>
     </header>
@@ -648,23 +680,43 @@
       <!-- ── Training ─────────────────────────────────────────────── -->
       <section class="game-section section-training">
         <div class="section-label label-training">Training</div>
-        <div class="featured-card" onclick="openGame('games/hackey-sac/index.html')">
-          <div class="featured-inner">
-            <div class="featured-text">
-              <div class="featured-name">BCI Hackey Sac</div>
-              <div class="featured-desc">
-                A falling ball cycles through 3 colors. Match the color with the correct click to
-                kick it back up. Practice mode lets you adjust ball size, gravity, and hitbox. Game
-                mode auto-scales difficulty up to speed level 10 over 250 kicks.
+        <div class="training-row">
+          <div class="featured-card" onclick="openGame('games/hackey-sac/index.html')">
+            <div class="featured-inner">
+              <div class="featured-text">
+                <div class="featured-name">BCI Hackey Sac</div>
+                <div class="featured-desc">
+                  A falling ball cycles through 3 colors — match the color with the right click to
+                  kick it back up. Practice mode tunes the physics; Game mode scales difficulty up
+                  to level 10.
+                </div>
+                <div class="featured-tags">
+                  <span class="tag">Cursor Tracking</span>
+                  <span class="tag">Reaction Time</span>
+                  <span class="tag">3-Click Training</span>
+                  <span class="tag">Analytics</span>
+                </div>
               </div>
-              <div class="featured-tags">
-                <span class="tag">Cursor Tracking</span>
-                <span class="tag">Reaction Time</span>
-                <span class="tag">3-Click Training</span>
-                <span class="tag">Analytics</span>
+              <div class="featured-right">
+                <span class="badge-live">&#9679; Live</span>
+                <span class="featured-cta">Play &rarr;</span>
               </div>
             </div>
-            <div class="featured-right">
+          </div>
+
+          <div
+            class="featured-card featured-card--compact"
+            onclick="openGame('games/webgrid/index.html')"
+          >
+            <div>
+              <div class="featured-name">WebGrid</div>
+              <div class="featured-desc">Dial in your BCI and see how far you can push it.</div>
+              <div class="featured-tags">
+                <span class="tag">BPS Benchmark</span>
+                <span class="tag">Adjustable Grid</span>
+              </div>
+            </div>
+            <div class="featured-bottom">
               <span class="badge-live">&#9679; Live</span>
               <span class="featured-cta">Play &rarr;</span>
             </div>

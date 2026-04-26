@@ -11,6 +11,7 @@ Built for Neuralink Prime Study participants and BCI users broadly. Every game i
 | Game             | Description                                      | Status  |
 | ---------------- | ------------------------------------------------ | ------- |
 | Hackey Sac       | Color-matched click training with a falling ball | Live    |
+| WebGrid          | BPS benchmark — colored cells in an N×N grid     | Live    |
 | Hoops            | Basketball rim timing and color matching         | Planned |
 | QB Targets       | Football receiver targeting under pressure       | Planned |
 | Goalie / Striker | Soccer shot blocking and striking                | Planned |
@@ -34,7 +35,8 @@ All games support 1, 2, or 3 click inputs and adjustable cursor sensitivity. Con
 bci-starter-pack/
 ├── index.html           # Game launcher hub
 ├── games/
-│   └── hackey-sac/      # BCI Hackey Sac
+│   ├── hackey-sac/      # BCI Hackey Sac
+│   └── webgrid/         # WebGrid (BPS benchmark)
 ├── shared/              # Shared BCI utilities and config
 ├── FUTURE_FEATURES.md   # Planned games and enhancements
 └── ASSETS.md            # Asset and license tracking
