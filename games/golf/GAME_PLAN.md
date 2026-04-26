@@ -2,22 +2,22 @@
 
 ## Status
 
-**Putt-Putt v1 — in progress.** Mechanics complete. Content + integration remaining.
+**Putt-Putt v1 — shipped.** All 13 checkpoints complete. Launcher card and Putt-Putt mode card are both Live.
 
 - ✅ Mode select screen, routing, launcher integration
-- ✅ Single hole rendering, top-down canvas, walls/cup/flag/ball
+- ✅ Top-down hole rendering with walls/cup/flag/ball
 - ✅ Aim → click-to-lock → cancel-or-shoot flow
 - ✅ Distance band selection (blue/orange/purple → short/medium/long)
 - ✅ Color-sequence skill check (3-step medium, 5-step long) with closing-ring telegraph and 1.8s window
-- ✅ Ball physics: friction, wall bounces, water hazards (with penalty + reset), sand traps (high friction), interior walls
-- ✅ Hole-to-hole navigation with "Next Hole →" button
-- ✅ 3 of 7 holes designed (holes 1, 2, 3)
-- ⏳ 4 more hand-designed holes (checkpoint 9)
-- ⏳ Round flow with cumulative score and end-of-round screen (checkpoint 10)
-- ⏳ Analytics → localStorage (checkpoint 11)
-- ⏳ Settings panel hookup (checkpoint 12)
-- ⏳ Visual polish pass (checkpoint 13)
-- ⏳ Launcher card flip from Coming Soon → Live, Putt-Putt mode card flip from Preview → Live
+- ✅ Ball physics: friction, wall bounces, water hazards (penalty + reset), sand traps (high friction), interior walls
+- ✅ 7 hand-designed holes
+- ✅ Round flow with cumulative score, scorecard, best-round tracking
+- ✅ Analytics: per-click attempts, reactions, holes scores saved to localStorage via shared schema
+- ✅ Settings panel: cursor sensitivity slider with live update + click toggles, shared with global settings
+- ✅ Visual polish: animated waving flag, ball trail during motion, cup depth gradient, water shimmer
+- ✅ Launcher Golf card flipped to Live, Putt-Putt mode card flipped to Live
+
+Up next: **v1.5 — Level Editor** (in-browser tool to drop start/cup/walls/water/sand and export JSON), then **v2 — Driving Range / TopGolf-style** to perfect the swing meter.
 
 ---
 

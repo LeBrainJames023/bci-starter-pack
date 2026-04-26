@@ -1,0 +1,11 @@
+{
+  "id": 4,
+  "name": "Sandy Curve",
+  "par": 3,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 100, "y": 100 },
+  "cup": { "x": 700, "y": 400 },
+  "walls": [],
+  "water": [],
+  "sand": [{ "x": 290, "y": 180, "width": 240, "height": 150 }]
+}

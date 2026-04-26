@@ -1,0 +1,14 @@
+{
+  "id": 5,
+  "name": "The Channel",
+  "par": 4,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 100, "y": 250 },
+  "cup": { "x": 700, "y": 250 },
+  "walls": [
+    { "x": 320, "y": 60, "width": 180, "height": 130 },
+    { "x": 320, "y": 310, "width": 180, "height": 130 }
+  ],
+  "water": [],
+  "sand": []
+}

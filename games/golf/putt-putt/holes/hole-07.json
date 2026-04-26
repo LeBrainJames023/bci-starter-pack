@@ -1,0 +1,11 @@
+{
+  "id": 7,
+  "name": "The Finale",
+  "par": 4,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 100, "y": 110 },
+  "cup": { "x": 700, "y": 400 },
+  "walls": [{ "x": 380, "y": 80, "width": 14, "height": 200 }],
+  "water": [{ "x": 480, "y": 290, "width": 160, "height": 110 }],
+  "sand": [{ "x": 200, "y": 290, "width": 140, "height": 100 }]
+}

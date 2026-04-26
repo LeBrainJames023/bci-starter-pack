@@ -8,19 +8,19 @@ Built for Neuralink Prime Study participants and BCI users broadly. Every game i
 
 ## Games
 
-| Game             | Description                                      | Status  |
-| ---------------- | ------------------------------------------------ | ------- |
-| Hackey Sac       | Color-matched click training with a falling ball | Live    |
-| WebGrid          | BPS benchmark — colored cells in an N×N grid     | Live    |
-| Golf             | Putt-putt mini-golf, driving range, real course  | In Dev  |
-| Hoops            | Basketball rim timing and color matching         | Planned |
-| QB Targets       | Football receiver targeting under pressure       | Planned |
-| Goalie / Striker | Soccer shot blocking and striking                | Planned |
-| Batter / Pitcher | Baseball timing and pitch selection              | Planned |
-| Rally            | Tennis / badminton color-matched returns         | Planned |
-| Range            | Target practice with decision-making             | Planned |
-| Tower Defense    | Wave-based click strategy                        | Planned |
-| Side Scroller    | Action platformer                                | Planned |
+| Game             | Description                                                | Status  |
+| ---------------- | ---------------------------------------------------------- | ------- |
+| Hackey Sac       | Color-matched click training with a falling ball           | Live    |
+| WebGrid          | BPS benchmark — colored cells in an N×N grid               | Live    |
+| Golf             | Putt-putt mini-golf (Live), driving range + course planned | Live    |
+| Hoops            | Basketball rim timing and color matching                   | Planned |
+| QB Targets       | Football receiver targeting under pressure                 | Planned |
+| Goalie / Striker | Soccer shot blocking and striking                          | Planned |
+| Batter / Pitcher | Baseball timing and pitch selection                        | Planned |
+| Rally            | Tennis / badminton color-matched returns                   | Planned |
+| Range            | Target practice with decision-making                       | Planned |
+| Tower Defense    | Wave-based click strategy                                  | Planned |
+| Side Scroller    | Action platformer                                          | Planned |
 
 ## How to Play
 

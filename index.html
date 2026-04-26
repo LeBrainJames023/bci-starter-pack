@@ -555,6 +555,14 @@
         transform: translateY(-1px);
       }
 
+      .game-card--live {
+        opacity: 1;
+      }
+      .game-card--live:hover {
+        border-color: var(--accent);
+        box-shadow: 0 0 14px rgba(255, 136, 51, 0.18);
+      }
+
       .game-card::before {
         content: '';
         position: absolute;
@@ -620,8 +628,8 @@
       <div class="hub-right">
         <button id="btn-settings" class="settings-btn" title="Global BCI Settings">&#9881;</button>
         <div class="hub-counts">
-          <div class="count-live">&#9632; 2 Games Live</div>
-          <div class="count-soon">&#9632; 11 Coming Soon</div>
+          <div class="count-live">&#9632; 3 Games Live</div>
+          <div class="count-soon">&#9632; 10 Coming Soon</div>
         </div>
       </div>
     </header>
@@ -730,16 +738,16 @@
         <div class="game-grid">
           <!-- Row 1 -->
           <div
-            class="game-card"
+            class="game-card game-card--live"
             style="--accent: var(--cat-sports); cursor: pointer"
             onclick="openGame('games/golf/index.html')"
           >
             <div class="card-name">Golf</div>
             <div class="card-desc">
-              Putt-putt to the driving range. Precision timing and click strength control your shot
-              distance and power.
+              Putt-putt mini-golf with color-sequence putts and three click-strength bands. Driving
+              Range and Real Course coming soon.
             </div>
-            <span class="badge-soon">Coming Soon</span>
+            <span class="badge-live">&#9679; Live</span>
           </div>
 
           <div class="game-card" style="--accent: var(--cat-sports)">

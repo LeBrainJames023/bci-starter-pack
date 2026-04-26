@@ -512,6 +512,271 @@
       .overlay-btn[hidden] {
         display: none;
       }
+
+      /* ── Header right (HUD + settings gear) ───────────────────── */
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .settings-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+        cursor: pointer;
+        font-family: inherit;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .settings-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      /* ── Round-complete scorecard ─────────────────────────────── */
+      .overlay-panel--wide {
+        min-width: 540px;
+      }
+      .overlay-totals {
+        display: flex;
+        justify-content: center;
+        gap: 32px;
+        margin-bottom: 6px;
+      }
+      .overlay-line.accent {
+        color: var(--golf-green);
+        font-weight: bold;
+        font-size: 14px;
+        margin: 8px 0 14px;
+      }
+      .overlay-line.subtle {
+        color: var(--text-dim);
+        font-size: 11px;
+        margin-top: 14px;
+      }
+      .scorecard {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        margin: 14px 0 4px;
+      }
+      .sc-cell {
+        background: var(--bg-badge-dim);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 8px 4px 6px;
+        text-align: center;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .sc-cell.is-under {
+        border-color: var(--good);
+        background: rgba(95, 191, 110, 0.1);
+      }
+      .sc-cell.is-on {
+        border-color: var(--border-strong);
+      }
+      .sc-cell.is-over {
+        border-color: var(--cancel-red-dim);
+        background: rgba(212, 75, 75, 0.07);
+      }
+      .sc-label {
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+      }
+      .sc-strokes {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin: 2px 0 1px;
+      }
+      .sc-par {
+        font-size: 9px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      /* ── Settings modal (ported from launcher) ─────────────────── */
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.84);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-panel {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        width: 440px;
+        padding: 22px 26px 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-title {
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .modal-close {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-muted);
+        font-size: 12px;
+        width: 26px;
+        height: 26px;
+        cursor: pointer;
+        font-family: inherit;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .modal-close:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .settings-section {
+        margin-bottom: 20px;
+      }
+      .settings-section:last-of-type {
+        margin-bottom: 16px;
+      }
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+      }
+      .settings-desc {
+        font-size: 11px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+      .slider-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .slider-range {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+      .slider-value {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+        min-width: 50px;
+        text-align: right;
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+        border: none;
+      }
+      .click-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+      }
+      .click-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .click-name {
+        flex: 1;
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+      .click-toggle-row input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--click-blue);
+        cursor: pointer;
+      }
+      .settings-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+        gap: 12px;
+      }
+      .settings-note {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.4;
+        flex: 1;
+      }
+      .settings-reset {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .settings-reset:hover {
+        color: var(--click-orange);
+        border-color: var(--click-orange);
+      }
     </style>
   </head>
 
@@ -526,19 +791,22 @@
               <div class="game-subtitle" id="hole-name">Hand-Designed Mini-Golf</div>
             </div>
           </div>
-          <div class="hud">
-            <div class="hud-stat">
-              <span class="hud-label">Hole</span>
-              <span class="hud-value" id="hud-hole">1</span>
+          <div class="header-right">
+            <div class="hud">
+              <div class="hud-stat">
+                <span class="hud-label">Hole</span>
+                <span class="hud-value" id="hud-hole">1</span>
+              </div>
+              <div class="hud-stat">
+                <span class="hud-label">Par</span>
+                <span class="hud-value" id="hud-par">2</span>
+              </div>
+              <div class="hud-stat">
+                <span class="hud-label">Strokes</span>
+                <span class="hud-value" id="hud-strokes">0</span>
+              </div>
             </div>
-            <div class="hud-stat">
-              <span class="hud-label">Par</span>
-              <span class="hud-value" id="hud-par">2</span>
-            </div>
-            <div class="hud-stat">
-              <span class="hud-label">Strokes</span>
-              <span class="hud-value" id="hud-strokes">0</span>
-            </div>
+            <button id="btn-settings" class="settings-btn" title="Settings">&#9881;</button>
           </div>
         </header>
 
@@ -563,6 +831,25 @@
                 <button class="overlay-btn is-primary" id="oc-next">Next Hole &rarr;</button>
                 <button class="overlay-btn" id="oc-replay">Play Again</button>
                 <button class="overlay-btn" id="oc-modes">&larr; Modes</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overlay" id="round-complete-overlay">
+            <div class="overlay-panel overlay-panel--wide">
+              <div class="overlay-title">Round Complete</div>
+              <div class="overlay-totals">
+                <div class="overlay-line">
+                  Total Strokes <span class="big" id="rc-strokes">0</span>
+                </div>
+                <div class="overlay-line">Course Par <span class="big" id="rc-par">0</span></div>
+              </div>
+              <div class="overlay-line accent" id="rc-result">&mdash;</div>
+              <div class="scorecard" id="rc-scorecard"></div>
+              <div class="overlay-line subtle" id="rc-best">&mdash;</div>
+              <div class="overlay-actions">
+                <button class="overlay-btn is-primary" id="rc-replay">Play New Round</button>
+                <button class="overlay-btn" id="rc-modes">&larr; Modes</button>
               </div>
             </div>
           </div>
@@ -591,6 +878,49 @@
       </div>
     </div>
 
+    <div id="settings-modal" class="modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">Putt-Putt Settings</div>
+          <button class="modal-close" id="settings-close">&#10005;</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Cursor Sensitivity</div>
+          <div class="slider-top">
+            <span class="slider-range">0.25&times; &nbsp;&mdash;&nbsp; 2.0&times;</span>
+            <span class="slider-value" id="settings-sens-val">1.00&times;</span>
+          </div>
+          <input type="range" id="settings-sens-slider" min="25" max="200" step="5" value="100" />
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Enabled Clicks</div>
+          <div class="settings-desc">Turn off any click you don't use. Saved across all games.</div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-blue)"></div>
+            <span class="click-name">Left click &mdash; Blue (Short)</span>
+            <input type="checkbox" id="settings-click-0" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-purple)"></div>
+            <span class="click-name">Middle click &mdash; Purple (Long)</span>
+            <input type="checkbox" id="settings-click-1" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-orange)"></div>
+            <span class="click-name">Right click &mdash; Orange (Medium)</span>
+            <input type="checkbox" id="settings-click-2" checked />
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <span class="settings-note">Saves automatically. Shared across every game.</span>
+          <button class="settings-reset" id="settings-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
     <script src="../../../shared/bci-input.js"></script>
     <script src="../../../shared/bci-settings.js"></script>
     <script src="../../../shared/bci-shell.js"></script>
@@ -603,7 +933,7 @@
          ───────────────────────────────────────────────────────────── */
 
       const GAME_ID = 'golf-putt-putt';
-      const TOTAL_HOLES = 3;
+      const TOTAL_HOLES = 7;
 
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
@@ -624,6 +954,16 @@
       const ocReplay = document.getElementById('oc-replay');
       const ocModes = document.getElementById('oc-modes');
       const penaltyFlash = document.getElementById('penalty-flash');
+      const roundOverlay = document.getElementById('round-complete-overlay');
+      const rcStrokes = document.getElementById('rc-strokes');
+      const rcPar = document.getElementById('rc-par');
+      const rcResult = document.getElementById('rc-result');
+      const rcScorecard = document.getElementById('rc-scorecard');
+      const rcBest = document.getElementById('rc-best');
+      const rcReplay = document.getElementById('rc-replay');
+      const rcModes = document.getElementById('rc-modes');
+      const settingsModal = document.getElementById('settings-modal');
+      const settingsBtn = document.getElementById('btn-settings');
       const hudHole = document.getElementById('hud-hole');
       const hudPar = document.getElementById('hud-par');
       const hudStrokes = document.getElementById('hud-strokes');
@@ -638,6 +978,7 @@
         IN_MOTION: 'in_motion',
         PENALTY_RESET: 'penalty_reset',
         HOLE_COMPLETE: 'hole_complete',
+        ROUND_COMPLETE: 'round_complete',
       };
 
       const BAND = {
@@ -673,6 +1014,19 @@
 
       /* Penalty state */
       let penaltyStartedAt = 0;
+
+      /* Round state — strokes per hole, par per hole (filled as holes load), analytics session */
+      let holeScores = new Array(TOTAL_HOLES).fill(null);
+      const LOADED_PARS = new Array(TOTAL_HOLES).fill(null);
+      let analyticsSession = null;
+
+      function sumPlannedPars() {
+        return LOADED_PARS.reduce((a, p) => a + (typeof p === 'number' ? p : 0), 0);
+      }
+
+      /* Ball trail (visual polish) — last few positions while in motion */
+      const ballTrail = [];
+      const TRAIL_MAX = 8;
 
       /* Tunables */
       const FRICTION = 0.985;
@@ -710,6 +1064,9 @@
         }
         if (s === STATE.HOLE_COMPLETE) {
           return '<span class="green">Hole complete!</span>';
+        }
+        if (s === STATE.ROUND_COMPLETE) {
+          return '<span class="green">Round complete!</span>';
         }
         return 'Loading hole&hellip;';
       }
@@ -766,7 +1123,15 @@
           setStatus(`Failed to load hole: ${err.message}`);
           return;
         }
+        LOADED_PARS[num - 1] = hole.par;
         resetHoleState();
+      }
+
+      function startNewRound() {
+        holeScores = new Array(TOTAL_HOLES).fill(null);
+        analyticsSession = BCI.createSession();
+        roundOverlay.classList.remove('is-visible');
+        gotoHole(1);
       }
 
       /* ── Geometry helpers ─────────────────────────────────────── */
@@ -825,7 +1190,14 @@
           return;
         }
 
-        if (state !== STATE.IN_MOTION) return;
+        if (state !== STATE.IN_MOTION) {
+          if (ballTrail.length) ballTrail.length = 0;
+          return;
+        }
+
+        /* Trail: record position before stepping */
+        ballTrail.push({ x: ball.x, y: ball.y });
+        if (ballTrail.length > TRAIL_MAX) ballTrail.shift();
 
         ball.x += ball.vx;
         ball.y += ball.vy;
@@ -902,8 +1274,14 @@
         ball.vy = 0;
         ball.x = cup.x;
         ball.y = cup.y;
-        state = STATE.HOLE_COMPLETE;
-        showHoleComplete();
+        holeScores[currentHoleNum - 1] = strokes;
+        if (currentHoleNum >= TOTAL_HOLES) {
+          state = STATE.ROUND_COMPLETE;
+          showRoundComplete();
+        } else {
+          state = STATE.HOLE_COMPLETE;
+          showHoleComplete();
+        }
         updateBottomBar();
       }
 
@@ -917,8 +1295,64 @@
         else if (diff === 0) result = 'On par';
         else result = `+${diff} over par`;
         ocResult.textContent = result;
-        ocNext.hidden = currentHoleNum >= TOTAL_HOLES;
+        ocNext.hidden = false; // round-complete handles last hole separately
         overlay.classList.add('is-visible');
+      }
+
+      function showRoundComplete() {
+        const totalStrokes = holeScores.reduce((a, b) => a + (b ?? 0), 0);
+        const totalPar = sumPlannedPars();
+        rcStrokes.textContent = totalStrokes;
+        rcPar.textContent = totalPar;
+        const diff = totalStrokes - totalPar;
+        let result = '';
+        if (diff < 0) result = `${Math.abs(diff)} UNDER PAR — nice round`;
+        else if (diff === 0) result = 'ON PAR';
+        else result = `+${diff} OVER PAR`;
+        rcResult.textContent = result;
+
+        /* Render scorecard */
+        rcScorecard.innerHTML = '';
+        for (let i = 0; i < TOTAL_HOLES; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'sc-cell';
+          const score = holeScores[i];
+          const par = LOADED_PARS[i] ?? '—';
+          const diffH = score != null && typeof par === 'number' ? score - par : 0;
+          if (score != null) {
+            if (diffH < 0) cell.classList.add('is-under');
+            else if (diffH === 0) cell.classList.add('is-on');
+            else cell.classList.add('is-over');
+          }
+          cell.innerHTML = `
+            <div class="sc-label">H${i + 1}</div>
+            <div class="sc-strokes">${score ?? '—'}</div>
+            <div class="sc-par">par ${par}</div>
+          `;
+          rcScorecard.appendChild(cell);
+        }
+
+        /* Best round tracking */
+        const bestKey = `bciBestRound:${GAME_ID}`;
+        const prev = parseInt(localStorage.getItem(bestKey) || '0', 10);
+        const isNewBest = !prev || totalStrokes < prev;
+        if (isNewBest) localStorage.setItem(bestKey, String(totalStrokes));
+        rcBest.textContent = isNewBest
+          ? `New best round! (was ${prev || '—'})`
+          : `Best round: ${prev}`;
+
+        /* Persist analytics */
+        if (analyticsSession) {
+          BCI.saveSession(GAME_ID, analyticsSession, {
+            mode: 'round',
+            strokes: totalStrokes,
+            par: totalPar,
+            holes: TOTAL_HOLES,
+            holeScores: [...holeScores],
+          });
+        }
+
+        roundOverlay.classList.add('is-visible');
       }
 
       /* ── Sequence (color-match skill check) ───────────────────── */
@@ -1060,20 +1494,23 @@
           for (const wall of hole.walls) drawWall(wall);
         }
 
-        /* Cup */
+        /* Cup — outer shadow ring + depth gradient inside */
         ctx.beginPath();
         ctx.arc(cup.x, cup.y, cup.radius + 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0,0,0,0.18)';
         ctx.fill();
         ctx.beginPath();
         ctx.arc(cup.x, cup.y, cup.radius, 0, Math.PI * 2);
-        ctx.fillStyle = getCss('--cup-shadow');
+        const cupGrad = ctx.createRadialGradient(cup.x - 2, cup.y - 2, 1, cup.x, cup.y, cup.radius);
+        cupGrad.addColorStop(0, '#1c2620');
+        cupGrad.addColorStop(1, getCss('--cup-shadow'));
+        ctx.fillStyle = cupGrad;
         ctx.fill();
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        /* Flag */
+        /* Flag — pole + waving cloth */
         const poleX = cup.x;
         const poleTop = cup.y - 52;
         ctx.strokeStyle = getCss('--flag-pole');
@@ -1082,11 +1519,15 @@
         ctx.moveTo(poleX, cup.y);
         ctx.lineTo(poleX, poleTop);
         ctx.stroke();
+        /* Cloth tip oscillates horizontally to suggest a breeze */
+        const flagWaveT = Date.now() / 320;
+        const tipDx = 22 + Math.sin(flagWaveT) * 3;
+        const midDx = 11 + Math.sin(flagWaveT - 0.5) * 2.5;
         ctx.fillStyle = getCss('--flag-cloth');
         ctx.beginPath();
         ctx.moveTo(poleX, poleTop);
-        ctx.lineTo(poleX + 22, poleTop + 6);
-        ctx.lineTo(poleX, poleTop + 13);
+        ctx.quadraticCurveTo(poleX + midDx, poleTop + 3, poleX + tipDx, poleTop + 6);
+        ctx.quadraticCurveTo(poleX + midDx, poleTop + 10, poleX, poleTop + 13);
         ctx.closePath();
         ctx.fill();
 
@@ -1170,11 +1611,24 @@
       }
 
       function drawBall() {
+        /* Trail: fading ghost positions during motion */
+        for (let i = 0; i < ballTrail.length; i++) {
+          const p = ballTrail[i];
+          const alpha = ((i + 1) / ballTrail.length) * 0.28;
+          const r = ball.radius * (0.55 + (i / ballTrail.length) * 0.4);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          ctx.fill();
+        }
+
+        /* Soft drop shadow */
         ctx.beginPath();
-        ctx.arc(ball.x + 2, ball.y + 2, ball.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.arc(ball.x + 2, ball.y + 2.5, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.38)';
         ctx.fill();
 
+        /* Ball with radial highlight */
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         const ballGrad = ctx.createRadialGradient(
@@ -1277,7 +1731,13 @@
 
         if (state === STATE.SEQUENCING) {
           const expected = sequenceColors[sequenceStep];
-          recordSequenceStep(colorName === expected);
+          const correct = colorName === expected;
+          /* Analytics: record per-click attempt + reaction */
+          if (analyticsSession) {
+            BCI.recordAttempt(analyticsSession, click.id, correct);
+            BCI.recordReaction(analyticsSession, click.id, Date.now() - sequenceStepStartedAt);
+          }
+          recordSequenceStep(correct);
         }
       });
 
@@ -1295,6 +1755,66 @@
       ocNext.addEventListener('click', () => {
         gotoHole(currentHoleNum + 1);
       });
+
+      rcReplay.addEventListener('click', () => startNewRound());
+      rcModes.addEventListener('click', () => {
+        window.location.href = '../index.html';
+      });
+
+      /* ── Settings modal hookup (mirrors launcher behavior) ─────── */
+      function setupSettings() {
+        const sensSlider = document.getElementById('settings-sens-slider');
+        const sensVal = document.getElementById('settings-sens-val');
+        const clickToggle = (id) => document.getElementById('settings-click-' + id);
+
+        function loadSettingsIntoUI() {
+          const s = BCI.getEffectiveSettings(GAME_ID);
+          sensSlider.value = Math.round(s.cursorSensitivity * 100);
+          sensVal.textContent = s.cursorSensitivity.toFixed(2) + '×';
+          [0, 1, 2].forEach((id) => {
+            clickToggle(id).checked = !!s.enabledClicks[id];
+          });
+        }
+
+        function openSettings() {
+          loadSettingsIntoUI();
+          settingsModal.style.display = 'flex';
+        }
+
+        function closeSettings() {
+          settingsModal.style.display = 'none';
+        }
+
+        settingsBtn.addEventListener('click', openSettings);
+        document.getElementById('settings-close').addEventListener('click', closeSettings);
+        settingsModal.addEventListener('mousedown', (e) => {
+          if (e.target === settingsModal) closeSettings();
+        });
+
+        sensSlider.addEventListener('input', (e) => {
+          const sens = parseInt(e.target.value, 10) / 100;
+          sensVal.textContent = sens.toFixed(2) + '×';
+          BCI.saveGlobalSettings({ cursorSensitivity: sens });
+          if (virtualCursor) virtualCursor.setSensitivity(sens);
+        });
+
+        [0, 1, 2].forEach((id) => {
+          clickToggle(id).addEventListener('change', (e) => {
+            const current = BCI.getGlobalSettings();
+            const enabledClicks = { ...current.enabledClicks, [id]: e.target.checked };
+            BCI.saveGlobalSettings({ enabledClicks });
+          });
+        });
+
+        document.getElementById('settings-reset').addEventListener('click', () => {
+          BCI.saveGlobalSettings({
+            cursorSensitivity: 1.0,
+            enabledClicks: { 0: true, 1: true, 2: true },
+          });
+          loadSettingsIntoUI();
+          if (virtualCursor) virtualCursor.setSensitivity(1.0);
+        });
+      }
 
       /* ── Header buttons ───────────────────────────────────────── */
       document.getElementById('btn-back').addEventListener('click', () => {
@@ -1320,15 +1840,26 @@
           ? Math.max(1, Math.min(TOTAL_HOLES, requested))
           : 1;
 
-        currentHoleNum = startHole;
+        /* Pre-load all holes in parallel — round summary needs every par. */
+        let allHoles;
         try {
-          hole = await loadHole(startHole);
+          allHoles = await Promise.all(
+            Array.from({ length: TOTAL_HOLES }, (_, i) => loadHole(i + 1))
+          );
+          allHoles.forEach((h, i) => (LOADED_PARS[i] = h.par));
         } catch (err) {
-          setStatus(`Failed to load hole: ${err.message}`);
+          setStatus(`Failed to preload holes: ${err.message}`);
           return;
         }
+
+        /* Start analytics session for this round */
+        analyticsSession = BCI.createSession();
+
+        currentHoleNum = startHole;
+        hole = allHoles[startHole - 1];
         resetHoleState();
         setupVirtualCursor();
+        setupSettings();
 
         const fitter = BCI.createViewportFitter(document.getElementById('game-wrapper'), {
           maxScale: 1.3,

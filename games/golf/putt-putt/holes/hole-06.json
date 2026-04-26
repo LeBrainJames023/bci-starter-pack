@@ -1,0 +1,11 @@
+{
+  "id": 6,
+  "name": "Hazard Run",
+  "par": 4,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 90, "y": 420 },
+  "cup": { "x": 710, "y": 80 },
+  "walls": [],
+  "water": [{ "x": 250, "y": 270, "width": 170, "height": 110 }],
+  "sand": [{ "x": 470, "y": 130, "width": 170, "height": 110 }]
+}
