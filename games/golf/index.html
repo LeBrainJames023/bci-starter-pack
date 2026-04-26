@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Golf — BCI Starter Pack</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --golf-green: #5fbf6e;
+        --golf-green-dim: #2d4a32;
+        --golf-green-bg: #19281d;
+
+        --live-text: #6bc46b;
+        --live-bg: #1a2a1a;
+        --live-border: #2d4a2d;
+
+        --gap-card: 14px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        padding: 36px 24px 60px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        max-width: 880px;
+        margin: 0 auto 36px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-bottom: 22px;
+        border-bottom: 1px solid var(--border);
+        gap: 18px;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: flex-end;
+        gap: 18px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 9px 14px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block {
+        line-height: 1.2;
+      }
+
+      .game-title {
+        font-size: 30px;
+        font-weight: bold;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+      }
+
+      .game-subtitle {
+        font-size: 11px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 7px;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: flex-end;
+        gap: 14px;
+      }
+
+      .mode-counts {
+        text-align: right;
+        font-size: 11px;
+        letter-spacing: 1px;
+        line-height: 1.9;
+      }
+
+      .count-live {
+        color: var(--live-text);
+      }
+      .count-soon {
+        color: var(--text-dim);
+      }
+
+      .settings-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+        font-family: inherit;
+      }
+      .settings-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      /* ── Section + label ─────────────────────────────────────── */
+      .modes-section {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 18px 14px 22px;
+        border-radius: 10px;
+        background: radial-gradient(ellipse at 50% 0%, rgba(95, 191, 110, 0.07), transparent 65%);
+      }
+
+      .section-label {
+        font-size: 10px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--golf-green);
+      }
+      .section-label::before {
+        content: '';
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 8px currentColor;
+        flex-shrink: 0;
+      }
+
+      /* ── Mode grid ───────────────────────────────────────────── */
+      .modes-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--gap-card);
+      }
+
+      .mode-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 22px 18px 20px;
+        position: relative;
+        opacity: 0.92;
+        transition:
+          opacity 0.2s,
+          border-color 0.2s,
+          transform 0.2s,
+          background 0.2s;
+        display: flex;
+        flex-direction: column;
+        min-height: 220px;
+      }
+
+      .mode-card.is-live {
+        cursor: pointer;
+        opacity: 1;
+        animation: glow-pulse 3s ease-in-out infinite;
+      }
+      .mode-card.is-live:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--golf-green);
+        animation: none;
+        box-shadow: 0 0 18px rgba(95, 191, 110, 0.18);
+        transform: translateY(-1px);
+      }
+
+      .mode-card.is-soon:hover {
+        opacity: 1;
+        border-color: var(--border-strong);
+      }
+
+      .mode-card.is-preview {
+        cursor: pointer;
+        opacity: 1;
+      }
+      .mode-card.is-preview:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--golf-green);
+        box-shadow: 0 0 14px rgba(95, 191, 110, 0.14);
+        transform: translateY(-1px);
+      }
+      .mode-card.is-preview::before {
+        background: var(--golf-green-dim);
+        opacity: 0.9;
+      }
+
+      .badge-preview {
+        display: inline-block;
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 2px;
+        background: var(--golf-green-bg);
+        color: var(--golf-green);
+        border: 1px solid var(--golf-green-dim);
+        font-weight: bold;
+      }
+
+      @keyframes glow-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(95, 191, 110, 0);
+          border-color: var(--golf-green-dim);
+        }
+        50% {
+          box-shadow: 0 0 14px rgba(95, 191, 110, 0.22);
+          border-color: var(--golf-green);
+        }
+      }
+
+      .mode-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 6px 6px 0 0;
+        background: var(--golf-green-dim);
+        opacity: 0.7;
+      }
+      .mode-card.is-live::before {
+        background: linear-gradient(90deg, var(--golf-green), #88dd99);
+        opacity: 1;
+        box-shadow: 0 0 8px var(--golf-green);
+      }
+
+      .mode-name {
+        font-size: 17px;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+        letter-spacing: 1.5px;
+      }
+
+      .mode-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.7;
+        flex: 1;
+        margin-bottom: 16px;
+      }
+
+      .mode-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .badge-soon {
+        display: inline-block;
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 2px;
+        background: var(--bg-badge-dim);
+        color: var(--text-dim);
+        border: 1px solid var(--border);
+      }
+
+      .badge-live {
+        display: inline-block;
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: bold;
+        background: var(--live-bg);
+        color: var(--live-text);
+        border: 1px solid var(--live-border);
+      }
+
+      .mode-cta {
+        font-size: 11px;
+        color: var(--golf-green);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      /* ── Settings modal (ported from launcher) ───────────────── */
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.84);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-panel {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        width: 440px;
+        padding: 22px 26px 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-title {
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .modal-close {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-muted);
+        font-size: 12px;
+        width: 26px;
+        height: 26px;
+        cursor: pointer;
+        font-family: inherit;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .modal-close:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .settings-section {
+        margin-bottom: 20px;
+      }
+      .settings-section:last-of-type {
+        margin-bottom: 16px;
+      }
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+      }
+      .settings-desc {
+        font-size: 11px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+      .slider-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .slider-range {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+      .slider-value {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+        min-width: 50px;
+        text-align: right;
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+        border: none;
+      }
+      .click-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+      }
+      .click-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .click-name {
+        flex: 1;
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+      .click-toggle-row input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--click-blue);
+        cursor: pointer;
+      }
+      .settings-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+        gap: 12px;
+      }
+      .settings-note {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.4;
+        flex: 1;
+      }
+      .settings-reset {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .settings-reset:hover {
+        color: var(--click-orange);
+        border-color: var(--click-orange);
+      }
+
+      /* ── Footer ─────────────────────────────────────────────── */
+      .game-footer {
+        max-width: 880px;
+        margin: 40px auto 0;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="game-header">
+      <div class="header-left">
+        <button id="btn-back" class="back-btn">&larr; Launcher</button>
+        <div class="title-block">
+          <div class="game-title">Golf</div>
+          <div class="game-subtitle">Putt-Putt &middot; Driving Range &middot; Real Golf</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="btn-settings" class="settings-btn" title="Global BCI Settings">&#9881;</button>
+        <div class="mode-counts">
+          <div class="count-live">&#9632; 0 Modes Live</div>
+          <div class="count-soon">&#9632; 3 Coming Soon</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="modes-section">
+      <div class="section-label">Modes</div>
+      <div class="modes-grid">
+        <div class="mode-card is-preview" data-mode="putt-putt">
+          <div class="mode-name">Putt-Putt</div>
+          <div class="mode-desc">
+            Top-down mini-golf course of hand-designed holes. Aim with the cursor, lock your shot,
+            click the color sequence to send the ball. Walls bounce, water punishes overshoot, sand
+            slows you down.
+          </div>
+          <div class="mode-bottom">
+            <span class="badge-preview">Preview &mdash; In Dev</span>
+            <span class="mode-cta">Play &rarr;</span>
+          </div>
+        </div>
+
+        <div class="mode-card is-soon" data-mode="driving-range">
+          <div class="mode-name">Driving Range</div>
+          <div class="mode-desc">
+            TopGolf-style swing practice. Three-click power meter (purple to start, orange for
+            power, blue for accuracy). Hit targets at varying distances, score points by precision.
+          </div>
+          <div class="mode-bottom">
+            <span class="badge-soon">Coming Soon</span>
+          </div>
+        </div>
+
+        <div class="mode-card is-soon" data-mode="course">
+          <div class="mode-name">Real Golf Course</div>
+          <div class="mode-desc">
+            Side-view 9-hole course. Drive, fairway, approach, putt &mdash; the full round. Same
+            three-click swing meter from the range, scaled across every shot type.
+          </div>
+          <div class="mode-bottom">
+            <span class="badge-soon">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div id="settings-modal" class="modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">Global BCI Settings</div>
+          <button class="modal-close" id="settings-close">&#10005;</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Cursor Sensitivity</div>
+          <div class="slider-top">
+            <span class="slider-range">0.25&times; &nbsp;&mdash;&nbsp; 2.0&times;</span>
+            <span class="slider-value" id="settings-sens-val">1.00&times;</span>
+          </div>
+          <input type="range" id="settings-sens-slider" min="25" max="200" step="5" value="100" />
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Enabled Clicks</div>
+          <div class="settings-desc">
+            Turn off any click you don't use. Every game will respect this.
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-blue)"></div>
+            <span class="click-name">Left click &mdash; Blue</span>
+            <input type="checkbox" id="settings-click-0" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-purple)"></div>
+            <span class="click-name">Middle click &mdash; Purple</span>
+            <input type="checkbox" id="settings-click-1" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-orange)"></div>
+            <span class="click-name">Right click &mdash; Orange</span>
+            <input type="checkbox" id="settings-click-2" checked />
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <span class="settings-note">Saves automatically. Shared across every game.</span>
+          <button class="settings-reset" id="settings-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="game-footer">
+      <span>Golf &nbsp;&middot;&nbsp; BCI Starter Pack</span>
+      <span>Cursor + 1&ndash;3 clicks &nbsp;&middot;&nbsp; No keyboard required</span>
+    </footer>
+
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+    <script>
+      /* ── Back to launcher ─────────────────────────────────────── */
+      document.getElementById('btn-back').addEventListener('click', () => {
+        BCI.goToLauncher();
+      });
+
+      /* ── Mode card routing ────────────────────────────────────── */
+      document.querySelectorAll('.mode-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const isClickable =
+            card.classList.contains('is-live') || card.classList.contains('is-preview');
+          if (!isClickable) return;
+          const mode = card.dataset.mode;
+          window.location.href = `${mode}/index.html`;
+        });
+      });
+
+      /* ── Settings modal (mirror of launcher behavior) ─────────── */
+      const modal = document.getElementById('settings-modal');
+      const sensSlider = document.getElementById('settings-sens-slider');
+      const sensVal = document.getElementById('settings-sens-val');
+      const clickToggle = (id) => document.getElementById('settings-click-' + id);
+
+      function loadSettingsIntoUI() {
+        const s = BCI.getGlobalSettings();
+        sensSlider.value = Math.round(s.cursorSensitivity * 100);
+        sensVal.textContent = s.cursorSensitivity.toFixed(2) + '×';
+        [0, 1, 2].forEach((id) => {
+          clickToggle(id).checked = !!s.enabledClicks[id];
+        });
+      }
+
+      function openSettings() {
+        loadSettingsIntoUI();
+        modal.style.display = 'flex';
+      }
+      function closeSettings() {
+        modal.style.display = 'none';
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', openSettings);
+      document.getElementById('settings-close').addEventListener('click', closeSettings);
+      modal.addEventListener('mousedown', (e) => {
+        if (e.target === modal) closeSettings();
+      });
+
+      sensSlider.addEventListener('input', (e) => {
+        const sens = parseInt(e.target.value, 10) / 100;
+        sensVal.textContent = sens.toFixed(2) + '×';
+        BCI.saveGlobalSettings({ cursorSensitivity: sens });
+      });
+
+      [0, 1, 2].forEach((id) => {
+        clickToggle(id).addEventListener('change', (e) => {
+          const current = BCI.getGlobalSettings();
+          const enabledClicks = { ...current.enabledClicks, [id]: e.target.checked };
+          BCI.saveGlobalSettings({ enabledClicks });
+        });
+      });
+
+      document.getElementById('settings-reset').addEventListener('click', () => {
+        BCI.saveGlobalSettings({
+          cursorSensitivity: 1.0,
+          enabledClicks: { 0: true, 1: true, 2: true },
+        });
+        loadSettingsIntoUI();
+      });
+    </script>
+  </body>
+</html>

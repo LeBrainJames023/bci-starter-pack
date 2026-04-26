@@ -42,6 +42,7 @@ Nothing in this file gets built until the current feature is complete.
 - Different clicks for club selection (chip, iron, driver)
 - Old-school mini-clip aesthetic with BCI-optimized input
 - Analytics: shot accuracy per club type, power consistency, distance control
+- Procedural hole generation: algorithm-built putt-putt holes with easy/medium/hard difficulty settings, unlocking large hole libraries (50+) without hand-design overhead. Deferred from v1 — hand-designed 5–7 holes ship first.
 
 ### Hockey
 

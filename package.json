@@ -7,7 +7,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "serve": "npx http-server . -p 3000 -o"
+    "serve": "npx http-server . -p 3000 -c-1 -o"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

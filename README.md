@@ -12,6 +12,7 @@ Built for Neuralink Prime Study participants and BCI users broadly. Every game i
 | ---------------- | ------------------------------------------------ | ------- |
 | Hackey Sac       | Color-matched click training with a falling ball | Live    |
 | WebGrid          | BPS benchmark — colored cells in an N×N grid     | Live    |
+| Golf             | Putt-putt mini-golf, driving range, real course  | In Dev  |
 | Hoops            | Basketball rim timing and color matching         | Planned |
 | QB Targets       | Football receiver targeting under pressure       | Planned |
 | Goalie / Striker | Soccer shot blocking and striking                | Planned |
@@ -36,7 +37,8 @@ bci-starter-pack/
 ├── index.html           # Game launcher hub
 ├── games/
 │   ├── hackey-sac/      # BCI Hackey Sac
-│   └── webgrid/         # WebGrid (BPS benchmark)
+│   ├── webgrid/         # WebGrid (BPS benchmark)
+│   └── golf/            # Golf (Putt-Putt in dev, Driving Range + Course planned)
 ├── shared/              # Shared BCI utilities and config
 ├── FUTURE_FEATURES.md   # Planned games and enhancements
 └── ASSETS.md            # Asset and license tracking

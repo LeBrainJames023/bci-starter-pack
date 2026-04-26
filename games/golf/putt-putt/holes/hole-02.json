@@ -1,0 +1,11 @@
+{
+  "id": 2,
+  "name": "Watery Approach",
+  "par": 3,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 100, "y": 250 },
+  "cup": { "x": 700, "y": 250 },
+  "walls": [],
+  "water": [{ "x": 310, "y": 195, "width": 200, "height": 130 }],
+  "sand": []
+}

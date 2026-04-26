@@ -1,0 +1,11 @@
+{
+  "id": 3,
+  "name": "The Long Way Around",
+  "par": 4,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 90, "y": 100 },
+  "cup": { "x": 710, "y": 400 },
+  "walls": [{ "x": 440, "y": 60, "width": 16, "height": 230 }],
+  "water": [],
+  "sand": [{ "x": 270, "y": 220, "width": 200, "height": 110 }]
+}

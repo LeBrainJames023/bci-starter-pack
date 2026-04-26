@@ -1,0 +1,1343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Putt-Putt — Golf — BCI Starter Pack</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --golf-green: #5fbf6e;
+        --golf-green-dim: #2d4a32;
+        --golf-green-bg: #19281d;
+
+        --cancel-red: #d44b4b;
+        --cancel-red-dim: #6b2828;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Course palette (top-down putt-putt) */
+        --fairway: #3d8b47;
+        --fairway-dark: #2f6e38;
+        --rough: #1f2a22;
+        --wall: #5c4a3a;
+        --wall-edge: #735c47;
+        --sand: #d4c089;
+        --sand-edge: #b8a06a;
+        --water: #3a6b9b;
+        --water-deep: #2a4f74;
+        --water-edge: #5a8db5;
+        --cup-shadow: #0d1411;
+        --flag-pole: #d8d4c8;
+        --flag-cloth: #d44b4b;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+
+      /* ── Canvas + course frame ───────────────────────────────── */
+      .course-frame {
+        position: relative;
+        flex: 1;
+        background: var(--rough);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+      }
+
+      /* ── Bottom bar ──────────────────────────────────────────── */
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .status-msg .green {
+        color: var(--golf-green);
+      }
+      .status-msg .red {
+        color: var(--cancel-red);
+      }
+
+      /* Click legend (shown during AIMED) */
+      .click-legend {
+        display: none;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .click-legend.is-visible {
+        display: flex;
+      }
+      .legend-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        padding: 5px 9px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--bg-badge-dim);
+      }
+      .legend-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      /* Sequence area — floating overlay on the canvas, shown during SEQUENCING */
+      .sequence-area {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 22px 16px;
+        background: rgba(13, 17, 23, 0.78);
+        backdrop-filter: blur(4px);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        z-index: 6;
+        pointer-events: none;
+      }
+      .sequence-area.is-visible {
+        display: flex;
+      }
+      .sequence-label {
+        font-size: 11px;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .sequence-label .accent {
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .sequence-dots {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        padding: 0 8px;
+      }
+      .seq-dot {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid var(--border-strong);
+        background: var(--bg-badge-dim);
+        transition:
+          border-color 0.15s,
+          transform 0.15s,
+          box-shadow 0.15s,
+          opacity 0.2s;
+      }
+      .seq-dot::after {
+        /* Inner colored fill */
+        content: '';
+        position: absolute;
+        inset: 6px;
+        border-radius: 50%;
+        background: var(--seq-color, transparent);
+        opacity: 0.92;
+      }
+      .seq-dot.is-active {
+        transform: scale(1.12);
+        border-color: var(--seq-color);
+        box-shadow: 0 0 16px var(--seq-color);
+      }
+      /* Closing white ring telegraphs the click window — shrinks toward the dot */
+      .seq-dot.is-active::before {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        opacity: 0.95;
+        transform: scale(2.1);
+        animation: ring-close var(--seq-window-ms, 1800ms) cubic-bezier(0.4, 0.05, 0.35, 1) forwards;
+        pointer-events: none;
+      }
+      @keyframes ring-close {
+        0% {
+          transform: scale(2.1);
+          opacity: 0.55;
+          border-color: rgba(255, 255, 255, 0.7);
+          border-width: 2px;
+        }
+        80% {
+          transform: scale(1.15);
+          opacity: 1;
+          border-color: #fff;
+          border-width: 3px;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+          border-color: #fff;
+          border-width: 3px;
+        }
+      }
+      .seq-dot.is-success {
+        border-color: var(--good);
+        box-shadow: 0 0 10px rgba(95, 191, 110, 0.55);
+      }
+      .seq-dot.is-success::after {
+        opacity: 1;
+      }
+      .seq-dot.is-fail {
+        border-color: var(--bad);
+        box-shadow: 0 0 8px rgba(212, 75, 75, 0.45);
+        opacity: 0.55;
+      }
+
+      .cancel-btn {
+        background: var(--bg-card);
+        border: 1.5px solid var(--cancel-red-dim);
+        border-radius: 6px;
+        color: var(--cancel-red);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 11px 22px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s,
+          box-shadow 0.15s;
+        display: none;
+      }
+      .cancel-btn.is-visible {
+        display: inline-block;
+      }
+      .cancel-btn:hover {
+        color: #fff;
+        background: var(--cancel-red);
+        border-color: var(--cancel-red);
+        box-shadow: 0 0 14px rgba(212, 75, 75, 0.4);
+      }
+
+      /* ── Penalty flash overlay (water) ────────────────────────── */
+      .penalty-flash {
+        position: absolute;
+        inset: 0;
+        background: rgba(212, 75, 75, 0);
+        pointer-events: none;
+        z-index: 5;
+        transition: background 0.18s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+      }
+      .penalty-flash.is-active {
+        background: rgba(212, 75, 75, 0.22);
+      }
+      .penalty-msg {
+        background: var(--cancel-red);
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        border-radius: 6px;
+        opacity: 0;
+        transform: scale(0.9);
+        transition:
+          opacity 0.15s,
+          transform 0.15s;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      }
+      .penalty-flash.is-active .penalty-msg {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      /* ── Hole complete overlay ───────────────────────────────── */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(13, 17, 23, 0.85);
+        z-index: 10;
+        border-radius: 8px;
+      }
+      .overlay.is-visible {
+        display: flex;
+      }
+
+      .overlay-panel {
+        background: var(--bg-card);
+        border: 1px solid var(--golf-green-dim);
+        border-radius: 8px;
+        padding: 28px 36px 26px;
+        min-width: 380px;
+        text-align: center;
+        box-shadow: 0 0 40px rgba(95, 191, 110, 0.18);
+      }
+
+      .overlay-title {
+        font-size: 22px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--golf-green);
+        margin-bottom: 8px;
+      }
+
+      .overlay-line {
+        font-size: 13px;
+        color: var(--text-muted);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .overlay-line .big {
+        font-size: 20px;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+
+      .overlay-actions {
+        margin-top: 18px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .overlay-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 18px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .overlay-btn:hover {
+        border-color: var(--golf-green);
+        color: var(--golf-green);
+        background: var(--bg-card-hover);
+      }
+      .overlay-btn.is-primary {
+        border-color: var(--golf-green-dim);
+        color: var(--golf-green);
+        background: var(--golf-green-bg);
+      }
+      .overlay-btn.is-primary:hover {
+        border-color: var(--golf-green);
+        background: var(--bg-card-hover);
+      }
+      .overlay-btn[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body oncontextmenu="return false;">
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button id="btn-back" class="back-btn">&larr; Modes</button>
+            <div class="title-block">
+              <div class="game-title">Putt-Putt</div>
+              <div class="game-subtitle" id="hole-name">Hand-Designed Mini-Golf</div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="hud-stat">
+              <span class="hud-label">Hole</span>
+              <span class="hud-value" id="hud-hole">1</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">Par</span>
+              <span class="hud-value" id="hud-par">2</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">Strokes</span>
+              <span class="hud-value" id="hud-strokes">0</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="course-frame">
+          <canvas id="canvas" width="800" height="500"></canvas>
+          <div class="penalty-flash" id="penalty-flash">
+            <div class="penalty-msg">Splash &mdash; +1 Stroke</div>
+          </div>
+          <div class="sequence-area" id="sequence-area">
+            <div class="sequence-label" id="sequence-label">
+              Click in order &mdash; <span class="accent" id="sequence-band">Medium</span>
+            </div>
+            <div class="sequence-dots" id="sequence-dots"></div>
+          </div>
+          <div class="overlay" id="hole-complete-overlay">
+            <div class="overlay-panel">
+              <div class="overlay-title">Hole Complete</div>
+              <div class="overlay-line">Strokes <span class="big" id="oc-strokes">0</span></div>
+              <div class="overlay-line">Par <span class="big" id="oc-par">2</span></div>
+              <div class="overlay-line" id="oc-result">&mdash;</div>
+              <div class="overlay-actions">
+                <button class="overlay-btn is-primary" id="oc-next">Next Hole &rarr;</button>
+                <button class="overlay-btn" id="oc-replay">Play Again</button>
+                <button class="overlay-btn" id="oc-modes">&larr; Modes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">Loading hole&hellip;</div>
+            <div class="click-legend" id="click-legend">
+              <span class="legend-pill"
+                ><span class="legend-dot" style="background: var(--click-blue)"></span>Blue &mdash;
+                Short</span
+              >
+              <span class="legend-pill"
+                ><span class="legend-dot" style="background: var(--click-orange)"></span>Orange
+                &mdash; Medium (3-seq)</span
+              >
+              <span class="legend-pill"
+                ><span class="legend-dot" style="background: var(--click-purple)"></span>Purple
+                &mdash; Long (5-seq)</span
+              >
+            </div>
+          </div>
+          <button id="btn-cancel" class="cancel-btn">&#10005; Cancel Aim</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../../shared/bci-input.js"></script>
+    <script src="../../../shared/bci-settings.js"></script>
+    <script src="../../../shared/bci-shell.js"></script>
+    <script>
+      /* ─────────────────────────────────────────────────────────────
+         Putt-Putt — checkpoints 2-8
+         Aim, lock, distance-band selection (blue=short / orange=medium /
+         purple=long), color-sequence skill check, ball physics with
+         walls, water, sand. Three holes available for testing.
+         ───────────────────────────────────────────────────────────── */
+
+      const GAME_ID = 'golf-putt-putt';
+      const TOTAL_HOLES = 3;
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      const statusMsg = document.getElementById('status-msg');
+      const clickLegend = document.getElementById('click-legend');
+      const sequenceArea = document.getElementById('sequence-area');
+      const sequenceBandLabel = document.getElementById('sequence-band');
+      const sequenceDotsEl = document.getElementById('sequence-dots');
+      const cancelBtn = document.getElementById('btn-cancel');
+      const overlay = document.getElementById('hole-complete-overlay');
+      const ocStrokes = document.getElementById('oc-strokes');
+      const ocPar = document.getElementById('oc-par');
+      const ocResult = document.getElementById('oc-result');
+      const ocNext = document.getElementById('oc-next');
+      const ocReplay = document.getElementById('oc-replay');
+      const ocModes = document.getElementById('oc-modes');
+      const penaltyFlash = document.getElementById('penalty-flash');
+      const hudHole = document.getElementById('hud-hole');
+      const hudPar = document.getElementById('hud-par');
+      const hudStrokes = document.getElementById('hud-strokes');
+      const holeNameEl = document.getElementById('hole-name');
+
+      /* ── State ────────────────────────────────────────────────── */
+      const STATE = {
+        LOADING: 'loading',
+        AIMING: 'aiming',
+        AIMED: 'aimed',
+        SEQUENCING: 'sequencing',
+        IN_MOTION: 'in_motion',
+        PENALTY_RESET: 'penalty_reset',
+        HOLE_COMPLETE: 'hole_complete',
+      };
+
+      const BAND = {
+        SHORT: 'short',
+        MEDIUM: 'medium',
+        LONG: 'long',
+      };
+
+      /* Map click button → BCI color name (matches bci-input.js) */
+      const COLOR_NAMES = ['blue', 'purple', 'orange']; // index by click.id
+
+      let hole = null;
+      let currentHoleNum = 1;
+      let state = STATE.LOADING;
+      let strokes = 0;
+
+      let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 9 };
+      let cup = { x: 0, y: 0, radius: 14 };
+      let lastShotPos = { x: 0, y: 0 };
+
+      let aimAngle = 0;
+      let lockedAngle = 0;
+      let cursorX = W / 2;
+      let cursorY = H / 2;
+      let virtualCursor = null;
+
+      /* Sequence state */
+      let sequenceColors = []; // ['blue', 'orange', ...]
+      let sequenceResults = []; // booleans, per step
+      let sequenceStep = 0;
+      let sequenceBand = BAND.MEDIUM;
+      let sequenceStepStartedAt = 0;
+
+      /* Penalty state */
+      let penaltyStartedAt = 0;
+
+      /* Tunables */
+      const FRICTION = 0.985;
+      const SAND_FRICTION = 0.928;
+      const STOP_SPEED = 0.04;
+      const SHORT_PUTT_V0 = 6.2;
+      const MEDIUM_PUTT_V0 = 9.5;
+      const LONG_PUTT_V0 = 13.5;
+      const WALL_BOUNCE = 0.85;
+      const WALL_THICKNESS = 14;
+      const SEQUENCE_WINDOW_MS = 1800;
+      const PENALTY_RESET_MS = 900;
+      const SKEW_MAX_RAD = (22 * Math.PI) / 180; // up to ±22° at 0% accuracy
+
+      /* ── DOM helpers ──────────────────────────────────────────── */
+      function setStatus(html) {
+        statusMsg.innerHTML = html;
+      }
+
+      function statusFor(s) {
+        if (s === STATE.AIMING) {
+          return 'Move cursor to aim &mdash; <span class="accent">click any color to lock</span>';
+        }
+        if (s === STATE.AIMED) {
+          return '<span class="green">Aim locked</span> &mdash; <span class="accent">choose your putt</span>';
+        }
+        if (s === STATE.SEQUENCING) {
+          return '';
+        }
+        if (s === STATE.IN_MOTION) {
+          return '&hellip;';
+        }
+        if (s === STATE.PENALTY_RESET) {
+          return '<span class="red">Splash &mdash; resetting</span>';
+        }
+        if (s === STATE.HOLE_COMPLETE) {
+          return '<span class="green">Hole complete!</span>';
+        }
+        return 'Loading hole&hellip;';
+      }
+
+      function updateBottomBar() {
+        const showLegend = state === STATE.AIMED;
+        const showSequence = state === STATE.SEQUENCING;
+        clickLegend.classList.toggle('is-visible', showLegend);
+        sequenceArea.classList.toggle('is-visible', showSequence);
+        statusMsg.style.display = showSequence ? 'none' : 'block';
+        if (!showSequence) setStatus(statusFor(state));
+        cancelBtn.classList.toggle('is-visible', state === STATE.AIMED);
+      }
+
+      function updateHud() {
+        hudHole.textContent = hole ? hole.id : '—';
+        hudPar.textContent = hole ? hole.par : '—';
+        hudStrokes.textContent = strokes;
+        if (hole && hole.name) holeNameEl.textContent = hole.name;
+      }
+
+      /* ── Hole loading ─────────────────────────────────────────── */
+      async function loadHole(num) {
+        const padded = String(num).padStart(2, '0');
+        const res = await fetch(`holes/hole-${padded}.json`);
+        if (!res.ok) throw new Error(`Failed to load hole ${num}`);
+        return await res.json();
+      }
+
+      function resetHoleState() {
+        ball.x = hole.ball.x;
+        ball.y = hole.ball.y;
+        ball.vx = 0;
+        ball.vy = 0;
+        cup.x = hole.cup.x;
+        cup.y = hole.cup.y;
+        lastShotPos.x = ball.x;
+        lastShotPos.y = ball.y;
+        strokes = 0;
+        aimAngle = 0;
+        state = STATE.AIMING;
+        overlay.classList.remove('is-visible');
+        ocNext.hidden = currentHoleNum >= TOTAL_HOLES;
+        updateHud();
+        updateBottomBar();
+      }
+
+      async function gotoHole(num) {
+        if (num < 1 || num > TOTAL_HOLES) return;
+        currentHoleNum = num;
+        try {
+          hole = await loadHole(num);
+        } catch (err) {
+          setStatus(`Failed to load hole: ${err.message}`);
+          return;
+        }
+        resetHoleState();
+      }
+
+      /* ── Geometry helpers ─────────────────────────────────────── */
+      function rectContainsPoint(r, x, y) {
+        return x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height;
+      }
+
+      function isInWater(x, y) {
+        if (!hole.water) return false;
+        for (const r of hole.water) if (rectContainsPoint(r, x, y)) return true;
+        return false;
+      }
+
+      function isInSand(x, y) {
+        if (!hole.sand) return false;
+        for (const r of hole.sand) if (rectContainsPoint(r, x, y)) return true;
+        return false;
+      }
+
+      /* Circle-vs-AABB collision response: pushes ball out, reflects velocity. */
+      function resolveWallCollision(wall) {
+        const closestX = Math.max(wall.x, Math.min(ball.x, wall.x + wall.width));
+        const closestY = Math.max(wall.y, Math.min(ball.y, wall.y + wall.height));
+        const dx = ball.x - closestX;
+        const dy = ball.y - closestY;
+        const distSq = dx * dx + dy * dy;
+        const r = ball.radius;
+        if (distSq >= r * r) return false;
+
+        const dist = Math.sqrt(distSq) || 0.0001;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const overlap = r - dist;
+        ball.x += nx * overlap;
+        ball.y += ny * overlap;
+        const vDotN = ball.vx * nx + ball.vy * ny;
+        if (vDotN < 0) {
+          ball.vx -= (1 + WALL_BOUNCE) * vDotN * nx;
+          ball.vy -= (1 + WALL_BOUNCE) * vDotN * ny;
+        }
+        return true;
+      }
+
+      /* ── Physics ──────────────────────────────────────────────── */
+      function stepPhysics() {
+        if (state === STATE.PENALTY_RESET) {
+          if (Date.now() - penaltyStartedAt >= PENALTY_RESET_MS) {
+            penaltyFlash.classList.remove('is-active');
+            ball.x = lastShotPos.x;
+            ball.y = lastShotPos.y;
+            ball.vx = 0;
+            ball.vy = 0;
+            state = STATE.AIMING;
+            updateBottomBar();
+          }
+          return;
+        }
+
+        if (state !== STATE.IN_MOTION) return;
+
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        /* Outer wall bounce (rectangular field) */
+        const minX = ball.radius;
+        const minY = ball.radius;
+        const maxX = hole.size.width - ball.radius;
+        const maxY = hole.size.height - ball.radius;
+
+        if (ball.x < minX) {
+          ball.x = minX;
+          ball.vx = -ball.vx * WALL_BOUNCE;
+        } else if (ball.x > maxX) {
+          ball.x = maxX;
+          ball.vx = -ball.vx * WALL_BOUNCE;
+        }
+        if (ball.y < minY) {
+          ball.y = minY;
+          ball.vy = -ball.vy * WALL_BOUNCE;
+        } else if (ball.y > maxY) {
+          ball.y = maxY;
+          ball.vy = -ball.vy * WALL_BOUNCE;
+        }
+
+        /* Interior walls */
+        if (hole.walls) {
+          for (const wall of hole.walls) resolveWallCollision(wall);
+        }
+
+        /* Water hazard */
+        if (isInWater(ball.x, ball.y)) {
+          triggerWaterPenalty();
+          return;
+        }
+
+        /* Friction (sand applies more) */
+        const friction = isInSand(ball.x, ball.y) ? SAND_FRICTION : FRICTION;
+        ball.vx *= friction;
+        ball.vy *= friction;
+
+        /* Cup detection */
+        const dxCup = ball.x - cup.x;
+        const dyCup = ball.y - cup.y;
+        const distToCup = Math.sqrt(dxCup * dxCup + dyCup * dyCup);
+        if (distToCup < cup.radius) {
+          sinkBall();
+          return;
+        }
+
+        /* Stop check */
+        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        if (speed < STOP_SPEED) {
+          ball.vx = 0;
+          ball.vy = 0;
+          state = STATE.AIMING;
+          updateBottomBar();
+        }
+      }
+
+      function triggerWaterPenalty() {
+        ball.vx = 0;
+        ball.vy = 0;
+        strokes++; // +1 penalty stroke (the original shot already counted as 1)
+        updateHud();
+        state = STATE.PENALTY_RESET;
+        penaltyStartedAt = Date.now();
+        penaltyFlash.classList.add('is-active');
+        updateBottomBar();
+      }
+
+      function sinkBall() {
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.x = cup.x;
+        ball.y = cup.y;
+        state = STATE.HOLE_COMPLETE;
+        showHoleComplete();
+        updateBottomBar();
+      }
+
+      function showHoleComplete() {
+        ocStrokes.textContent = strokes;
+        ocPar.textContent = hole.par;
+        const diff = strokes - hole.par;
+        let result = '';
+        if (strokes === 1) result = 'Hole-in-one!';
+        else if (diff < 0) result = `${Math.abs(diff)} under par`;
+        else if (diff === 0) result = 'On par';
+        else result = `+${diff} over par`;
+        ocResult.textContent = result;
+        ocNext.hidden = currentHoleNum >= TOTAL_HOLES;
+        overlay.classList.add('is-visible');
+      }
+
+      /* ── Sequence (color-match skill check) ───────────────────── */
+      function startSequence(band) {
+        sequenceBand = band;
+        const length = band === BAND.LONG ? 5 : 3;
+        sequenceColors = [];
+        sequenceResults = [];
+        for (let i = 0; i < length; i++) {
+          const palette = ['blue', 'orange', 'purple'];
+          sequenceColors.push(palette[Math.floor(Math.random() * palette.length)]);
+        }
+        sequenceStep = 0;
+        sequenceStepStartedAt = Date.now();
+        sequenceBandLabel.textContent = band === BAND.LONG ? 'Long' : 'Medium';
+        renderSequenceDots();
+        state = STATE.SEQUENCING;
+        updateBottomBar();
+      }
+
+      function renderSequenceDots() {
+        sequenceDotsEl.innerHTML = '';
+        for (let i = 0; i < sequenceColors.length; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'seq-dot';
+          dot.style.setProperty('--seq-color', `var(--click-${sequenceColors[i]})`);
+          if (i < sequenceStep) {
+            dot.classList.add(sequenceResults[i] ? 'is-success' : 'is-fail');
+          } else if (i === sequenceStep) {
+            dot.classList.add('is-active');
+          }
+          sequenceDotsEl.appendChild(dot);
+        }
+      }
+
+      function tickSequence() {
+        if (state !== STATE.SEQUENCING) return;
+        const elapsed = Date.now() - sequenceStepStartedAt;
+        if (elapsed >= SEQUENCE_WINDOW_MS) {
+          recordSequenceStep(false); // timeout
+        }
+      }
+
+      function recordSequenceStep(success) {
+        sequenceResults.push(success);
+        sequenceStep++;
+        if (sequenceStep >= sequenceColors.length) {
+          finishSequence();
+        } else {
+          sequenceStepStartedAt = Date.now();
+          renderSequenceDots();
+        }
+      }
+
+      function finishSequence() {
+        renderSequenceDots();
+        const correct = sequenceResults.filter(Boolean).length;
+        const accuracy = correct / sequenceResults.length;
+        const baseV0 = sequenceBand === BAND.LONG ? LONG_PUTT_V0 : MEDIUM_PUTT_V0;
+        const speed = baseV0 * (0.55 + 0.45 * accuracy); // 55%–100% of base
+        const skew = (1 - accuracy) * SKEW_MAX_RAD * (Math.random() < 0.5 ? -1 : 1);
+        shoot(speed, skew);
+      }
+
+      /* ── Shooting ─────────────────────────────────────────────── */
+      function shoot(speed, skewRad = 0) {
+        const angle = lockedAngle + skewRad;
+        ball.vx = Math.cos(angle) * speed;
+        ball.vy = Math.sin(angle) * speed;
+        lastShotPos.x = ball.x;
+        lastShotPos.y = ball.y;
+        strokes++;
+        state = STATE.IN_MOTION;
+        updateHud();
+        updateBottomBar();
+      }
+
+      /* ── Rendering ────────────────────────────────────────────── */
+      function render() {
+        ctx.clearRect(0, 0, W, H);
+
+        const offX = Math.floor((W - hole.size.width) / 2);
+        const offY = Math.floor((H - hole.size.height) / 2);
+
+        ctx.save();
+        ctx.translate(offX, offY);
+
+        /* Fairway base */
+        const grad = ctx.createRadialGradient(
+          hole.size.width / 2,
+          hole.size.height / 2,
+          50,
+          hole.size.width / 2,
+          hole.size.height / 2,
+          Math.max(hole.size.width, hole.size.height) / 1.4
+        );
+        grad.addColorStop(0, getCss('--fairway'));
+        grad.addColorStop(1, getCss('--fairway-dark'));
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, hole.size.width, hole.size.height);
+
+        /* Subtle fairway stripes */
+        ctx.save();
+        ctx.globalAlpha = 0.07;
+        ctx.fillStyle = '#000';
+        for (let y = 0; y < hole.size.height; y += 18) {
+          ctx.fillRect(0, y, hole.size.width, 9);
+        }
+        ctx.restore();
+
+        /* Sand traps */
+        if (hole.sand) {
+          for (const s of hole.sand) drawSand(s);
+        }
+
+        /* Water hazards */
+        if (hole.water) {
+          for (const w of hole.water) drawWater(w);
+        }
+
+        /* Outer wall */
+        const wt = WALL_THICKNESS;
+        ctx.fillStyle = getCss('--wall');
+        ctx.fillRect(0, 0, hole.size.width, wt);
+        ctx.fillRect(0, hole.size.height - wt, hole.size.width, wt);
+        ctx.fillRect(0, 0, wt, hole.size.height);
+        ctx.fillRect(hole.size.width - wt, 0, wt, hole.size.height);
+        ctx.strokeStyle = getCss('--wall-edge');
+        ctx.lineWidth = 1;
+        ctx.strokeRect(
+          wt - 0.5,
+          wt - 0.5,
+          hole.size.width - wt * 2 + 1,
+          hole.size.height - wt * 2 + 1
+        );
+
+        /* Interior walls */
+        if (hole.walls) {
+          for (const wall of hole.walls) drawWall(wall);
+        }
+
+        /* Cup */
+        ctx.beginPath();
+        ctx.arc(cup.x, cup.y, cup.radius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cup.x, cup.y, cup.radius, 0, Math.PI * 2);
+        ctx.fillStyle = getCss('--cup-shadow');
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        /* Flag */
+        const poleX = cup.x;
+        const poleTop = cup.y - 52;
+        ctx.strokeStyle = getCss('--flag-pole');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(poleX, cup.y);
+        ctx.lineTo(poleX, poleTop);
+        ctx.stroke();
+        ctx.fillStyle = getCss('--flag-cloth');
+        ctx.beginPath();
+        ctx.moveTo(poleX, poleTop);
+        ctx.lineTo(poleX + 22, poleTop + 6);
+        ctx.lineTo(poleX, poleTop + 13);
+        ctx.closePath();
+        ctx.fill();
+
+        /* Aim line — AIMING */
+        if (state === STATE.AIMING) {
+          const dx = cursorX - offX - ball.x;
+          const dy = cursorY - offY - ball.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len > 5) {
+            aimAngle = Math.atan2(dy, dx);
+            drawAimLine(ball.x, ball.y, aimAngle, 180, getCss('--text-primary'));
+          }
+        }
+
+        /* Locked aim arrow — AIMED or SEQUENCING */
+        if (state === STATE.AIMED || state === STATE.SEQUENCING) {
+          drawAimLine(ball.x, ball.y, lockedAngle, 180, getCss('--golf-green'));
+          drawAimArrow(ball.x, ball.y, lockedAngle, 180, getCss('--golf-green'));
+        }
+
+        /* Ball */
+        drawBall();
+
+        ctx.restore();
+
+        /* Cursor crosshair */
+        if (state === STATE.AIMING || state === STATE.AIMED) {
+          BCI.drawCursorDot(ctx, cursorX, cursorY, {
+            arm: 8,
+            color: state === STATE.AIMING ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.55)',
+          });
+        }
+      }
+
+      function drawSand(s) {
+        ctx.save();
+        ctx.fillStyle = getCss('--sand');
+        ctx.fillRect(s.x, s.y, s.width, s.height);
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = '#000';
+        for (let i = 0; i < 12; i++) {
+          const px = s.x + Math.random() * s.width;
+          const py = s.y + Math.random() * s.height;
+          ctx.fillRect(px, py, 2, 1);
+        }
+        ctx.restore();
+        ctx.strokeStyle = getCss('--sand-edge');
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(s.x + 0.5, s.y + 0.5, s.width - 1, s.height - 1);
+      }
+
+      function drawWater(w) {
+        ctx.save();
+        const wgrad = ctx.createLinearGradient(w.x, w.y, w.x, w.y + w.height);
+        wgrad.addColorStop(0, getCss('--water'));
+        wgrad.addColorStop(1, getCss('--water-deep'));
+        ctx.fillStyle = wgrad;
+        ctx.fillRect(w.x, w.y, w.width, w.height);
+        /* Subtle shimmer lines */
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          const y = w.y + 18 + i * 22 + Math.sin(Date.now() / 600 + i) * 3;
+          ctx.beginPath();
+          ctx.moveTo(w.x + 12, y);
+          ctx.lineTo(w.x + w.width - 12, y);
+          ctx.stroke();
+        }
+        ctx.restore();
+        ctx.strokeStyle = getCss('--water-edge');
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.width - 1, w.height - 1);
+      }
+
+      function drawWall(wall) {
+        ctx.fillStyle = getCss('--wall');
+        ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+        ctx.strokeStyle = getCss('--wall-edge');
+        ctx.lineWidth = 1;
+        ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.width - 1, wall.height - 1);
+      }
+
+      function drawBall() {
+        ctx.beginPath();
+        ctx.arc(ball.x + 2, ball.y + 2, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        const ballGrad = ctx.createRadialGradient(
+          ball.x - 3,
+          ball.y - 3,
+          1,
+          ball.x,
+          ball.y,
+          ball.radius
+        );
+        ballGrad.addColorStop(0, '#fff');
+        ballGrad.addColorStop(1, '#c8c8c8');
+        ctx.fillStyle = ballGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      function drawAimLine(x, y, angle, length, color) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 7]);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      function drawAimArrow(x, y, angle, length, color) {
+        const tipX = x + Math.cos(angle) * length;
+        const tipY = y + Math.sin(angle) * length;
+        const wingLen = 11;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(
+          tipX - Math.cos(angle - 0.45) * wingLen,
+          tipY - Math.sin(angle - 0.45) * wingLen
+        );
+        ctx.lineTo(
+          tipX - Math.cos(angle + 0.45) * wingLen,
+          tipY - Math.sin(angle + 0.45) * wingLen
+        );
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function getCss(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+
+      /* ── Input ────────────────────────────────────────────────── */
+      function setupVirtualCursor() {
+        virtualCursor = BCI.createVirtualCursor(canvas, {
+          sensitivity: BCI.getEffectiveSettings(GAME_ID).cursorSensitivity ?? 1.0,
+          startX: W / 2,
+          startY: H / 2,
+        });
+      }
+
+      canvas.addEventListener('mousemove', () => {
+        if (!virtualCursor) return;
+        cursorX = virtualCursor.x;
+        cursorY = virtualCursor.y;
+      });
+
+      canvas.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const click = BCI.CLICK_BY_BUTTON[e.button];
+        if (!click) return;
+        const colorName = COLOR_NAMES[click.id];
+
+        if (state === STATE.AIMING) {
+          lockedAngle = aimAngle;
+          state = STATE.AIMED;
+          updateBottomBar();
+          return;
+        }
+
+        if (state === STATE.AIMED) {
+          /* Distance band selection by click color */
+          if (colorName === 'blue') {
+            shoot(SHORT_PUTT_V0, 0);
+          } else if (colorName === 'orange') {
+            startSequence(BAND.MEDIUM);
+          } else if (colorName === 'purple') {
+            startSequence(BAND.LONG);
+          }
+          return;
+        }
+
+        if (state === STATE.SEQUENCING) {
+          const expected = sequenceColors[sequenceStep];
+          recordSequenceStep(colorName === expected);
+        }
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        if (state !== STATE.AIMED) return;
+        state = STATE.AIMING;
+        updateBottomBar();
+      });
+
+      /* ── Overlay buttons ──────────────────────────────────────── */
+      ocReplay.addEventListener('click', () => resetHoleState());
+      ocModes.addEventListener('click', () => {
+        window.location.href = '../index.html';
+      });
+      ocNext.addEventListener('click', () => {
+        gotoHole(currentHoleNum + 1);
+      });
+
+      /* ── Header buttons ───────────────────────────────────────── */
+      document.getElementById('btn-back').addEventListener('click', () => {
+        window.location.href = '../index.html';
+      });
+
+      /* ── Loop ─────────────────────────────────────────────────── */
+      function loop() {
+        tickSequence();
+        stepPhysics();
+        if (hole) render();
+        requestAnimationFrame(loop);
+      }
+
+      /* ── Boot ─────────────────────────────────────────────────── */
+      (async function init() {
+        /* Sync CSS animation duration with JS timing-window constant */
+        document.documentElement.style.setProperty('--seq-window-ms', `${SEQUENCE_WINDOW_MS}ms`);
+
+        const params = new URLSearchParams(window.location.search);
+        const requested = parseInt(params.get('hole') || '1', 10);
+        const startHole = Number.isFinite(requested)
+          ? Math.max(1, Math.min(TOTAL_HOLES, requested))
+          : 1;
+
+        currentHoleNum = startHole;
+        try {
+          hole = await loadHole(startHole);
+        } catch (err) {
+          setStatus(`Failed to load hole: ${err.message}`);
+          return;
+        }
+        resetHoleState();
+        setupVirtualCursor();
+
+        const fitter = BCI.createViewportFitter(document.getElementById('game-wrapper'), {
+          maxScale: 1.3,
+          padding: 0.94,
+        });
+        fitter.fit();
+
+        loop();
+      })();
+    </script>
+  </body>
+</html>

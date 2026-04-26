@@ -1,0 +1,11 @@
+{
+  "id": 1,
+  "name": "First Tap",
+  "par": 2,
+  "size": { "width": 800, "height": 500 },
+  "ball": { "x": 120, "y": 250 },
+  "cup": { "x": 680, "y": 250 },
+  "walls": [],
+  "water": [],
+  "sand": []
+}
