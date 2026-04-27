@@ -39,6 +39,10 @@
         --live-bg: #1a2a1a;
         --live-border: #2d4a2d;
 
+        --dev-text: #d4a35a;
+        --dev-bg: #2a221a;
+        --dev-border: #4a3d2d;
+
         /* Spacing */
         --gap-card: 12px;
         --gap-section: 40px;
@@ -578,6 +582,15 @@
         box-shadow: 0 0 14px rgba(255, 136, 51, 0.18);
       }
 
+      .game-card--dev {
+        opacity: 1;
+        cursor: pointer;
+      }
+      .game-card--dev:hover {
+        border-color: var(--dev-border);
+        box-shadow: 0 0 12px rgba(212, 163, 90, 0.18);
+      }
+
       .game-card::before {
         content: '';
         position: absolute;
@@ -616,6 +629,19 @@
         background: var(--bg-badge-dim);
         color: var(--text-dim);
         border: 1px solid var(--border);
+      }
+
+      .badge-dev {
+        display: inline-block;
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 5px 12px;
+        border-radius: 3px;
+        font-weight: bold;
+        background: var(--dev-bg);
+        color: var(--dev-text);
+        border: 1px solid var(--dev-border);
       }
 
       /* ── Footer ─────────────────────────────────────────────── */
@@ -768,12 +794,16 @@
             <span class="badge-live">&#9679; Live</span>
           </div>
 
-          <div class="game-card" style="--accent: var(--cat-sports)">
+          <div
+            class="game-card game-card--dev"
+            style="--accent: var(--cat-sports)"
+            onclick="openGame('games/hoops/index.html')"
+          >
             <div class="card-name">BCI Hoops</div>
             <div class="card-desc">
               Basketball. Time clicks to match the rotating rim's colored zones and sink the shot.
             </div>
-            <span class="badge-soon">Coming Soon</span>
+            <span class="badge-dev">&#9679; In Progress</span>
           </div>
 
           <div class="game-card" style="--accent: var(--cat-sports)">
