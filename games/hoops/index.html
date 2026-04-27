@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BCI Hoops — BCI Arcade</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Gym palette — fully themed environment, no BCI palette here */
+        --gym-floor: #8a5a2b;
+        --gym-floor-dark: #5b3a1a;
+        --gym-floor-line: #d8a86a;
+        --gym-wall: #14191f;
+        --gym-crowd: #2a2f38;
+        --gym-spot: rgba(255, 220, 160, 0.18);
+
+        --backboard: #f3eee2;
+        --backboard-edge: #b8b0a0;
+        --backboard-square: #2a2f38;
+        --rim-shadow: #0a0d10;
+        --net-color: #f3eee2;
+        --ball-orange: #d97a2c;
+        --ball-orange-dark: #8d4a17;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        min-width: 56px;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+
+      /* ── Canvas + court frame ────────────────────────────────── */
+      .court-frame {
+        position: relative;
+        flex: 1;
+        background: var(--gym-wall);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+      }
+
+      /* ── Bottom bar ──────────────────────────────────────────── */
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .home-slot {
+        display: flex;
+        align-items: center;
+      }
+
+      /* ── Settings modal placeholder (wired in later checkpoint) */
+      .settings-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      }
+    </style>
+  </head>
+
+  <body oncontextmenu="return false;">
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button class="back-btn" id="btn-back">&larr; Arcade</button>
+            <div class="title-block">
+              <div class="game-title">BCI Hoops</div>
+              <div class="game-subtitle">Free Throw &middot; Three-Point</div>
+            </div>
+          </div>
+
+          <div class="hud">
+            <div class="hud-stat">
+              <span class="hud-label">Shot</span>
+              <span class="hud-value" id="hud-shot">— / —</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">Score</span>
+              <span class="hud-value" id="hud-score">0</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">Streak</span>
+              <span class="hud-value" id="hud-streak">0</span>
+            </div>
+          </div>
+
+          <div class="header-right">
+            <button class="icon-btn" id="btn-settings">Settings</button>
+          </div>
+        </header>
+
+        <div class="court-frame">
+          <canvas id="canvas" width="800" height="540"></canvas>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">
+              <span class="accent">Hoops v1</span> &middot; scaffold online &middot; mechanic comes
+              online next
+            </div>
+          </div>
+          <div class="home-slot" id="home-slot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-modal" id="settings-modal"></div>
+
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+    <script>
+      'use strict';
+
+      const GAME_ID = 'hoops';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      /* Header buttons */
+      document.getElementById('btn-back').addEventListener('click', () => {
+        BCI.goToLauncher();
+      });
+
+      /* Home button slot — uses the shared component */
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      /* Virtual cursor — checkpoint 3 will draw a proper reticle on top of it */
+      const settings = BCI.getEffectiveSettings(GAME_ID);
+      const virtualCursor = BCI.createVirtualCursor(canvas, {
+        sensitivity: settings.cursorSensitivity,
+        startX: W / 2,
+        startY: H * 0.55,
+      });
+
+      /* Scaffold draw — placeholder so opening the file shows something
+         that reads as "hoops, in progress." Real scene lands in next
+         checkpoint. */
+      function drawScaffold() {
+        ctx.clearRect(0, 0, W, H);
+
+        /* Soft vertical gradient to suggest gym ambience */
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#161b22');
+        grad.addColorStop(1, '#0d1117');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        /* Centered placeholder marker */
+        ctx.fillStyle = '#5d6670';
+        ctx.font = '14px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('BCI HOOPS', W / 2, H / 2 - 10);
+        ctx.fillStyle = '#3a4150';
+        ctx.font = '11px Courier New';
+        ctx.fillText('scene comes online in checkpoint 2', W / 2, H / 2 + 12);
+
+        /* Cursor preview so we can confirm input is wired */
+        BCI.drawCursorDot(ctx, virtualCursor.x, virtualCursor.y, {
+          color: 'rgba(232, 228, 217, 0.9)',
+        });
+      }
+
+      function loop() {
+        drawScaffold();
+        requestAnimationFrame(loop);
+      }
+
+      const fitter = BCI.createViewportFitter(document.getElementById('game-wrapper'), {
+        maxScale: 1.3,
+        padding: 0.94,
+      });
+      fitter.fit();
+
+      loop();
+    </script>
+  </body>
+</html>

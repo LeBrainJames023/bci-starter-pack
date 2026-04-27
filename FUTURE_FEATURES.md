@@ -15,6 +15,8 @@ Nothing in this file gets built until the current feature is complete.
 - BCI bonus: dwell-time mechanic slightly widens the sweet spot
 - Analytics: per-click accuracy on different rim positions, reaction time, hold time
 
+**Hoops — streak feedback.** Once the v1 round flow is solid, layer in visible streak rewards: crowd noise that swells as the streak builds, and a screen shake / rim flash on long streaks. Held out of v1 to keep the first shipping pass focused on core mechanic feel.
+
 ### BCI QB Targets (Football)
 
 - Cursor acts as quarterback aim
