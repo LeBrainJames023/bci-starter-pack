@@ -8,19 +8,19 @@ Built for Neuralink Prime Study participants and BCI users broadly. Every game i
 
 ## Games
 
-| Game             | Description                                                | Status  |
-| ---------------- | ---------------------------------------------------------- | ------- |
-| Hackey Sac       | Color-matched click training with a falling ball           | Live    |
-| WebGrid          | BPS benchmark — colored cells in an N×N grid               | Live    |
-| Golf             | Putt-putt mini-golf (Live), driving range + course planned | Live    |
-| Hoops            | Basketball rim timing and color matching                   | Planned |
-| QB Targets       | Football receiver targeting under pressure                 | Planned |
-| Goalie / Striker | Soccer shot blocking and striking                          | Planned |
-| Batter / Pitcher | Baseball timing and pitch selection                        | Planned |
-| Rally            | Tennis / badminton color-matched returns                   | Planned |
-| Range            | Target practice with decision-making                       | Planned |
-| Tower Defense    | Wave-based click strategy                                  | Planned |
-| Side Scroller    | Action platformer                                          | Planned |
+| Game             | Description                                                     | Status  |
+| ---------------- | --------------------------------------------------------------- | ------- |
+| Hackey Sac       | Color-matched click training with a falling ball                | Live    |
+| WebGrid          | BPS benchmark — colored cells in an N×N grid                    | Live    |
+| Golf             | Putt-putt mini-golf (Live), driving range + course planned      | Live    |
+| Hoops            | Free Throw + Three-Point — rotating colored rim, click to match | Live    |
+| QB Targets       | Football receiver targeting under pressure                      | Planned |
+| Goalie / Striker | Soccer shot blocking and striking                               | Planned |
+| Batter / Pitcher | Baseball timing and pitch selection                             | Planned |
+| Rally            | Tennis / badminton color-matched returns                        | Planned |
+| Range            | Target practice with decision-making                            | Planned |
+| Tower Defense    | Wave-based click strategy                                       | Planned |
+| Side Scroller    | Action platformer                                               | Planned |
 
 ## How to Play
 
@@ -38,7 +38,8 @@ bci-starter-pack/
 ├── games/
 │   ├── hackey-sac/      # BCI Hackey Sac
 │   ├── webgrid/         # WebGrid (BPS benchmark)
-│   └── golf/            # Golf (Putt-Putt in dev, Driving Range + Course planned)
+│   ├── golf/            # Golf (Putt-Putt Live, Driving Range + Course planned)
+│   └── hoops/           # BCI Hoops (Free Throw + Three-Point Live)
 ├── shared/              # Shared BCI utilities and config
 ├── FUTURE_FEATURES.md   # Planned games and enhancements
 └── ASSETS.md            # Asset and license tracking

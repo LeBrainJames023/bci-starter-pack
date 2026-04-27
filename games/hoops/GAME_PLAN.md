@@ -2,7 +2,7 @@
 
 ## Status
 
-v1 in progress.
+v1 shipped — Live on the launcher.
 
 ## Locked v1 Spec
 
@@ -40,19 +40,21 @@ per-color accuracy, reaction time per shot, longest streak. Stored under
 
 ## v1 Checkpoints
 
-1. Folder + index.html scaffold + locked spec + FUTURE_FEATURES entry.
-2. Static gym scene — floor, crowd, spotlight, backboard, rim, net, ball.
-3. BCI cursor reticle (large, BCI-friendly, on-rim highlight).
-4. Clock-face rim rotation with three colored arcs.
-5. Click-to-shot arc animation (~300ms flight).
-6. Hit detection at arrival (cursor on rim + zone color + click color).
-7. HUD (score / miss / streak) with make/miss feedback.
-8. 10-shot round structure + end-of-round results screen.
-9. Mode select for Free Throw vs Three-Point with separate stats.
-10. Difficulty ramp on rim rotation speed across the 10 shots.
-11. Analytics integration.
-12. Settings panel (cursor sensitivity, replay, mode select).
-13. Home button + launcher card flipped to Live + game count bumped.
+All shipped.
+
+1. ✅ Folder + index.html scaffold + locked spec + FUTURE_FEATURES entry.
+2. ✅ Static gym scene — floor, crowd, spotlight, backboard, rim, net, ball.
+3. ✅ BCI cursor reticle (large, BCI-friendly, on-rim highlight).
+4. ✅ Clock-face rim rotation with three colored arcs.
+5. ✅ Click-to-shot arc animation (~300ms flight).
+6. ✅ Hit detection at arrival (cursor on rim + zone color + click color).
+7. ✅ HUD (score / miss / streak) with make/miss feedback.
+8. ✅ 10-shot round structure + end-of-round results screen.
+9. ✅ Mode select for Free Throw vs Three-Point with separate stats.
+10. ✅ Difficulty ramp on rim rotation speed across the 10 shots.
+11. ✅ Analytics integration.
+12. ✅ Settings panel (cursor sensitivity, replay, mode select).
+13. ✅ Home button + launcher card flipped to Live + game count bumped.
 
 ## Long-Term Vision
 
@@ -66,7 +68,8 @@ per-color accuracy, reaction time per shot, longest streak. Stored under
 
 ## Currently Building
 
-Checkpoint 1 — scaffold.
+Nothing active. Next milestone is v1.5 polish (visual pass + streak
+feedback per FUTURE_FEATURES).
 
 ## Tech Notes
 
