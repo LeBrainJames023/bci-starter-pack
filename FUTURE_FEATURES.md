@@ -98,6 +98,7 @@ Nothing in this file gets built until the current feature is complete.
 ## Game Enhancements
 
 - **Themed Home button color variants.** The shared Home button (joystick + cursor + 3 BCI-color arcade buttons) is currently neutral so it never competes with the click-input colors. Once we have more polish bandwidth, explore subtle per-game theming (e.g. a green tint inside a golf course, white-on-ice in hockey) without ever using the blue/orange/purple click palette on the button itself. Goal: more brand personality per game while keeping click-input semantics untouchable.
+- **WebGrid splash motif — more presence.** The single-cell + ghost cursor loop on the menu currently feels subtle and clean. User has flagged interest in making it more colorful / more present down the road — possibly multiple cells at once, brighter color washes, or a denser cycle. Don't touch yet; this is parked until the rest of the splash polish settles.
 - Cross-game analytics dashboard in the launcher
 - Global BCI profile: click mapping saved once, applied to all games
 - Difficulty progression curriculum: guide new users from easiest to hardest game
