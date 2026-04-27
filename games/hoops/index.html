@@ -325,7 +325,83 @@
         border-color: var(--border-strong);
       }
 
-      /* ── Settings modal placeholder (wired in later checkpoint) */
+      /* ── Mode select overlay ─────────────────────────────────── */
+      .mode-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.85);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 7;
+      }
+      .mode-overlay.is-visible {
+        display: flex;
+      }
+      .mode-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 28px 36px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        align-items: center;
+        min-width: 480px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .mode-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .mode-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        width: 100%;
+      }
+      .mode-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-family: inherit;
+        cursor: pointer;
+        padding: 18px 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+        text-align: left;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          transform 0.12s;
+      }
+      .mode-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-orange);
+        transform: translateY(-1px);
+      }
+      .mode-btn-name {
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+      }
+      .mode-btn-desc {
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      /* ── Settings modal ──────────────────────────────────────── */
       .settings-modal {
         display: none;
         position: fixed;
@@ -334,6 +410,82 @@
         align-items: center;
         justify-content: center;
         z-index: 20;
+      }
+      .settings-modal.is-visible {
+        display: flex;
+      }
+      .settings-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 26px 32px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 380px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .settings-card-title {
+        font-size: 13px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .settings-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .settings-row-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        display: flex;
+        justify-content: space-between;
+      }
+      .settings-row-label .accent {
+        color: var(--text-primary);
+      }
+      .settings-slider {
+        width: 100%;
+        accent-color: var(--click-orange);
+      }
+      .settings-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .settings-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 16px;
+        cursor: pointer;
+        flex: 1;
+        min-width: 100px;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .settings-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-blue);
+      }
+      .settings-btn--ghost {
+        color: var(--text-muted);
+        background: transparent;
+      }
+      .settings-btn--ghost:hover {
+        color: var(--text-primary);
       }
     </style>
   </head>
@@ -391,7 +543,28 @@
               </div>
               <div class="results-buttons">
                 <button class="results-btn" id="btn-play-again">Play Again</button>
+                <button class="results-btn results-btn--ghost" id="btn-results-modes">
+                  Mode Select
+                </button>
                 <button class="results-btn results-btn--ghost" id="btn-results-home">Home</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mode-overlay" id="mode-overlay">
+            <div class="mode-card">
+              <div class="mode-title">Select Mode</div>
+              <div class="mode-grid">
+                <button class="mode-btn" data-mode="ft">
+                  <div class="mode-btn-name">Free Throw</div>
+                  <div class="mode-btn-desc">15 ft &middot; baseline timing &middot; 10 shots</div>
+                </button>
+                <button class="mode-btn" data-mode="threePt">
+                  <div class="mode-btn-name">Three-Point</div>
+                  <div class="mode-btn-desc">
+                    Pulled-back camera &middot; longer flight &middot; 10 shots
+                  </div>
+                </button>
               </div>
             </div>
           </div>
@@ -409,7 +582,36 @@
       </div>
     </div>
 
-    <div class="settings-modal" id="settings-modal"></div>
+    <div class="settings-modal" id="settings-modal">
+      <div class="settings-card">
+        <div class="settings-card-title">Settings</div>
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span>Cursor Sensitivity</span>
+            <span class="accent" id="settings-sens-val">1.00&times;</span>
+          </div>
+          <input
+            class="settings-slider"
+            id="settings-sens-slider"
+            type="range"
+            min="25"
+            max="200"
+            step="5"
+            value="100"
+          />
+        </div>
+        <div class="settings-buttons">
+          <button class="settings-btn" id="settings-replay">Replay Round</button>
+          <button class="settings-btn" id="settings-modes">Mode Select</button>
+        </div>
+        <div class="settings-buttons">
+          <button class="settings-btn settings-btn--ghost" id="settings-reset">
+            Reset Defaults
+          </button>
+          <button class="settings-btn settings-btn--ghost" id="settings-close">Close</button>
+        </div>
+      </div>
+    </div>
 
     <script src="../../shared/bci-input.js"></script>
     <script src="../../shared/bci-settings.js"></script>
@@ -657,6 +859,7 @@
          ROUND_END — results overlay shown; loop still ticks for the
                      visual but no shots happen. */
       const STATE = {
+        MODE_SELECT: 'mode_select',
         AIMING: 'aiming',
         SHOOTING: 'shooting',
         RESOLVING: 'resolving',
@@ -664,12 +867,51 @@
       };
 
       const ROUND_SHOTS = 10;
-      const SHOT_FLIGHT_MS = 300;
       const RESOLVE_MS = 700;
       const FLASH_MS = 500;
-      const RIM_SPEED_BASE = 0.55; // rad/s — checkpoint 10 will ramp
+      const RIM_SPEED_BASE = 0.55; // rad/s baseline — modulated by ramp + mode
+      const RIM_SPEED_RAMP_PER_SHOT = 0.13; // shot 10 = 2.17× shot 1
 
-      let gameState = STATE.AIMING;
+      /* ── Modes ────────────────────────────────────────────────
+         Each mode overrides scene + flight tunables. Free Throw is
+         the baseline; Three-Point pulls the launch point back, shrinks
+         the rim slightly, and lengthens the flight so prediction
+         pressure goes up even before the difficulty ramp kicks in. */
+      const MODES = {
+        ft: {
+          name: 'Free Throw',
+          launchX: 400,
+          launchY: 488,
+          rimRx: 70,
+          rimRy: 18,
+          flightMs: 300,
+          rimSpeedMul: 1.0,
+        },
+        threePt: {
+          name: 'Three-Point',
+          launchX: 400,
+          launchY: 514,
+          rimRx: 60,
+          rimRy: 16,
+          flightMs: 420,
+          rimSpeedMul: 1.0,
+        },
+      };
+
+      let activeMode = 'ft'; // changes via mode select
+      let currentFlightMs = MODES.ft.flightMs;
+
+      function applyMode(modeId) {
+        activeMode = modeId;
+        const m = MODES[modeId];
+        SCENE.launchX = m.launchX;
+        SCENE.launchY = m.launchY;
+        SCENE.rimRx = m.rimRx;
+        SCENE.rimRy = m.rimRy;
+        currentFlightMs = m.flightMs;
+      }
+
+      let gameState = STATE.MODE_SELECT;
       let lastFrameMs = performance.now();
       let rimAngle = 0;
 
@@ -679,9 +921,17 @@
       let streak = 0;
       let longestStreak = 0;
 
-      let shot = null; // { startedAt, fromX, fromY, toX, toY, targetAngle, clickColor, outcome, resolvedAt }
+      let shot = null; // { startedAt, fromX, fromY, toX, toY, targetAngle, clickColor, clickId, outcome, resolvedAt }
       let flashAt = 0;
       let flashType = null; // 'make' | 'miss' | null
+
+      /* Analytics — separate session per round, separate game id per
+         mode so all-time totals stay clean. */
+      let analyticsSession = null;
+      let aimingStartedAt = 0;
+      function analyticsGameId() {
+        return activeMode === 'ft' ? 'hoops-ft' : 'hoops-3pt';
+      }
 
       /* ── Geometry helpers ─────────────────────────────────────
          cursorRimInfo: convert a screen point into ellipse-parametric
@@ -788,7 +1038,7 @@
 
       function drawBallInFlight() {
         if (!shot || gameState !== STATE.SHOOTING) return;
-        const t = Math.min(1, (performance.now() - shot.startedAt) / SHOT_FLIGHT_MS);
+        const t = Math.min(1, (performance.now() - shot.startedAt) / currentFlightMs);
         const x = shot.fromX + (shot.toX - shot.fromX) * t;
         const flatY = shot.fromY + (shot.toY - shot.fromY) * t;
         /* Parabolic apex — peaks above the linear interpolation at
@@ -911,9 +1161,15 @@
         statusMsg.innerHTML = html;
       }
 
-      /* ── Round flow + results ─────────────────────────────────── */
+      /* ── Round flow + results + mode select ──────────────────── */
 
       const resultsOverlay = document.getElementById('results-overlay');
+      const modeOverlay = document.getElementById('mode-overlay');
+
+      function aimingPromptHTML() {
+        const modeName = MODES[activeMode].name;
+        return `<span class="accent">${modeName}</span> &middot; aim at a zone &middot; click matching color`;
+      }
 
       function startRound() {
         shotIndex = 0;
@@ -923,12 +1179,13 @@
         longestStreak = 0;
         shot = null;
         flashType = null;
+        analyticsSession = BCI.createSession();
+        aimingStartedAt = Date.now();
         gameState = STATE.AIMING;
         resultsOverlay.classList.remove('is-visible');
+        modeOverlay.classList.remove('is-visible');
         updateHud();
-        setStatus(
-          '<span class="accent">Free Throw</span> &middot; aim at a zone &middot; click matching color'
-        );
+        setStatus(aimingPromptHTML());
       }
 
       function showResults() {
@@ -937,13 +1194,98 @@
         document.getElementById('results-acc').textContent = accPct + '%';
         document.getElementById('results-streak').textContent = String(longestStreak);
         resultsOverlay.classList.add('is-visible');
-        setStatus('<span class="accent">Round complete</span>');
+        setStatus(`<span class="accent">${MODES[activeMode].name}</span> &middot; round complete`);
+
+        /* Persist this round into the per-mode analytics bucket. */
+        if (analyticsSession) {
+          BCI.saveSession(analyticsGameId(), analyticsSession, {
+            mode: activeMode,
+            score,
+            miss,
+            longestStreak,
+            roundShots: ROUND_SHOTS,
+          });
+          analyticsSession = null;
+        }
+      }
+
+      function showModeSelect() {
+        gameState = STATE.MODE_SELECT;
+        analyticsSession = null;
+        shot = null;
+        flashType = null;
+        resultsOverlay.classList.remove('is-visible');
+        modeOverlay.classList.add('is-visible');
+        setStatus('<span class="accent">Select a mode</span>');
       }
 
       document.getElementById('btn-play-again').addEventListener('click', startRound);
+      document.getElementById('btn-results-modes').addEventListener('click', showModeSelect);
       document
         .getElementById('btn-results-home')
         .addEventListener('click', () => BCI.goToLauncher());
+
+      document.querySelectorAll('.mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const modeId = btn.dataset.mode;
+          if (!MODES[modeId]) return;
+          applyMode(modeId);
+          startRound();
+        });
+      });
+
+      /* ── Settings ────────────────────────────────────────────── */
+
+      const settingsModal = document.getElementById('settings-modal');
+      const sensSlider = document.getElementById('settings-sens-slider');
+      const sensVal = document.getElementById('settings-sens-val');
+
+      function loadSettingsIntoUI() {
+        const s = BCI.getEffectiveSettings(GAME_ID);
+        sensSlider.value = Math.round(s.cursorSensitivity * 100);
+        sensVal.textContent = s.cursorSensitivity.toFixed(2) + '×';
+      }
+
+      function openSettings() {
+        loadSettingsIntoUI();
+        settingsModal.classList.add('is-visible');
+      }
+
+      function closeSettings() {
+        settingsModal.classList.remove('is-visible');
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', openSettings);
+      document.getElementById('settings-close').addEventListener('click', closeSettings);
+      settingsModal.addEventListener('mousedown', (e) => {
+        if (e.target === settingsModal) closeSettings();
+      });
+
+      sensSlider.addEventListener('input', (e) => {
+        const sens = parseInt(e.target.value, 10) / 100;
+        sensVal.textContent = sens.toFixed(2) + '×';
+        BCI.saveGlobalSettings({ cursorSensitivity: sens });
+        if (virtualCursor) virtualCursor.setSensitivity(sens);
+      });
+
+      document.getElementById('settings-reset').addEventListener('click', () => {
+        BCI.saveGlobalSettings({
+          cursorSensitivity: 1.0,
+          enabledClicks: { 0: true, 1: true, 2: true },
+        });
+        loadSettingsIntoUI();
+        if (virtualCursor) virtualCursor.setSensitivity(1.0);
+      });
+
+      document.getElementById('settings-replay').addEventListener('click', () => {
+        closeSettings();
+        startRound();
+      });
+
+      document.getElementById('settings-modes').addEventListener('click', () => {
+        closeSettings();
+        showModeSelect();
+      });
 
       /* ── Input ────────────────────────────────────────────────── */
 
@@ -960,6 +1302,11 @@
         const colorName = clickIdToColorName(click.id);
         if (!colorName) return;
 
+        const reactionMs = Date.now() - aimingStartedAt;
+        if (analyticsSession) {
+          BCI.recordReaction(analyticsSession, click.id, reactionMs);
+        }
+
         shot = {
           startedAt: performance.now(),
           fromX: SCENE.launchX,
@@ -968,6 +1315,7 @@
           toY: virtualCursor.y,
           targetAngle: info.angle,
           clickColor: colorName,
+          clickId: click.id,
           outcome: null,
           resolvedAt: 0,
         };
@@ -977,16 +1325,29 @@
 
       /* ── Tick ────────────────────────────────────────────────── */
 
+      function currentRimSpeed() {
+        /* Ramp up over the round so shot 10 demands real prediction.
+           shot 1 = 1.00× base, shot 10 = 1 + 9 * 0.13 = 2.17× base. */
+        const ramp = 1 + shotIndex * RIM_SPEED_RAMP_PER_SHOT;
+        return RIM_SPEED_BASE * ramp * MODES[activeMode].rimSpeedMul;
+      }
+
       function tick(now) {
         const dt = Math.min(0.05, (now - lastFrameMs) / 1000);
         lastFrameMs = now;
 
-        if (gameState !== STATE.ROUND_END) {
-          rimAngle = (rimAngle + RIM_SPEED_BASE * dt) % (Math.PI * 2);
+        /* Rim spins during all play states; freezes on round-end and
+           mode-select so the menus feel still. */
+        if (
+          gameState === STATE.AIMING ||
+          gameState === STATE.SHOOTING ||
+          gameState === STATE.RESOLVING
+        ) {
+          rimAngle = (rimAngle + currentRimSpeed() * dt) % (Math.PI * 2);
         }
 
         if (gameState === STATE.SHOOTING) {
-          if (now - shot.startedAt >= SHOT_FLIGHT_MS) {
+          if (now - shot.startedAt >= currentFlightMs) {
             /* Resolve: which zone is under the locked target angle right
                now? The rim has kept rotating during flight, so the answer
                depends on flight-time prediction — that's the skill. */
@@ -996,6 +1357,10 @@
             shot.resolvedAt = now;
             flashAt = now;
             flashType = make ? 'make' : 'miss';
+
+            if (analyticsSession) {
+              BCI.recordAttempt(analyticsSession, shot.clickId, make);
+            }
 
             if (make) {
               score++;
@@ -1019,9 +1384,8 @@
             } else {
               shot = null;
               gameState = STATE.AIMING;
-              setStatus(
-                '<span class="accent">Free Throw</span> &middot; aim at a zone &middot; click matching color'
-              );
+              aimingStartedAt = Date.now();
+              setStatus(aimingPromptHTML());
               updateHud();
             }
           }
@@ -1042,7 +1406,11 @@
       });
       fitter.fit();
 
-      startRound();
+      /* Apply the default mode at boot so SCENE values are coherent for
+         the very first frame, then sit on the mode-select overlay until
+         the player picks. */
+      applyMode('ft');
+      showModeSelect();
       requestAnimationFrame(loop);
     </script>
   </body>
