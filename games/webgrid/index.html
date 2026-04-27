@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>WebGrid &mdash; BCI Starter Pack</title>
+    <title>WebGrid &mdash; BCI Arcade</title>
     <style>
       :root {
         --click-blue: #4488ff;
@@ -599,27 +599,44 @@
       }
 
       #game-bottom {
-        margin-top: 14px;
+        margin-top: 18px;
         display: flex;
-        gap: 12px;
+        gap: 14px;
+        align-items: center;
+        justify-content: center;
       }
 
       .game-btn {
         background: var(--bg-card);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: 11px;
+        border: 1px solid #4a5260;
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: bold;
         letter-spacing: 2px;
         text-transform: uppercase;
-        padding: 8px 18px;
-        border-radius: 4px;
+        padding: 14px 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
         transition:
           color 0.15s,
-          border-color 0.15s;
+          border-color 0.15s,
+          background 0.15s;
       }
       .game-btn:hover {
         color: var(--text-primary);
-        border-color: var(--border-strong);
+        border-color: #9aa4b1;
+        background: #1c2128;
+      }
+      .game-btn--play-again {
+        color: #6bc46b;
+        border-color: #2d4a2d;
+        background: #1a2a1a;
+      }
+      .game-btn--play-again:hover {
+        color: #88dd88;
+        border-color: #6bc46b;
+        background: #1f2f1f;
       }
 
       /* ── End Screen ──────────────────────────────────────────── */
@@ -755,7 +772,7 @@
       <div class="menu-link-row">
         <button class="menu-link" id="btn-settings">&#9881; Settings</button>
         <button class="menu-link" id="btn-analytics">&#9638; Analytics</button>
-        <button class="menu-link" id="btn-launcher">&larr; Launcher</button>
+        <button class="menu-link" id="btn-launcher">&larr; BCI Arcade</button>
       </div>
     </div>
 
@@ -914,6 +931,7 @@
 
       <div id="game-bottom">
         <button class="game-btn" id="btn-quit">Quit Run</button>
+        <span id="game-home-slot"><!-- Home button injected by script --></span>
       </div>
     </div>
 
@@ -1518,16 +1536,48 @@
       }
 
       /* ── Quit / Replay / Menu ────────────────────────────────── */
-      document.getElementById('btn-quit').onclick = () => {
-        if (!game || game.ended) return;
-        endGame(false);
+      // Quit Run stops the run in place and toggles to Play Again — no jump
+      // to the end screen. A second click restarts the same mode with the
+      // same settings, so the user can quickly bail and retry.
+      const quitBtn = document.getElementById('btn-quit');
+      function setQuitMode() {
+        quitBtn.textContent = 'Quit Run';
+        quitBtn.classList.remove('game-btn--play-again');
+      }
+      function setPlayAgainMode() {
+        quitBtn.textContent = 'Play Again';
+        quitBtn.classList.add('game-btn--play-again');
+      }
+      quitBtn.onclick = () => {
+        if (game && !game.ended) {
+          // Stop the run in place; freeze HUD/grid; switch button to Play Again
+          game.ended = true;
+          if (game.rafId) cancelAnimationFrame(game.rafId);
+          setPlayAgainMode();
+          return;
+        }
+        // Button is in Play Again state — restart with same mode + settings
+        startGame(currentMode || 'practice');
       };
+
+      // Any new run starts in Quit Run state (timer-end and Replay both reach here)
+      const _origStartGame = startGame;
+      startGame = function (mode) {
+        setQuitMode();
+        return _origStartGame(mode);
+      };
+
       document.getElementById('btn-replay').onclick = () => {
         startGame(currentMode || 'practice');
       };
       document.getElementById('btn-end-menu').onclick = () => {
         showScreen('menu-screen');
       };
+
+      // Inline Home button next to Quit Run (icon-only — neighbours a labeled action)
+      document
+        .getElementById('game-home-slot')
+        .appendChild(BCI.createHomeButton({ showLabel: false }));
 
       /* ── Boot ────────────────────────────────────────────────── */
       startMotif();

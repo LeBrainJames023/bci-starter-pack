@@ -27,6 +27,14 @@
         flex-direction: column;
         align-items: center;
         gap: 40px;
+        position: relative;
+        padding-top: 12px;
+      }
+
+      #splash-home {
+        position: absolute;
+        top: 0;
+        left: 0;
       }
 
       #menu-header {
@@ -498,24 +506,28 @@
 
       #btn-back {
         position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(22, 27, 34, 0.88);
-        border: 1px solid #2d333b;
-        border-radius: 4px;
-        color: #7d8590;
+        top: 14px;
+        left: 14px;
+        background: rgba(22, 27, 34, 0.92);
+        border: 1px solid #4a5260;
+        border-radius: 6px;
+        color: #c9d1d9;
         font-family: 'Courier New', monospace;
-        font-size: 11px;
-        padding: 5px 10px;
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        padding: 10px 18px;
         cursor: pointer;
         transition:
           color 0.15s,
-          border-color 0.15s;
+          border-color 0.15s,
+          background 0.15s;
         z-index: 10;
       }
       #btn-back:hover {
         color: #e8e4d9;
-        border-color: #7d8590;
+        border-color: #9aa4b1;
+        background: #1c2128;
       }
 
       /* ── Advanced Settings Overlay ───────────────────────────── */
@@ -761,6 +773,46 @@
           background 0.4s;
       }
 
+      /* ── Live ball + hitbox preview ────────────────────────── */
+      .preview-stage {
+        position: relative;
+        width: 110px;
+        height: 110px;
+        margin: 6px auto 0;
+      }
+      .preview-ball,
+      .preview-hitbox {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition:
+          width 0.12s,
+          height 0.12s;
+      }
+      .preview-ball {
+        background: #4488ff;
+        box-shadow: 0 0 12px rgba(68, 136, 255, 0.45);
+      }
+      .preview-hitbox {
+        border: 1px dashed rgba(154, 164, 177, 0.55);
+        background: rgba(68, 136, 255, 0.05);
+        pointer-events: none;
+      }
+      .preview-readout {
+        font-size: 10px;
+        color: #7d8590;
+        letter-spacing: 1px;
+        margin-top: 8px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .preview-readout span {
+        color: #c9d1d9;
+        font-weight: bold;
+      }
+
       .legend-row {
         display: flex;
         align-items: center;
@@ -783,14 +835,15 @@
       .btn-adv-shared {
         margin-top: auto;
         width: 100%;
-        padding: 10px;
+        padding: 16px 12px;
         background: #1c2128;
-        border: 1px solid #2d333b;
-        border-radius: 4px;
-        color: #7d8590;
+        border: 1px solid #4a5260;
+        border-radius: 6px;
+        color: #c9d1d9;
         font-family: 'Courier New', monospace;
-        font-size: 11px;
-        letter-spacing: 1px;
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 2px;
         cursor: pointer;
         transition:
           color 0.15s,
@@ -928,6 +981,7 @@
   <body>
     <!-- ── Main Menu ──────────────────────────────────────────────── -->
     <div id="menu-screen">
+      <div id="splash-home"><!-- Home button injected by script --></div>
       <div id="menu-header">
         <div id="menu-ball"></div>
         <div id="menu-title">BCI Hackey Sac</div>
@@ -960,7 +1014,6 @@
         </div>
       </div>
       <button class="menu-link" id="btn-analytics-menu">&#9632; Analytics</button>
-      <button class="menu-link" id="btn-launcher">&#8592; Back to Launcher</button>
     </div>
 
     <!-- ── Analytics Screen ───────────────────────────────────────── -->
@@ -1214,6 +1267,17 @@
           <div class="sub-number" id="p-best">Best: 0</div>
         </div>
         <div class="panel">
+          <div class="panel-label">Preview</div>
+          <div class="preview-stage">
+            <div class="preview-hitbox" id="preview-hitbox-p"></div>
+            <div class="preview-ball" id="preview-ball-p"></div>
+          </div>
+          <div class="preview-readout">
+            Ball <span id="preview-ball-val-p">—</span> &nbsp;·&nbsp; Hit
+            <span id="preview-hit-val-p">—</span>
+          </div>
+        </div>
+        <div class="panel">
           <div class="panel-label">Controls</div>
           <div class="legend-row">
             <div class="legend-dot" style="background: #4488ff"></div>
@@ -1252,6 +1316,17 @@
           </div>
           <div class="speed-bar-track">
             <div class="speed-bar-fill" id="g-speed-bar" style="width: 10%"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Preview</div>
+          <div class="preview-stage">
+            <div class="preview-hitbox" id="preview-hitbox-g"></div>
+            <div class="preview-ball" id="preview-ball-g"></div>
+          </div>
+          <div class="preview-readout">
+            Ball <span id="preview-ball-val-g">—</span> &nbsp;·&nbsp; Hit
+            <span id="preview-hit-val-g">—</span>
           </div>
         </div>
         <div class="panel">
@@ -1806,6 +1881,7 @@
         practice.sizeLevel = parseInt(e.target.value, 10);
         document.getElementById('p-size-val').textContent = practice.sizeLevel;
         if (gameState.ball) gameState.ball.radius = practiceRadius();
+        updatePreview();
       });
 
       document.getElementById('p-grav-slider').addEventListener('input', (e) => {
@@ -1822,6 +1898,7 @@
       document.getElementById('hitbox-slider').addEventListener('input', (e) => {
         hitboxPadding = parseInt(e.target.value, 10);
         document.getElementById('hitbox-val').textContent = hitboxPadding;
+        updatePreview();
       });
 
       // ── Click toggles (saved as per-game overrides) ────────────────
@@ -2120,6 +2197,38 @@
         refreshAnalyticsScreen();
       });
 
+      // ── Live preview (sidebar) ─────────────────────────────────────
+      // Shows a scaled circle for the current ball + a dashed ring for the
+      // hitbox. Updates instantly on slider input and tracks the live game
+      // ball when speed level shrinks the radius mid-run.
+      const PREVIEW_SCALE = 0.45;
+      function currentBallRadius() {
+        if (gameState.ball && appMode !== 'menu') return gameState.ball.radius;
+        return appMode === 'game' ? CONFIG.BALL_RADIUS : practiceRadius();
+      }
+      function updatePreview() {
+        const r = currentBallRadius();
+        const hr = r + hitboxPadding;
+        const ballPx = Math.round(r * 2 * PREVIEW_SCALE);
+        const hbPx = Math.round(hr * 2 * PREVIEW_SCALE);
+        ['p', 'g'].forEach((suffix) => {
+          const ball = document.getElementById('preview-ball-' + suffix);
+          const hb = document.getElementById('preview-hitbox-' + suffix);
+          const bv = document.getElementById('preview-ball-val-' + suffix);
+          const hv = document.getElementById('preview-hit-val-' + suffix);
+          if (ball) {
+            ball.style.width = ballPx + 'px';
+            ball.style.height = ballPx + 'px';
+          }
+          if (hb) {
+            hb.style.width = hbPx + 'px';
+            hb.style.height = hbPx + 'px';
+          }
+          if (bv) bv.textContent = Math.round(r);
+          if (hv) hv.textContent = hitboxPadding;
+        });
+      }
+
       // ── Apply effective settings (global + any per-game overrides) ─
       function applyEffectiveSettings() {
         const s = BCI.getEffectiveSettings('hackey-sac');
@@ -2160,13 +2269,14 @@
         applyEffectiveSettings();
         initState();
         viewportFitter.fit();
+        updatePreview();
       }
 
       document
         .getElementById('btn-practice-menu')
         .addEventListener('click', () => startMode('practice'));
       document.getElementById('btn-game-menu').addEventListener('click', () => startMode('game'));
-      document.getElementById('btn-launcher').addEventListener('click', () => BCI.goToLauncher());
+      document.getElementById('splash-home').appendChild(BCI.createHomeButton());
 
       document.getElementById('btn-back').addEventListener('click', () => {
         saveSessionToPersistent();
@@ -2269,6 +2379,7 @@
         if (appMode !== 'menu') {
           update(dt);
           draw();
+          updatePreview();
         }
 
         requestAnimationFrame(loop);

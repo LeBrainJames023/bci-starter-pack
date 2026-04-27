@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BCI Starter Pack</title>
+    <title>BCI Arcade</title>
     <style>
       /* ─────────────────────────────────────────────────────────────
        Theme tokens — change colors here to restyle the entire page
@@ -76,6 +76,21 @@
         letter-spacing: 5px;
         text-transform: uppercase;
         color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .hub-mark {
+        width: 42px;
+        height: 42px;
+        color: var(--text-primary);
+        flex-shrink: 0;
+        display: block;
+      }
+      .hub-mark .bci-home-icon {
+        width: 100%;
+        height: 100%;
       }
 
       .hub-subtitle {
@@ -622,7 +637,10 @@
     <!-- ── Header ─────────────────────────────────────────────────── -->
     <header class="hub-header">
       <div>
-        <div class="hub-title">BCI Starter Pack</div>
+        <div class="hub-title">
+          <span class="hub-mark" id="hub-mark" aria-hidden="true"></span>
+          <span>BCI Arcade</span>
+        </div>
         <div class="hub-subtitle">Brain-Computer Interface Training Games</div>
       </div>
       <div class="hub-right">
@@ -855,15 +873,19 @@
 
     <!-- ── Footer ─────────────────────────────────────────────────── -->
     <footer class="hub-footer">
-      <span>BCI Starter Pack &nbsp;·&nbsp; Neuralink Prime Study</span>
+      <span>BCI Arcade &nbsp;·&nbsp; Neuralink Prime Study</span>
       <span>Cursor + 1–3 clicks &nbsp;·&nbsp; No keyboard required</span>
     </footer>
 
     <!-- Shared BCI modules -->
     <script src="shared/bci-input.js"></script>
     <script src="shared/bci-settings.js"></script>
+    <script src="shared/bci-shell.js"></script>
 
     <script>
+      // Inline the BCI Arcade brand mark into the header
+      document.getElementById('hub-mark').innerHTML = BCI.HOME_ICON_SVG;
+
       function openGame(path) {
         window.location.href = path;
       }

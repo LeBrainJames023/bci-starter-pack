@@ -74,6 +74,11 @@ fitter.fit();
 
 // Back-to-launcher navigation
 BCI.goToLauncher(); // defaults to '../../index.html'
+
+// Home button — joystick-and-cursor SVG, navigates to the launcher.
+// Self-injects its CSS the first time it's called.
+const home = BCI.createHomeButton(); // { showLabel?, label?, onClick?, path? }
+document.getElementById('top-bar').appendChild(home);
 ```
 
 ## Rules for Adding to This Folder
