@@ -288,8 +288,8 @@
         <div class="bottom-bar">
           <div class="bb-content">
             <div class="status-msg" id="status-msg">
-              <span class="accent">Hoops v1</span> &middot; scaffold online &middot; mechanic comes
-              online next
+              <span class="accent">Hoops v1</span> &middot; gym scene online &middot; rim rotation
+              comes online next
             </div>
           </div>
           <div class="home-slot" id="home-slot"></div>
@@ -321,44 +321,287 @@
       /* Home button slot — uses the shared component */
       document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
 
+      /* ── Scene geometry ────────────────────────────────────────
+         All positions in canvas-local coords. Free-throw camera by
+         default; checkpoint 9 will pull the camera back for 3PT by
+         scaling SCENE.scale and adjusting the launch point. */
+      const SCENE = {
+        /* Hoop placement — rim center is the geometric anchor for
+           rim drawing, rotation, and (later) hit detection. */
+        hoopX: 400,
+        hoopY: 218,
+
+        /* Mildly flattened rim ellipse — keeps the gym 3D read but
+           still legible as a "clock face" once the colored arcs ride
+           around the ring in checkpoint 4. */
+        rimRx: 70,
+        rimRy: 18,
+        rimThickness: 6,
+
+        /* Backboard rectangle (centered above the rim). */
+        boardW: 220,
+        boardH: 130,
+        boardYTop: 78,
+
+        /* Net hangs straight down from the rim. */
+        netDrop: 56,
+
+        /* Floor / wall split — wall above, hardwood below. */
+        floorY: 330,
+
+        /* Free-throw launch point for the ball. */
+        launchX: 400,
+        launchY: 488,
+        ballR: 18,
+      };
+
       /* Virtual cursor — checkpoint 3 will draw a proper reticle on top of it */
       const settings = BCI.getEffectiveSettings(GAME_ID);
       const virtualCursor = BCI.createVirtualCursor(canvas, {
         sensitivity: settings.cursorSensitivity,
         startX: W / 2,
-        startY: H * 0.55,
+        startY: SCENE.hoopY,
       });
 
-      /* Scaffold draw — placeholder so opening the file shows something
-         that reads as "hoops, in progress." Real scene lands in next
-         checkpoint. */
-      function drawScaffold() {
-        ctx.clearRect(0, 0, W, H);
+      /* ── Scene rendering ───────────────────────────────────────
+         Pure draw functions, no game state. Checkpoint 4 will add a
+         rotating-rim variant; everything else here stays static. */
 
-        /* Soft vertical gradient to suggest gym ambience */
-        const grad = ctx.createLinearGradient(0, 0, 0, H);
-        grad.addColorStop(0, '#161b22');
-        grad.addColorStop(1, '#0d1117');
+      function drawWall() {
+        const grad = ctx.createLinearGradient(0, 0, 0, SCENE.floorY);
+        grad.addColorStop(0, '#0a0d12');
+        grad.addColorStop(1, '#161b22');
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(0, 0, W, SCENE.floorY);
+      }
 
-        /* Centered placeholder marker */
-        ctx.fillStyle = '#5d6670';
-        ctx.font = '14px Courier New';
-        ctx.textAlign = 'center';
-        ctx.fillText('BCI HOOPS', W / 2, H / 2 - 10);
-        ctx.fillStyle = '#3a4150';
-        ctx.font = '11px Courier New';
-        ctx.fillText('scene comes online in checkpoint 2', W / 2, H / 2 + 12);
+      function drawCrowd() {
+        /* Two rows of dim head-and-shoulders silhouettes against the
+           back wall. Seeded values so the crowd doesn't shimmer. */
+        const rows = [
+          { y: SCENE.floorY - 28, count: 22, scale: 1.0, alpha: 0.55 },
+          { y: SCENE.floorY - 56, count: 18, scale: 0.9, alpha: 0.35 },
+        ];
+        ctx.fillStyle = '#000';
+        for (const row of rows) {
+          ctx.globalAlpha = row.alpha;
+          for (let i = 0; i < row.count; i++) {
+            const t = (i + 0.5) / row.count;
+            /* Stable pseudo-random jitter so each head sits a little
+               differently. */
+            const jitter = Math.sin(i * 12.9898 + row.y) * 0.5;
+            const x = t * W + jitter * 8;
+            const headR = 7 * row.scale;
+            const shoulderW = 22 * row.scale;
+            const shoulderH = 14 * row.scale;
+            /* Head */
+            ctx.beginPath();
+            ctx.arc(x, row.y - shoulderH * 0.4, headR, 0, Math.PI * 2);
+            ctx.fill();
+            /* Shoulders */
+            ctx.beginPath();
+            ctx.ellipse(x, row.y, shoulderW / 2, shoulderH / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
 
-        /* Cursor preview so we can confirm input is wired */
+      function drawSpotlight() {
+        /* Warm radial light centered on the rim, fades out. Drawn
+           after the wall/crowd so it lifts the hoop area. */
+        const grad = ctx.createRadialGradient(
+          SCENE.hoopX,
+          SCENE.hoopY - 10,
+          20,
+          SCENE.hoopX,
+          SCENE.hoopY - 10,
+          340
+        );
+        grad.addColorStop(0, 'rgba(255, 220, 160, 0.22)');
+        grad.addColorStop(0.55, 'rgba(255, 200, 130, 0.07)');
+        grad.addColorStop(1, 'rgba(255, 200, 130, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, SCENE.floorY + 40);
+      }
+
+      function drawFloor() {
+        /* Hardwood band with simple perspective: a darker far edge at
+           SCENE.floorY, lighter as it comes forward. Plank lines fan
+           out from a vanishing point above the rim. */
+        const floorTop = SCENE.floorY;
+        const grad = ctx.createLinearGradient(0, floorTop, 0, H);
+        grad.addColorStop(0, '#5b3a1a');
+        grad.addColorStop(0.4, '#7a4f24');
+        grad.addColorStop(1, '#8a5a2b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, floorTop, W, H - floorTop);
+
+        /* Plank lines — fan from vanishing point at (hoopX, hoopY-30). */
+        const vpX = SCENE.hoopX;
+        const vpY = SCENE.hoopY - 30;
+        ctx.strokeStyle = 'rgba(40, 22, 8, 0.45)';
+        ctx.lineWidth = 1;
+        const planks = 11;
+        for (let i = 0; i <= planks; i++) {
+          const t = i / planks;
+          const xBottom = -W * 0.1 + t * (W * 1.2);
+          ctx.beginPath();
+          ctx.moveTo(vpX + (xBottom - vpX) * 0.18, floorTop);
+          ctx.lineTo(xBottom, H);
+          ctx.stroke();
+        }
+
+        /* Free-throw line — subtle painted arc on the floor, just
+           behind the launch point so it reads as "this is where the
+           shot starts." */
+        ctx.strokeStyle = 'rgba(216, 168, 106, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(SCENE.launchX, SCENE.launchY + 6, 92, 14, 0, Math.PI, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      function drawBackboardAndNet() {
+        const cx = SCENE.hoopX;
+        const top = SCENE.boardYTop;
+        const w = SCENE.boardW;
+        const h = SCENE.boardH;
+
+        /* Backboard plate */
+        ctx.fillStyle = '#f3eee2';
+        ctx.fillRect(cx - w / 2, top, w, h);
+
+        /* Backboard edge shadow */
+        ctx.strokeStyle = '#b8b0a0';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - w / 2, top, w, h);
+
+        /* Inner shot square (the painted target on the glass) */
+        const sqW = 78;
+        const sqH = 56;
+        ctx.strokeStyle = '#2a2f38';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(cx - sqW / 2, top + h - sqH - 14, sqW, sqH);
+
+        /* Pole/mount stub behind the backboard, just for depth */
+        ctx.fillStyle = '#1a1f26';
+        ctx.fillRect(cx - 6, top - 8, 12, 8);
+
+        /* Net — inverted V-mesh hanging from the rim front edge */
+        const rimY = SCENE.hoopY;
+        const rimRx = SCENE.rimRx;
+        const netBottomW = rimRx * 1.05;
+        const netBottomY = rimY + SCENE.netDrop;
+
+        ctx.strokeStyle = 'rgba(243, 238, 226, 0.85)';
+        ctx.lineWidth = 1.4;
+
+        const cords = 9;
+        for (let i = 0; i <= cords; i++) {
+          const t = i / cords;
+          const xTop = cx - rimRx + t * rimRx * 2;
+          const xBottom = cx - netBottomW + t * netBottomW * 2 * 0.85;
+          ctx.beginPath();
+          ctx.moveTo(xTop, rimY);
+          ctx.lineTo(xBottom, netBottomY);
+          ctx.stroke();
+        }
+        /* Two horizontal bands across the net for the mesh feel */
+        for (let band = 1; band <= 2; band++) {
+          const t = band / 3;
+          const y = rimY + t * SCENE.netDrop;
+          const halfW = rimRx + (netBottomW - rimRx) * t * 0.85;
+          ctx.beginPath();
+          ctx.moveTo(cx - halfW, y);
+          ctx.lineTo(cx + halfW, y);
+          ctx.stroke();
+        }
+      }
+
+      function drawRimNeutral() {
+        /* Static neutral rim for checkpoint 2. Checkpoint 4 replaces
+           this with the rotating clock-face version. */
+        const cx = SCENE.hoopX;
+        const cy = SCENE.hoopY;
+        const rx = SCENE.rimRx;
+        const ry = SCENE.rimRy;
+
+        /* Soft drop shadow on the floor below the rim */
+        ctx.fillStyle = 'rgba(10, 13, 16, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 4, rx + 2, ry + 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* Rim ring — drawn as a thick ellipse stroke. */
+        ctx.strokeStyle = '#d97a2c';
+        ctx.lineWidth = SCENE.rimThickness;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        /* Highlight pass — top half a touch brighter for dimension */
+        ctx.strokeStyle = 'rgba(255, 200, 130, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      function drawBall() {
+        const x = SCENE.launchX;
+        const y = SCENE.launchY;
+        const r = SCENE.ballR;
+
+        /* Ground shadow */
+        ctx.fillStyle = 'rgba(10, 13, 16, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + r * 0.85, r * 0.85, r * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* Ball body — radial gradient for soft volume */
+        const grad = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.2, x, y, r);
+        grad.addColorStop(0, '#f0a55a');
+        grad.addColorStop(0.6, '#d97a2c');
+        grad.addColorStop(1, '#8d4a17');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* Seam lines */
+        ctx.strokeStyle = 'rgba(40, 22, 8, 0.85)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(x - r, y);
+        ctx.lineTo(x + r, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, r, Math.PI * 0.15, Math.PI - Math.PI * 0.15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, r, Math.PI + Math.PI * 0.15, Math.PI * 2 - Math.PI * 0.15);
+        ctx.stroke();
+      }
+
+      function drawScene() {
+        ctx.clearRect(0, 0, W, H);
+        drawWall();
+        drawCrowd();
+        drawSpotlight();
+        drawFloor();
+        drawBackboardAndNet();
+        drawRimNeutral();
+        drawBall();
+
+        /* Cursor preview — checkpoint 3 replaces with proper reticle */
         BCI.drawCursorDot(ctx, virtualCursor.x, virtualCursor.y, {
           color: 'rgba(232, 228, 217, 0.9)',
         });
       }
 
       function loop() {
-        drawScaffold();
+        drawScene();
         requestAnimationFrame(loop);
       }
 
