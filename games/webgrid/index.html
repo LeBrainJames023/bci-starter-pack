@@ -50,115 +50,235 @@
         display: flex;
       }
 
-      /* ── Menu Screen ─────────────────────────────────────────── */
+      /* ── Menu Screen — Golf-style structured layout ──────────── */
       #menu-screen {
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
         min-height: 100vh;
-        gap: 36px;
-        padding: 40px 20px;
+        padding: 36px 24px 24px;
         position: relative;
+      }
+
+      /* Header bar */
+      .game-header {
+        max-width: 880px;
+        width: 100%;
+        margin: 0 auto 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+        gap: 18px;
+        position: relative;
+        z-index: 3;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: flex-end;
+        gap: 14px;
       }
 
       #splash-home {
-        position: absolute;
-        top: 18px;
-        left: 18px;
-        z-index: 5;
+        display: inline-flex;
       }
 
-      #menu-header {
-        text-align: center;
-        position: relative;
-        padding: 30px 40px 10px;
-        z-index: 2;
+      .title-block {
+        line-height: 1.2;
       }
 
-      #menu-header::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 560px;
-        height: 220px;
-        background: radial-gradient(
-          ellipse at center,
-          rgba(68, 136, 255, 0.18) 0%,
-          rgba(68, 136, 255, 0) 65%
-        );
-        pointer-events: none;
-        z-index: -1;
-      }
-
-      #menu-title {
-        font-size: 56px;
+      .game-title {
+        font-size: 30px;
         font-weight: bold;
         letter-spacing: 5px;
+        text-transform: uppercase;
         color: var(--text-primary);
       }
 
-      #menu-subtitle {
-        font-size: 12px;
+      .game-subtitle {
+        font-size: 11px;
         color: var(--text-muted);
-        letter-spacing: 4px;
+        letter-spacing: 3px;
         text-transform: uppercase;
-        margin-top: 12px;
+        margin-top: 7px;
       }
 
-      .menu-btn-row {
-        display: flex;
-        gap: 24px;
-        z-index: 2;
-      }
-
-      .menu-btn {
-        width: 220px;
-        padding: 26px 20px;
+      .settings-btn {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-top-width: 3px;
         border-radius: 6px;
-        color: var(--text-primary);
-        text-align: center;
+        color: var(--text-muted);
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+        cursor: pointer;
+        font-family: inherit;
         transition:
+          color 0.15s,
           border-color 0.15s,
           background 0.15s;
       }
-
-      #btn-practice {
-        border-top-color: var(--click-blue);
-      }
-      #btn-game {
-        border-top-color: var(--click-orange);
-      }
-
-      .menu-btn:hover {
+      .settings-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
         background: #1c2128;
       }
-      #btn-practice:hover {
-        border-color: var(--click-blue);
-      }
-      #btn-game:hover {
-        border-color: var(--click-orange);
+
+      /* Section + label */
+      .modes-section {
+        max-width: 880px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 18px 14px 22px;
+        border-radius: 10px;
+        background: radial-gradient(ellipse at 50% 0%, rgba(68, 136, 255, 0.07), transparent 65%);
+        position: relative;
+        z-index: 2;
       }
 
-      .menu-btn-title {
-        font-size: 22px;
-        font-weight: bold;
-        margin-bottom: 10px;
-        letter-spacing: 1px;
+      .section-label {
+        font-size: 10px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--click-blue);
       }
-      .menu-btn-desc {
+      .section-label::before {
+        content: '';
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 8px currentColor;
+        flex-shrink: 0;
+      }
+
+      /* Mode grid + cards */
+      .modes-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      .mode-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 22px 20px 20px;
+        position: relative;
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        color: inherit;
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          transform 0.2s,
+          box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        min-height: 220px;
+      }
+
+      .mode-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 6px 6px 0 0;
+        opacity: 1;
+      }
+
+      .mode-card--practice::before {
+        background: linear-gradient(90deg, var(--click-blue), #66aaff);
+        box-shadow: 0 0 8px var(--click-blue);
+      }
+      .mode-card--game::before {
+        background: linear-gradient(90deg, var(--click-orange), #ffaa66);
+        box-shadow: 0 0 8px var(--click-orange);
+      }
+
+      .mode-card--practice:hover {
+        background: #1c2128;
+        border-color: var(--click-blue);
+        transform: translateY(-1px);
+        box-shadow: 0 0 18px rgba(68, 136, 255, 0.18);
+      }
+      .mode-card--game:hover {
+        background: #1c2128;
+        border-color: var(--click-orange);
+        transform: translateY(-1px);
+        box-shadow: 0 0 18px rgba(255, 136, 51, 0.18);
+      }
+
+      .mode-name {
+        font-size: 17px;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+        letter-spacing: 1.5px;
+        display: block;
+      }
+
+      .mode-desc {
         font-size: 11px;
         color: var(--text-muted);
-        line-height: 1.6;
+        line-height: 1.7;
+        flex: 1;
+        margin-bottom: 16px;
+        display: block;
       }
 
-      .menu-link-row {
+      .mode-bottom {
         display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .badge-live {
+        display: inline-block;
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 2px;
+        background: #1a2a1a;
+        color: var(--good);
+        border: 1px solid #2d4a2d;
+        font-weight: bold;
+      }
+
+      .mode-cta {
+        font-size: 11px;
+        color: var(--click-blue);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .mode-card--game .mode-cta {
+        color: var(--click-orange);
+      }
+
+      /* Analytics link row + footer */
+      .menu-link-row {
+        max-width: 880px;
+        width: 100%;
+        margin: 18px auto 0;
+        display: flex;
+        justify-content: center;
         gap: 24px;
+        position: relative;
         z-index: 2;
       }
 
@@ -166,7 +286,7 @@
         background: none;
         border: none;
         color: var(--text-muted);
-        font-size: 12px;
+        font-size: 11px;
         letter-spacing: 2px;
         text-transform: uppercase;
         padding: 8px 12px;
@@ -174,6 +294,22 @@
       }
       .menu-link:hover {
         color: var(--text-primary);
+      }
+
+      .game-footer {
+        max-width: 880px;
+        width: 100%;
+        margin: auto auto 0;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 2;
       }
 
       /* ── Menu Motif (cell + ghost cursor) ────────────────────── */
@@ -757,30 +893,52 @@
   <body oncontextmenu="return false;">
     <!-- ── Menu Screen ──────────────────────────────────────────── -->
     <div id="menu-screen" class="screen active">
-      <div id="splash-home"><!-- Home button injected by script --></div>
       <div id="motif-cell"></div>
       <div id="motif-cursor"></div>
 
-      <div id="menu-header">
-        <div id="menu-title">WebGrid</div>
-        <div id="menu-subtitle">Dial in your BCI &middot; See how far you can push it</div>
-      </div>
+      <header class="game-header">
+        <div class="header-left">
+          <span id="splash-home"><!-- Home button injected by script --></span>
+          <div class="title-block">
+            <div class="game-title">WebGrid</div>
+            <div class="game-subtitle">Dial in your BCI &middot; See how far you can push it</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <button id="btn-settings" class="settings-btn" title="Settings">&#9881;</button>
+        </div>
+      </header>
 
-      <div class="menu-btn-row">
-        <button class="menu-btn" id="btn-practice">
-          <div class="menu-btn-title">Practice</div>
-          <div class="menu-btn-desc">No pressure. Tune settings, run as long as you want.</div>
-        </button>
-        <button class="menu-btn" id="btn-game">
-          <div class="menu-btn-title">Game</div>
-          <div class="menu-btn-desc">25&times;25 locked. Top 3 scores saved.</div>
-        </button>
-      </div>
+      <main class="modes-section">
+        <div class="section-label">Modes</div>
+        <div class="modes-grid">
+          <div class="mode-card mode-card--practice" id="btn-practice">
+            <span class="mode-name">Practice</span>
+            <span class="mode-desc">No pressure. Tune settings, run as long as you want.</span>
+            <div class="mode-bottom">
+              <span class="badge-live">&#9679; Live</span>
+              <span class="mode-cta">Play &rarr;</span>
+            </div>
+          </div>
+          <div class="mode-card mode-card--game" id="btn-game">
+            <span class="mode-name">Game</span>
+            <span class="mode-desc">25&times;25 locked. Top 3 scores saved.</span>
+            <div class="mode-bottom">
+              <span class="badge-live">&#9679; Live</span>
+              <span class="mode-cta">Play &rarr;</span>
+            </div>
+          </div>
+        </div>
+      </main>
 
       <div class="menu-link-row">
-        <button class="menu-link" id="btn-settings">&#9881; Settings</button>
         <button class="menu-link" id="btn-analytics">&#9638; Analytics</button>
       </div>
+
+      <footer class="game-footer">
+        <span>WebGrid &nbsp;&middot;&nbsp; BCI Arcade</span>
+        <span>Cursor + 1&ndash;3 clicks &nbsp;&middot;&nbsp; No keyboard required</span>
+      </footer>
     </div>
 
     <!-- ── Settings Modal ──────────────────────────────────────── -->
@@ -1207,9 +1365,10 @@
       function computeSafeZone(sRect) {
         const padding = 70;
         const targets = [
-          document.getElementById('menu-header'),
-          document.querySelector('.menu-btn-row'),
+          document.querySelector('.game-header'),
+          document.querySelector('.modes-section'),
           document.querySelector('.menu-link-row'),
+          document.querySelector('.game-footer'),
         ].filter(Boolean);
 
         if (targets.length === 0) {
