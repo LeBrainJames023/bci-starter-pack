@@ -236,6 +236,95 @@
         align-items: center;
       }
 
+      /* ── Round-end results overlay ───────────────────────────── */
+      .results-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.82);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 6;
+      }
+      .results-overlay.is-visible {
+        display: flex;
+      }
+      .results-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 26px 36px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        align-items: center;
+        min-width: 400px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .results-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .results-grid {
+        display: flex;
+        gap: 28px;
+      }
+      .results-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+        min-width: 96px;
+      }
+      .results-stat-label {
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .results-stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .results-buttons {
+        display: flex;
+        gap: 12px;
+      }
+      .results-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .results-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-blue);
+      }
+      .results-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .results-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
       /* ── Settings modal placeholder (wired in later checkpoint) */
       .settings-modal {
         display: none;
@@ -283,6 +372,29 @@
 
         <div class="court-frame">
           <canvas id="canvas" width="800" height="540"></canvas>
+          <div class="results-overlay" id="results-overlay">
+            <div class="results-card">
+              <div class="results-title">Round Complete</div>
+              <div class="results-grid">
+                <div class="results-stat">
+                  <div class="results-stat-label">Made</div>
+                  <div class="results-stat-value" id="results-made">0 / 10</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Accuracy</div>
+                  <div class="results-stat-value" id="results-acc">0%</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Best Streak</div>
+                  <div class="results-stat-value" id="results-streak">0</div>
+                </div>
+              </div>
+              <div class="results-buttons">
+                <button class="results-btn" id="btn-play-again">Play Again</button>
+                <button class="results-btn results-btn--ghost" id="btn-results-home">Home</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="bottom-bar">
@@ -519,47 +631,129 @@
         }
       }
 
-      function drawRimNeutral() {
-        /* Static neutral rim for checkpoint 2. Checkpoint 4 replaces
-           this with the rotating clock-face version. */
+      /* ── Click colors / zones ─────────────────────────────────
+         The rim is divided into three angular zones. Zone i = ZONE_ORDER[i].
+         All zones rotate together around the rim center driven by rimAngle.
+         Click colors map: left = blue, middle = purple, right = orange
+         (per BCI.CLICKS). */
+      const COLOR_HEX = {
+        blue: '#4488ff',
+        orange: '#ff8833',
+        purple: '#aa44ff',
+      };
+      const ZONE_ORDER = ['blue', 'orange', 'purple'];
+
+      function clickIdToColorName(id) {
+        if (id === 0) return 'blue'; // left click
+        if (id === 1) return 'purple'; // middle click
+        if (id === 2) return 'orange'; // right click
+        return null;
+      }
+
+      /* ── Game state machine ───────────────────────────────────
+         AIMING — rim spinning, waiting for click on rim.
+         SHOOTING — ball in flight (~300ms), no input accepted.
+         RESOLVING — outcome flash; rim keeps rotating; brief pause.
+         ROUND_END — results overlay shown; loop still ticks for the
+                     visual but no shots happen. */
+      const STATE = {
+        AIMING: 'aiming',
+        SHOOTING: 'shooting',
+        RESOLVING: 'resolving',
+        ROUND_END: 'round_end',
+      };
+
+      const ROUND_SHOTS = 10;
+      const SHOT_FLIGHT_MS = 300;
+      const RESOLVE_MS = 700;
+      const FLASH_MS = 500;
+      const RIM_SPEED_BASE = 0.55; // rad/s — checkpoint 10 will ramp
+
+      let gameState = STATE.AIMING;
+      let lastFrameMs = performance.now();
+      let rimAngle = 0;
+
+      let shotIndex = 0; // 0..ROUND_SHOTS-1
+      let score = 0;
+      let miss = 0;
+      let streak = 0;
+      let longestStreak = 0;
+
+      let shot = null; // { startedAt, fromX, fromY, toX, toY, targetAngle, clickColor, outcome, resolvedAt }
+      let flashAt = 0;
+      let flashType = null; // 'make' | 'miss' | null
+
+      /* ── Geometry helpers ─────────────────────────────────────
+         cursorRimInfo: convert a screen point into ellipse-parametric
+         (angle, normalized distance) so we can answer "is this on the
+         rim?" and "which zone is under it?" with the same math the
+         renderer uses. */
+      function cursorRimInfo() {
+        const dx = (virtualCursor.x - SCENE.hoopX) / SCENE.rimRx;
+        const dy = (virtualCursor.y - SCENE.hoopY) / SCENE.rimRy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        /* Forgiving on-rim band — cursor doesn't have to land exactly
+           on the ring, just inside the rim's catch zone. */
+        const onRim = dist >= 0.55 && dist <= 1.4;
+        return { angle, dist, onRim };
+      }
+
+      function zoneColorAt(angleParam) {
+        let a = (angleParam - rimAngle) % (Math.PI * 2);
+        if (a < 0) a += Math.PI * 2;
+        const idx = Math.floor(a / ((Math.PI * 2) / 3));
+        return ZONE_ORDER[idx % 3];
+      }
+
+      /* ── Rendering ───────────────────────────────────────────── */
+
+      function drawRimRotating() {
         const cx = SCENE.hoopX;
         const cy = SCENE.hoopY;
         const rx = SCENE.rimRx;
         const ry = SCENE.rimRy;
 
-        /* Soft drop shadow on the floor below the rim */
+        /* Drop shadow on the floor below the rim */
         ctx.fillStyle = 'rgba(10, 13, 16, 0.4)';
         ctx.beginPath();
         ctx.ellipse(cx, cy + 4, rx + 2, ry + 2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        /* Rim ring — drawn as a thick ellipse stroke. */
-        ctx.strokeStyle = '#d97a2c';
+        /* Three colored arcs — one per zone, each spans 2π/3 of the
+           ellipse parametric circle, all sliding together as rimAngle
+           advances. */
         ctx.lineWidth = SCENE.rimThickness;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        for (let i = 0; i < 3; i++) {
+          const startAngle = rimAngle + (i * 2 * Math.PI) / 3;
+          const endAngle = rimAngle + ((i + 1) * 2 * Math.PI) / 3;
+          ctx.strokeStyle = COLOR_HEX[ZONE_ORDER[i]];
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, rx, ry, 0, startAngle, endAngle);
+          ctx.stroke();
+        }
 
-        /* Highlight pass — top half a touch brighter for dimension */
-        ctx.strokeStyle = 'rgba(255, 200, 130, 0.6)';
-        ctx.lineWidth = 1.5;
+        /* Inner highlight (lower half) — adds a touch of dimension
+           without competing with the click colors. */
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2);
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI);
         ctx.stroke();
       }
 
-      function drawBall() {
-        const x = SCENE.launchX;
-        const y = SCENE.launchY;
-        const r = SCENE.ballR;
+      function drawBallAt(x, y, r) {
+        /* Ground shadow only when ball is near the floor — fades as
+           the ball lifts. */
+        const shadowAlpha = Math.max(0, 0.45 * (1 - Math.abs(SCENE.launchY - y) / 240));
+        if (shadowAlpha > 0.02) {
+          ctx.fillStyle = `rgba(10, 13, 16, ${shadowAlpha})`;
+          ctx.beginPath();
+          ctx.ellipse(x, SCENE.launchY + r * 0.85, r * 0.85, r * 0.25, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
-        /* Ground shadow */
-        ctx.fillStyle = 'rgba(10, 13, 16, 0.45)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + r * 0.85, r * 0.85, r * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        /* Ball body — radial gradient for soft volume */
+        /* Ball body */
         const grad = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.2, x, y, r);
         grad.addColorStop(0, '#f0a55a');
         grad.addColorStop(0.6, '#d97a2c');
@@ -571,7 +765,7 @@
 
         /* Seam lines */
         ctx.strokeStyle = 'rgba(40, 22, 8, 0.85)';
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = Math.max(1, r * 0.08);
         ctx.beginPath();
         ctx.moveTo(x - r, y);
         ctx.lineTo(x + r, y);
@@ -584,6 +778,107 @@
         ctx.stroke();
       }
 
+      function drawBall() {
+        /* Ball at the launch point — visible during AIMING. Hidden
+           during SHOOTING (the in-flight ball is drawn instead) so we
+           don't show two balls at once. */
+        if (gameState === STATE.SHOOTING || gameState === STATE.RESOLVING) return;
+        drawBallAt(SCENE.launchX, SCENE.launchY, SCENE.ballR);
+      }
+
+      function drawBallInFlight() {
+        if (!shot || gameState !== STATE.SHOOTING) return;
+        const t = Math.min(1, (performance.now() - shot.startedAt) / SHOT_FLIGHT_MS);
+        const x = shot.fromX + (shot.toX - shot.fromX) * t;
+        const flatY = shot.fromY + (shot.toY - shot.fromY) * t;
+        /* Parabolic apex — peaks above the linear interpolation at
+           t=0.5. Negative apex pulls the curve up on canvas. */
+        const apex = -110;
+        const arc = -4 * apex * t * (1 - t);
+        const y = flatY + arc;
+        const r = SCENE.ballR * (1 - 0.45 * t);
+        drawBallAt(x, y, r);
+      }
+
+      function drawOutcomeFlash() {
+        if (flashType === null) return;
+        const elapsed = performance.now() - flashAt;
+        if (elapsed >= FLASH_MS) {
+          flashType = null;
+          return;
+        }
+        const fade = 1 - elapsed / FLASH_MS;
+
+        if (flashType === 'make') {
+          /* Green pulse over the net area */
+          ctx.fillStyle = `rgba(95, 191, 110, ${0.32 * fade})`;
+          ctx.beginPath();
+          ctx.ellipse(
+            SCENE.hoopX,
+            SCENE.hoopY + 18,
+            SCENE.rimRx * 1.05,
+            SCENE.netDrop * 0.9,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        } else {
+          /* Red rim halo */
+          ctx.strokeStyle = `rgba(212, 75, 75, ${0.7 * fade})`;
+          ctx.lineWidth = SCENE.rimThickness + 4;
+          ctx.beginPath();
+          ctx.ellipse(
+            SCENE.hoopX,
+            SCENE.hoopY,
+            SCENE.rimRx + 4,
+            SCENE.rimRy + 4,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+        }
+      }
+
+      function drawReticle() {
+        const info = cursorRimInfo();
+        const x = virtualCursor.x;
+        const y = virtualCursor.y;
+        const lit = info.onRim;
+        const color = lit ? 'rgba(255, 255, 255, 1)' : 'rgba(232, 228, 217, 0.6)';
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lit ? 2.4 : 1.8;
+
+        /* Outer ring — large, BCI-friendly */
+        ctx.beginPath();
+        ctx.arc(x, y, 14, 0, Math.PI * 2);
+        ctx.stroke();
+
+        /* Crosshair arms */
+        const arm = lit ? 9 : 7;
+        const inner = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - arm, y);
+        ctx.lineTo(x - inner, y);
+        ctx.moveTo(x + inner, y);
+        ctx.lineTo(x + arm, y);
+        ctx.moveTo(x, y - arm);
+        ctx.lineTo(x, y - inner);
+        ctx.moveTo(x, y + inner);
+        ctx.lineTo(x, y + arm);
+        ctx.stroke();
+
+        /* Center dot */
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       function drawScene() {
         ctx.clearRect(0, 0, W, H);
         drawWall();
@@ -591,19 +886,155 @@
         drawSpotlight();
         drawFloor();
         drawBackboardAndNet();
-        drawRimNeutral();
+        drawRimRotating();
+        drawOutcomeFlash();
         drawBall();
-
-        /* Cursor preview — checkpoint 3 replaces with proper reticle */
-        BCI.drawCursorDot(ctx, virtualCursor.x, virtualCursor.y, {
-          color: 'rgba(232, 228, 217, 0.9)',
-        });
+        drawBallInFlight();
+        drawReticle();
       }
 
-      function loop() {
+      /* ── HUD + status ─────────────────────────────────────────── */
+
+      const hudShot = document.getElementById('hud-shot');
+      const hudScore = document.getElementById('hud-score');
+      const hudStreak = document.getElementById('hud-streak');
+      const statusMsg = document.getElementById('status-msg');
+
+      function updateHud() {
+        const display = Math.min(shotIndex + 1, ROUND_SHOTS);
+        hudShot.textContent = `${display} / ${ROUND_SHOTS}`;
+        hudScore.textContent = String(score);
+        hudStreak.textContent = String(streak);
+      }
+
+      function setStatus(html) {
+        statusMsg.innerHTML = html;
+      }
+
+      /* ── Round flow + results ─────────────────────────────────── */
+
+      const resultsOverlay = document.getElementById('results-overlay');
+
+      function startRound() {
+        shotIndex = 0;
+        score = 0;
+        miss = 0;
+        streak = 0;
+        longestStreak = 0;
+        shot = null;
+        flashType = null;
+        gameState = STATE.AIMING;
+        resultsOverlay.classList.remove('is-visible');
+        updateHud();
+        setStatus(
+          '<span class="accent">Free Throw</span> &middot; aim at a zone &middot; click matching color'
+        );
+      }
+
+      function showResults() {
+        document.getElementById('results-made').textContent = `${score} / ${ROUND_SHOTS}`;
+        const accPct = Math.round((score / ROUND_SHOTS) * 100);
+        document.getElementById('results-acc').textContent = accPct + '%';
+        document.getElementById('results-streak').textContent = String(longestStreak);
+        resultsOverlay.classList.add('is-visible');
+        setStatus('<span class="accent">Round complete</span>');
+      }
+
+      document.getElementById('btn-play-again').addEventListener('click', startRound);
+      document
+        .getElementById('btn-results-home')
+        .addEventListener('click', () => BCI.goToLauncher());
+
+      /* ── Input ────────────────────────────────────────────────── */
+
+      canvas.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (gameState !== STATE.AIMING) return;
+
+        const click = BCI.CLICK_BY_BUTTON[e.button];
+        if (!click) return;
+
+        const info = cursorRimInfo();
+        if (!info.onRim) return; // off-rim clicks ignored — no shot, no miss
+
+        const colorName = clickIdToColorName(click.id);
+        if (!colorName) return;
+
+        shot = {
+          startedAt: performance.now(),
+          fromX: SCENE.launchX,
+          fromY: SCENE.launchY,
+          toX: virtualCursor.x,
+          toY: virtualCursor.y,
+          targetAngle: info.angle,
+          clickColor: colorName,
+          outcome: null,
+          resolvedAt: 0,
+        };
+        gameState = STATE.SHOOTING;
+        setStatus('<span class="accent">Shot fired</span>');
+      });
+
+      /* ── Tick ────────────────────────────────────────────────── */
+
+      function tick(now) {
+        const dt = Math.min(0.05, (now - lastFrameMs) / 1000);
+        lastFrameMs = now;
+
+        if (gameState !== STATE.ROUND_END) {
+          rimAngle = (rimAngle + RIM_SPEED_BASE * dt) % (Math.PI * 2);
+        }
+
+        if (gameState === STATE.SHOOTING) {
+          if (now - shot.startedAt >= SHOT_FLIGHT_MS) {
+            /* Resolve: which zone is under the locked target angle right
+               now? The rim has kept rotating during flight, so the answer
+               depends on flight-time prediction — that's the skill. */
+            const zoneColor = zoneColorAt(shot.targetAngle);
+            const make = zoneColor === shot.clickColor;
+            shot.outcome = make ? 'make' : 'miss';
+            shot.resolvedAt = now;
+            flashAt = now;
+            flashType = make ? 'make' : 'miss';
+
+            if (make) {
+              score++;
+              streak++;
+              if (streak > longestStreak) longestStreak = streak;
+              setStatus('<span class="accent">Bucket</span> &middot; +1');
+            } else {
+              miss++;
+              streak = 0;
+              setStatus('<span class="accent">Off the iron</span>');
+            }
+            gameState = STATE.RESOLVING;
+            updateHud();
+          }
+        } else if (gameState === STATE.RESOLVING) {
+          if (now - shot.resolvedAt >= RESOLVE_MS) {
+            shotIndex++;
+            if (shotIndex >= ROUND_SHOTS) {
+              gameState = STATE.ROUND_END;
+              showResults();
+            } else {
+              shot = null;
+              gameState = STATE.AIMING;
+              setStatus(
+                '<span class="accent">Free Throw</span> &middot; aim at a zone &middot; click matching color'
+              );
+              updateHud();
+            }
+          }
+        }
+      }
+
+      function loop(now) {
+        tick(now);
         drawScene();
         requestAnimationFrame(loop);
       }
+
+      /* ── Boot ────────────────────────────────────────────────── */
 
       const fitter = BCI.createViewportFitter(document.getElementById('game-wrapper'), {
         maxScale: 1.3,
@@ -611,7 +1042,8 @@
       });
       fitter.fit();
 
-      loop();
+      startRound();
+      requestAnimationFrame(loop);
     </script>
   </body>
 </html>
