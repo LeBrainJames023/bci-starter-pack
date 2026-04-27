@@ -61,6 +61,13 @@
         position: relative;
       }
 
+      #splash-home {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        z-index: 5;
+      }
+
       #menu-header {
         text-align: center;
         position: relative;
@@ -750,6 +757,7 @@
   <body oncontextmenu="return false;">
     <!-- ── Menu Screen ──────────────────────────────────────────── -->
     <div id="menu-screen" class="screen active">
+      <div id="splash-home"><!-- Home button injected by script --></div>
       <div id="motif-cell"></div>
       <div id="motif-cursor"></div>
 
@@ -772,7 +780,6 @@
       <div class="menu-link-row">
         <button class="menu-link" id="btn-settings">&#9881; Settings</button>
         <button class="menu-link" id="btn-analytics">&#9638; Analytics</button>
-        <button class="menu-link" id="btn-launcher">&larr; BCI Arcade</button>
       </div>
     </div>
 
@@ -1108,7 +1115,7 @@
       /* ── Menu actions ────────────────────────────────────────── */
       document.getElementById('btn-practice').onclick = () => startGame('practice');
       document.getElementById('btn-game').onclick = () => startGame('game');
-      document.getElementById('btn-launcher').onclick = () => BCI.goToLauncher();
+      document.getElementById('splash-home').appendChild(BCI.createHomeButton());
 
       /* ── Menu motif (single cell + ghost cursor on a loop) ──── */
       const motifCell = document.getElementById('motif-cell');
