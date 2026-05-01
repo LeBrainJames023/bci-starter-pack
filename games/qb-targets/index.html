@@ -7,13 +7,32 @@
     <style>
       :root {
         --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
         --text-primary: #e8e4d9;
         --text-muted: #9aa4b1;
         --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
         --click-orange: #ff8833;
-        --dev-text: #d4a35a;
-        --dev-bg: #2a221a;
-        --dev-border: #4a3d2d;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Field palette — environment colors, no BCI palette here */
+        --field-frame: #0a1410;
+        --sky: #6e93b0;
+        --grass: #2d6b2d;
+        --grass-dark: #1f4c1f;
+        --grass-line: #ffffff;
+        --crowd: #2a2f38;
+        --qb-jersey: #1a3a5a;
+        --qb-helmet: #0f2840;
       }
 
       * {
@@ -27,72 +46,1679 @@
         min-height: 100vh;
         font-family: 'Courier New', monospace;
         color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        user-select: none;
       }
 
-      .stub {
-        text-align: center;
-        max-width: 480px;
-        padding: 40px 28px;
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
-      .stub-badge {
-        display: inline-block;
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        min-width: 56px;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+
+      /* ── Canvas + field frame ────────────────────────────────── */
+      .field-frame {
+        position: relative;
+        flex: 1;
+        background: var(--field-frame);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+      }
+
+      /* ── Bottom bar ──────────────────────────────────────────── */
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .status-msg .accent-good {
+        color: var(--good);
+      }
+      .status-msg .accent-bad {
+        color: var(--bad);
+      }
+      .home-slot {
+        display: flex;
+        align-items: center;
+      }
+
+      /* ── Overlay base (results, settings, analytics) ─────────── */
+      .overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.85);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 6;
+      }
+      .overlay.is-visible {
+        display: flex;
+      }
+      .overlay-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 26px 32px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+        min-width: 440px;
+        max-width: 560px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .overlay-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+
+      /* ── Round-end results ───────────────────────────────────── */
+      .results-grid {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .results-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+        min-width: 84px;
+      }
+      .results-stat-label {
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .results-stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .results-buttons {
+        display: flex;
+        gap: 12px;
+      }
+      .results-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .results-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-blue);
+      }
+      .results-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .results-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      /* ── Settings panel ──────────────────────────────────────── */
+      .settings-card {
+        min-width: 480px;
+        gap: 14px;
+      }
+      .settings-row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .settings-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .settings-label {
         font-size: 10px;
         letter-spacing: 2px;
         text-transform: uppercase;
-        padding: 5px 12px;
-        border-radius: 3px;
-        font-weight: bold;
-        background: var(--dev-bg);
-        color: var(--dev-text);
-        border: 1px solid var(--dev-border);
-        margin-bottom: 22px;
-      }
-
-      .stub-title {
-        font-size: 28px;
-        font-weight: bold;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        margin-bottom: 14px;
-      }
-
-      .stub-desc {
-        font-size: 13px;
         color: var(--text-muted);
-        line-height: 1.7;
-        margin-bottom: 28px;
+      }
+      .settings-value {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+        border: none;
+      }
+      .settings-help {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+      .settings-buttons {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+      .settings-btn {
+        flex: 1;
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .settings-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-orange);
+      }
+      .settings-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .settings-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
       }
 
-      .stub-spec {
+      /* ── Analytics panel ─────────────────────────────────────── */
+      .analytics-card {
+        min-width: 520px;
+      }
+      .analytics-section {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .analytics-h {
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .analytics-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .analytics-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 80px 80px;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+        padding: 4px 0;
+      }
+      .analytics-row .a-date {
+        color: var(--text-dim);
+      }
+      .analytics-row .a-stat {
+        text-align: right;
+      }
+      .analytics-row .a-stat-strong {
+        text-align: right;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .analytics-empty {
         font-size: 11px;
         color: var(--text-dim);
+        text-align: center;
+        padding: 16px;
+      }
+      .alltime-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+      .alltime-cell {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .alltime-cell-color {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .alltime-cell-name {
+        font-size: 10px;
+        color: var(--text-muted);
         letter-spacing: 1px;
-        line-height: 1.8;
+        text-transform: uppercase;
+      }
+      .alltime-cell-stat {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .alltime-cell-sub {
+        font-size: 9px;
+        color: var(--text-dim);
       }
     </style>
   </head>
   <body>
-    <div class="stub">
-      <div class="stub-badge">In Progress</div>
-      <div class="stub-title">QB Targets</div>
-      <div class="stub-desc">
-        v1 spec is locked. Build checkpoints are kicking off — static field scene comes first, then
-        receivers, windows, click rules, ball flight, polish.
-      </div>
-      <div class="stub-spec">
-        Behind-QB camera · Discrete plays · 4 receivers · 2–3 windows<br />
-        15-throw drill · Sack vs incompletion · Forgiveness sliders
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button class="back-btn" id="btn-back">&larr; Back</button>
+            <div class="title-block">
+              <div class="game-title">QB Targets</div>
+              <div class="game-subtitle">v1 — Concurrent Reads</div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="hud-stat">
+              <div class="hud-label">Play</div>
+              <div class="hud-value" id="hud-play">1/15</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Comp</div>
+              <div class="hud-value" id="hud-comp">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Streak</div>
+              <div class="hud-value" id="hud-streak">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Sacks</div>
+              <div class="hud-value" id="hud-sacks">0</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="icon-btn" id="btn-analytics">Stats</button>
+            <button class="icon-btn" id="btn-settings">Settings</button>
+          </div>
+        </header>
+
+        <div class="field-frame">
+          <canvas id="canvas" width="800" height="540"></canvas>
+
+          <!-- Round-end results -->
+          <div class="overlay" id="results-overlay">
+            <div class="overlay-card">
+              <div class="overlay-title">Round Complete</div>
+              <div class="results-grid">
+                <div class="results-stat">
+                  <div class="results-stat-label">Comp</div>
+                  <div class="results-stat-value" id="result-comp">0/15</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Pct</div>
+                  <div class="results-stat-value" id="result-pct">0%</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Streak</div>
+                  <div class="results-stat-value" id="result-streak">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Sacks</div>
+                  <div class="results-stat-value" id="result-sacks">0</div>
+                </div>
+              </div>
+              <div class="results-buttons">
+                <button class="results-btn" id="result-replay">Play Again</button>
+                <button class="results-btn results-btn--ghost" id="result-home">Home</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="overlay" id="settings-overlay">
+            <div class="overlay-card settings-card">
+              <div class="overlay-title">Settings</div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Cursor Sensitivity</span>
+                  <span class="settings-value" id="set-sens-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-sens" min="25" max="200" step="5" value="100" />
+                <div class="settings-help">
+                  How fast the on-screen cursor moves with your input.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Window Size</span>
+                  <span class="settings-value" id="set-size-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-size" min="70" max="160" step="5" value="100" />
+                <div class="settings-help">
+                  Bigger window = easier to land. 100% is the default size.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Window Duration</span>
+                  <span class="settings-value" id="set-dur-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-dur" min="60" max="160" step="5" value="100" />
+                <div class="settings-help">
+                  How long windows stay open. Higher = more time to read the field.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Aim Tolerance</span>
+                  <span class="settings-value" id="set-aim-val">90 px</span>
+                </div>
+                <input type="range" id="set-aim" min="50" max="160" step="5" value="90" />
+                <div class="settings-help">
+                  Vertical forgiveness — how close your cursor has to be to a receiver.
+                </div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn" id="set-replay">Replay Round</button>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="set-reset">
+                  Reset Defaults
+                </button>
+                <button class="settings-btn settings-btn--ghost" id="set-close">Close</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="overlay" id="analytics-overlay">
+            <div class="overlay-card analytics-card">
+              <div class="overlay-title">Stats</div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-color accuracy</div>
+                <div class="alltime-grid" id="alltime-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">Recent rounds</div>
+                <div class="analytics-rows" id="history-rows"></div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="analytics-close">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">
+              Read the field. <span class="accent">Match the color, throw the ball.</span>
+            </div>
+          </div>
+          <div class="home-slot" id="home-slot"></div>
+        </div>
       </div>
     </div>
 
-    <!-- Shared BCI modules -->
     <script src="../../shared/bci-input.js"></script>
     <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script>
+      'use strict';
+
+      const GAME_ID = 'qb-targets';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      /* Suppress the right-click context menu so the orange (right) click
+         is usable inside the canvas. */
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      /* Header buttons */
+      document.getElementById('btn-back').addEventListener('click', () => BCI.goToLauncher());
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      /* Viewport fitter — scales the wrapper to fit the window */
+      const wrapper = document.getElementById('game-wrapper');
+      const fitter = BCI.createViewportFitter(wrapper);
+      fitter.fit();
+      requestAnimationFrame(() => fitter.fit());
+
+      /* ── Color setup ──────────────────────────────────────────── */
+      const COLOR_HEX = {
+        blue: '#4488ff',
+        orange: '#ff8833',
+        purple: '#aa44ff',
+      };
+      const COLOR_NAMES = ['blue', 'orange', 'purple'];
+
+      function clickIdToColorName(id) {
+        if (id === 0) return 'blue'; // left
+        if (id === 1) return 'purple'; // middle
+        if (id === 2) return 'orange'; // right
+        return null;
+      }
+      function colorNameToClickId(name) {
+        if (name === 'blue') return 0;
+        if (name === 'purple') return 1;
+        if (name === 'orange') return 2;
+        return null;
+      }
+
+      /* ── Field geometry (behind-QB perspective) ────────────────
+         The canvas is 800×540. The field is rendered as a trapezoid:
+         narrow at the top (vanishing toward the deep end zone), wide
+         at the bottom (foreground, where the QB stands). */
+      const FIELD = {
+        topY: 60,
+        topLeftX: 240,
+        topRightX: 560,
+        bottomY: H,
+        bottomLeftX: -120,
+        bottomRightX: W + 120,
+        endzoneY: 130, // bottom of end zone band
+        losY: 420, // line of scrimmage
+        qbX: W / 2,
+        qbY: 510,
+      };
+
+      function fieldEdgesAtY(y) {
+        const t = (y - FIELD.topY) / (FIELD.bottomY - FIELD.topY);
+        const tt = Math.max(0, Math.min(1, t));
+        const leftX = FIELD.topLeftX + tt * (FIELD.bottomLeftX - FIELD.topLeftX);
+        const rightX = FIELD.topRightX + tt * (FIELD.bottomRightX - FIELD.topRightX);
+        return { leftX, rightX };
+      }
+
+      function perspectiveScale(y) {
+        const t = (y - FIELD.topY) / (FIELD.bottomY - FIELD.topY);
+        const tt = Math.max(0, Math.min(1, t));
+        return 0.42 + 0.58 * tt;
+      }
+
+      /* ── Tunables (defaults; user-tunable subset is overridden
+            by per-game settings) ─────────────────────────────────── */
+      const DEFAULTS = {
+        windowDurationBaseMs: 2800, // play 1
+        windowDurationRampPerPlay: 0.045, // shrinks linearly per play
+        windowDurationFloorMs: 800, // hard floor
+        windowSizeMul: 1.0, // user multiplier on window dimensions
+        windowDurationMul: 1.0, // user multiplier on duration
+        yBandTolerance: 90, // px of vertical aim forgiveness
+      };
+
+      /* tunables = current effective values (defaults merged with saved game settings) */
+      const tunables = { ...DEFAULTS };
+
+      function loadTunablesFromSettings() {
+        const g = BCI.getGameSettings(GAME_ID);
+        if (typeof g.windowSizeMul === 'number') tunables.windowSizeMul = g.windowSizeMul;
+        if (typeof g.windowDurationMul === 'number')
+          tunables.windowDurationMul = g.windowDurationMul;
+        if (typeof g.yBandTolerance === 'number') tunables.yBandTolerance = g.yBandTolerance;
+      }
+      loadTunablesFromSettings();
+
+      /* ── Virtual cursor ───────────────────────────────────────── */
+      const settings = BCI.getEffectiveSettings(GAME_ID);
+      const virtualCursor = BCI.createVirtualCursor(canvas, {
+        sensitivity: settings.cursorSensitivity,
+        startX: W / 2,
+        startY: FIELD.qbY - 40,
+      });
+
+      /* ── Game state ───────────────────────────────────────────── */
+      const STATE = {
+        IDLE: 'idle',
+        PRE_SNAP: 'pre_snap',
+        LIVE: 'live',
+        BALL_FLIGHT: 'ball_flight',
+        RESOLVING: 'resolving',
+        ROUND_END: 'round_end',
+      };
+
+      const PRE_SNAP_MS = 500;
+      const RESOLVE_MS = 750;
+      const BALL_FLIGHT_MS = 380;
+      const TOTAL_PLAYS = 15;
+      const FLASH_MS = 500;
+
+      let gameState = STATE.IDLE;
+      let stateEnteredAt = 0;
+      let lastFrameMs = performance.now();
+
+      let currentPlay = 0;
+      let completions = 0;
+      let incompletions = 0;
+      let sacks = 0;
+      let streak = 0;
+      let longestStreak = 0;
+
+      let receivers = [];
+      let resolveOutcome = null; // 'completion' | 'incompletion' | 'sack'
+      let resolveTarget = null;
+      let ballFlight = null;
+      let sackFlashUntil = 0;
+      let completionFlashUntil = 0;
+      let incompletionFlashUntil = 0;
+
+      let analyticsSession = null;
+      let playSnappedAt = 0; // start of LIVE phase, used for reaction time
+
+      /* Pause is used while modal overlays (settings, analytics) are open
+         so the play clock doesn't run out behind the modal. All time-based
+         values (state entry, window opens, ball flight, flashes) get shifted
+         forward by the pause duration on resume. */
+      let paused = false;
+      let pauseStartedAt = 0;
+
+      function pauseGame() {
+        if (paused) return;
+        paused = true;
+        pauseStartedAt = performance.now();
+      }
+
+      function unpauseGame() {
+        if (!paused) return;
+        const delta = performance.now() - pauseStartedAt;
+        paused = false;
+        stateEnteredAt += delta;
+        playSnappedAt += delta;
+        if (ballFlight) ballFlight.startMs += delta;
+        sackFlashUntil += delta;
+        completionFlashUntil += delta;
+        incompletionFlashUntil += delta;
+        for (const r of receivers) {
+          if (r.windowOpenedAt > 0) r.windowOpenedAt += delta;
+          if (r.targetedFlashUntil > 0) r.targetedFlashUntil += delta;
+        }
+        lastFrameMs = performance.now();
+      }
+
+      /* ── Receiver setup ───────────────────────────────────────── */
+      function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      function computeWindowDurationForPlay(playIdx) {
+        // playIdx is 0-based
+        const baseMs = DEFAULTS.windowDurationBaseMs * tunables.windowDurationMul;
+        const floorMs = DEFAULTS.windowDurationFloorMs * tunables.windowDurationMul;
+        const ramped = baseMs * (1 - DEFAULTS.windowDurationRampPerPlay * playIdx);
+        return Math.max(floorMs, ramped);
+      }
+
+      function setupNewPlay() {
+        receivers = [];
+
+        const lanes = [0, 1, 2, 3];
+        // 2 or 3 of the 4 receivers get an open window
+        const windowedCount = 2 + Math.floor(Math.random() * 2);
+        const shuffledLanes = shuffle(lanes);
+        const windowedLanes = new Set(shuffledLanes.slice(0, windowedCount));
+        // One lane is the deep route — runs faster so depth reads even
+        // though all windows open at the same time.
+        const deepLane = lanes[Math.floor(Math.random() * 4)];
+
+        // Distinct colors for the windowed receivers (cycle if 3+)
+        const colors = shuffle(COLOR_NAMES);
+        let cIdx = 0;
+
+        const wDur = computeWindowDurationForPlay(currentPlay - 1);
+
+        for (const lane of lanes) {
+          const hasWindow = windowedLanes.has(lane);
+          const isDeep = lane === deepLane;
+          const windowColor = hasWindow ? colors[cIdx++ % colors.length] : null;
+          receivers.push({
+            lane,
+            isDeep,
+            hasWindow,
+            windowColor,
+            progress: 0, // 0 = at LOS, 1 = end zone
+            speed: isDeep ? 0.32 : 0.2, // progress per second
+            windowOpenedAt: 0,
+            windowDurationMs: wDur,
+            windowClosed: !hasWindow, // covered receivers are "closed" from the start
+            targetedFlashUntil: 0,
+            wasTargeted: false,
+          });
+        }
+      }
+
+      /* ── Position helpers ─────────────────────────────────────── */
+      function receiverPos(r) {
+        const yLOS = FIELD.losY;
+        const yEnd = FIELD.endzoneY + 10;
+        const y = yLOS + r.progress * (yEnd - yLOS);
+        const { leftX, rightX } = fieldEdgesAtY(y);
+        const laneFrac = (r.lane + 0.5) / 4;
+        const x = leftX + laneFrac * (rightX - leftX);
+        const scale = perspectiveScale(y);
+        return { x, y, scale };
+      }
+
+      function receiverChestY(r, pos) {
+        const bodyH = 60 * pos.scale;
+        return pos.y - bodyH * 0.55;
+      }
+
+      /* ── Drawing ──────────────────────────────────────────────── */
+      function drawSky() {
+        const grad = ctx.createLinearGradient(0, 0, 0, FIELD.topY + 40);
+        grad.addColorStop(0, '#5d83a3');
+        grad.addColorStop(1, '#a3bfd1');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, FIELD.topY);
+      }
+
+      function drawCrowd() {
+        // Stadium silhouette band
+        ctx.fillStyle = 'rgba(20, 25, 30, 0.85)';
+        ctx.fillRect(0, FIELD.topY - 22, W, 26);
+
+        // Pseudo-random head bumps
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        const heads = 70;
+        for (let i = 0; i < heads; i++) {
+          const t = (i + 0.5) / heads;
+          const jitter = Math.sin(i * 12.9898) * 0.5;
+          const x = t * W + jitter * 6;
+          const y = FIELD.topY - 8 + Math.sin(i * 7.13) * 1.5;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawField() {
+        // Trapezoidal grass
+        ctx.fillStyle = '#2d6b2d';
+        ctx.beginPath();
+        ctx.moveTo(FIELD.topLeftX, FIELD.topY);
+        ctx.lineTo(FIELD.topRightX, FIELD.topY);
+        ctx.lineTo(FIELD.bottomRightX, FIELD.bottomY);
+        ctx.lineTo(FIELD.bottomLeftX, FIELD.bottomY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Grass tone variation — a few subtle horizontal bands
+        for (let i = 0; i < 6; i++) {
+          const y0 = FIELD.topY + i * 80;
+          const y1 = y0 + 40;
+          if (y0 > FIELD.bottomY) break;
+          const e0 = fieldEdgesAtY(y0);
+          const e1 = fieldEdgesAtY(y1);
+          ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 0, 0, 0.04)';
+          ctx.beginPath();
+          ctx.moveTo(e0.leftX, y0);
+          ctx.lineTo(e0.rightX, y0);
+          ctx.lineTo(e1.rightX, y1);
+          ctx.lineTo(e1.leftX, y1);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // End zone (darker band at top of field)
+        const ezTop = FIELD.topY;
+        const ezBot = FIELD.endzoneY;
+        const ezA = fieldEdgesAtY(ezTop);
+        const ezB = fieldEdgesAtY(ezBot);
+        ctx.fillStyle = '#1f4c1f';
+        ctx.beginPath();
+        ctx.moveTo(ezA.leftX, ezTop);
+        ctx.lineTo(ezA.rightX, ezTop);
+        ctx.lineTo(ezB.rightX, ezBot);
+        ctx.lineTo(ezB.leftX, ezBot);
+        ctx.closePath();
+        ctx.fill();
+
+        // Yard lines (every "10 yards" approximate)
+        const yardLines = [FIELD.endzoneY, 200, 270, 340, FIELD.losY];
+        for (const y of yardLines) {
+          const e = fieldEdgesAtY(y);
+          const widthScale = (e.rightX - e.leftX) / (FIELD.bottomRightX - FIELD.bottomLeftX);
+          ctx.lineWidth = 1.2 + widthScale * 1.8;
+          ctx.strokeStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(e.leftX, y);
+          ctx.lineTo(e.rightX, y);
+          ctx.stroke();
+        }
+
+        // Hash marks down the center
+        for (let y = FIELD.endzoneY + 18; y < FIELD.bottomY; y += 20) {
+          const e = fieldEdgesAtY(y);
+          const cx = (e.leftX + e.rightX) / 2;
+          const widthScale = (e.rightX - e.leftX) / (FIELD.bottomRightX - FIELD.bottomLeftX);
+          ctx.lineWidth = 1 + widthScale * 0.6;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+          const offset = 60 * widthScale;
+          const tickW = 4 + widthScale * 4;
+          // left hash
+          ctx.beginPath();
+          ctx.moveTo(cx - offset - tickW / 2, y);
+          ctx.lineTo(cx - offset + tickW / 2, y);
+          ctx.stroke();
+          // right hash
+          ctx.beginPath();
+          ctx.moveTo(cx + offset - tickW / 2, y);
+          ctx.lineTo(cx + offset + tickW / 2, y);
+          ctx.stroke();
+        }
+
+        // Center half-divider for aim-side reference (very subtle)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(W / 2, FIELD.topY);
+        ctx.lineTo(W / 2, FIELD.bottomY);
+        ctx.stroke();
+      }
+
+      function drawReceiver(r) {
+        const pos = receiverPos(r);
+        const scale = pos.scale;
+        const bodyH = 60 * scale;
+        const bodyW = 24 * scale;
+        const isFlashed = performance.now() < r.targetedFlashUntil;
+
+        // Shadow on grass
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(pos.x, pos.y + 2 * scale, bodyW * 0.65, 4 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Legs (back-of-runner — just two simple diagonals)
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = Math.max(1, 3 * scale);
+        ctx.beginPath();
+        ctx.moveTo(pos.x - 5 * scale, pos.y);
+        ctx.lineTo(pos.x - 3 * scale, pos.y - bodyH * 0.42);
+        ctx.moveTo(pos.x + 5 * scale, pos.y);
+        ctx.lineTo(pos.x + 3 * scale, pos.y - bodyH * 0.42);
+        ctx.stroke();
+
+        // Jersey
+        const jerseyColor = isFlashed ? '#d44b4b' : '#dadada';
+        ctx.fillStyle = jerseyColor;
+        ctx.fillRect(pos.x - bodyW * 0.5, pos.y - bodyH * 0.85, bodyW, bodyH * 0.45);
+
+        // Helmet
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y - bodyH * 0.95, bodyW * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Speed line for the deep receiver — subtle motion blur trail
+        if (r.isDeep && gameState === STATE.LIVE && r.progress > 0.05) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(pos.x - bodyW * 0.6, pos.y - bodyH * 0.5);
+          ctx.lineTo(pos.x - bodyW * 1.4, pos.y - bodyH * 0.42);
+          ctx.stroke();
+        }
+
+        // Window (if open)
+        if (r.hasWindow && !r.windowClosed && r.windowOpenedAt > 0) {
+          const elapsed = performance.now() - r.windowOpenedAt;
+          const shrink = Math.max(0, 1 - elapsed / r.windowDurationMs);
+          if (shrink <= 0) {
+            r.windowClosed = true;
+          } else {
+            const baseWindowW = 90 * scale * tunables.windowSizeMul;
+            const baseWindowH = 26 * scale * tunables.windowSizeMul;
+            const w = baseWindowW * (0.25 + shrink * 0.75);
+            const h = baseWindowH * (0.5 + shrink * 0.5);
+            const cy = receiverChestY(r, pos);
+            const color = COLOR_HEX[r.windowColor];
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 14;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(1.5, 3 * scale);
+            ctx.strokeRect(pos.x - w / 2, cy - h / 2, w, h);
+            // Inner fill at low alpha for legibility
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.12 * shrink;
+            ctx.fillRect(pos.x - w / 2, cy - h / 2, w, h);
+            ctx.restore();
+          }
+        }
+      }
+
+      function drawQB() {
+        // QB silhouette in the foreground (back of player)
+        const cx = FIELD.qbX;
+        const cy = FIELD.qbY;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 12, 36, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Legs
+        ctx.fillStyle = '#0d2030';
+        ctx.fillRect(cx - 22, cy - 8, 16, 22);
+        ctx.fillRect(cx + 6, cy - 8, 16, 22);
+
+        // Jersey body
+        ctx.fillStyle = '#1a3a5a';
+        ctx.fillRect(cx - 30, cy - 60, 60, 60);
+
+        // Number
+        ctx.fillStyle = '#f0f0f0';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('12', cx, cy - 30);
+
+        // Helmet (back of head)
+        ctx.fillStyle = '#0f2840';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 75, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Helmet stripe
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(cx - 24, cy - 78, 48, 3);
+      }
+
+      function drawCursorReticle() {
+        const cx = virtualCursor.x;
+        const cy = virtualCursor.y;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+        ctx.shadowBlur = 4;
+        ctx.lineWidth = 1.5;
+        // Crosshair
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, cy);
+        ctx.lineTo(cx - 4, cy);
+        ctx.moveTo(cx + 4, cy);
+        ctx.lineTo(cx + 14, cy);
+        ctx.moveTo(cx, cy - 14);
+        ctx.lineTo(cx, cy - 4);
+        ctx.moveTo(cx, cy + 4);
+        ctx.lineTo(cx, cy + 14);
+        ctx.stroke();
+        // Center dot
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawBall() {
+        if (!ballFlight) return;
+        const elapsed = performance.now() - ballFlight.startMs;
+        const t = Math.max(0, Math.min(1, elapsed / BALL_FLIGHT_MS));
+        const x = ballFlight.fromX + (ballFlight.toX - ballFlight.fromX) * t;
+        const linearY = ballFlight.fromY + (ballFlight.toY - ballFlight.fromY) * t;
+        // Parabolic apex above the line
+        const apex = 90;
+        const y = linearY - Math.sin(t * Math.PI) * apex;
+
+        ctx.save();
+        ctx.fillStyle = '#8b4513';
+        ctx.strokeStyle = '#3a1d0a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 9, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Laces
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.lineTo(x + 3, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - 1.5, y - 1.5);
+        ctx.lineTo(x - 1.5, y + 1.5);
+        ctx.moveTo(x + 1.5, y - 1.5);
+        ctx.lineTo(x + 1.5, y + 1.5);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawCompletionFlash() {
+        if (performance.now() >= completionFlashUntil || !resolveTarget) return;
+        const pos = receiverPos(resolveTarget);
+        const cy = receiverChestY(resolveTarget, pos);
+        const remain = (completionFlashUntil - performance.now()) / FLASH_MS;
+        ctx.save();
+        ctx.fillStyle = `rgba(95, 191, 110, ${0.35 * remain})`;
+        ctx.beginPath();
+        ctx.arc(pos.x, cy, 50 * pos.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawIncompletionFlash() {
+        if (performance.now() >= incompletionFlashUntil) return;
+        const remain = (incompletionFlashUntil - performance.now()) / FLASH_MS;
+        ctx.save();
+        ctx.fillStyle = `rgba(212, 75, 75, ${0.18 * remain})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+
+      function drawSackOverlay() {
+        if (performance.now() >= sackFlashUntil) return;
+        const remain = (sackFlashUntil - performance.now()) / 700;
+        ctx.save();
+        ctx.fillStyle = `rgba(212, 75, 75, ${0.22 * remain})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(255, 255, 255, ${remain})`;
+        ctx.font = 'bold 44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowBlur = 6;
+        ctx.fillText('SACKED', W / 2, H / 2 + 10);
+        ctx.restore();
+      }
+
+      function drawHelpText() {
+        // A subtle pre-snap message
+        if (gameState !== STATE.PRE_SNAP) return;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.font = 'bold 11px Courier New, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`PLAY ${currentPlay} / ${TOTAL_PLAYS}`, W / 2, FIELD.topY + 20);
+        ctx.restore();
+      }
+
+      /* ── Update ───────────────────────────────────────────────── */
+      function update(dtSec) {
+        const now = performance.now();
+
+        if (gameState === STATE.PRE_SNAP) {
+          // Receivers stay at LOS during pre-snap
+          if (now - stateEnteredAt > PRE_SNAP_MS) {
+            // Snap! Open windows
+            for (const r of receivers) {
+              if (r.hasWindow) r.windowOpenedAt = now;
+            }
+            gameState = STATE.LIVE;
+            stateEnteredAt = now;
+            playSnappedAt = now;
+            updateStatus(
+              `Play ${currentPlay} of ${TOTAL_PLAYS} &mdash; <span class="accent">read the field</span>`
+            );
+          }
+          return;
+        }
+
+        if (gameState === STATE.LIVE) {
+          // Receivers run downfield
+          for (const r of receivers) {
+            r.progress = Math.min(0.98, r.progress + r.speed * dtSec);
+          }
+          // Check if all windows have closed → sack (held the ball too long)
+          let anyOpen = false;
+          for (const r of receivers) {
+            if (!r.hasWindow) continue;
+            if (r.windowClosed) continue;
+            const elapsed = now - r.windowOpenedAt;
+            if (elapsed < r.windowDurationMs) {
+              anyOpen = true;
+              break;
+            }
+          }
+          if (!anyOpen) {
+            resolvePlay('sack', null, null);
+          }
+          return;
+        }
+
+        if (gameState === STATE.BALL_FLIGHT) {
+          // Receivers keep running while ball flies
+          for (const r of receivers) {
+            r.progress = Math.min(0.98, r.progress + r.speed * dtSec);
+          }
+          if (now - stateEnteredAt > BALL_FLIGHT_MS) {
+            // Ball arrives — kick off the visible completion flash
+            completionFlashUntil = now + FLASH_MS;
+            gameState = STATE.RESOLVING;
+            stateEnteredAt = now;
+          }
+          return;
+        }
+
+        if (gameState === STATE.RESOLVING) {
+          // Hold for a beat showing the outcome
+          if (now - stateEnteredAt > RESOLVE_MS) {
+            advanceToNextPlay();
+          }
+          return;
+        }
+      }
+
+      function advanceToNextPlay() {
+        if (currentPlay >= TOTAL_PLAYS) {
+          endRound();
+          return;
+        }
+        currentPlay++;
+        setupNewPlay();
+        gameState = STATE.PRE_SNAP;
+        stateEnteredAt = performance.now();
+        ballFlight = null;
+        resolveOutcome = null;
+        resolveTarget = null;
+        updateHUD();
+        updateStatus(
+          `Play ${currentPlay} of ${TOTAL_PLAYS} &mdash; <span class="accent">snap incoming</span>`
+        );
+      }
+
+      /* ── Click handling ───────────────────────────────────────── */
+      canvas.addEventListener('mousedown', (e) => {
+        if (gameState !== STATE.LIVE) return;
+        e.preventDefault();
+        const colorName = clickIdToColorName(e.button);
+        const clickId = e.button;
+        if (colorName == null || clickId == null) return;
+
+        const target = findAimedReceiver();
+        const reactionMs = performance.now() - playSnappedAt;
+
+        BCI.recordReaction(analyticsSession, clickId, reactionMs);
+
+        if (!target) {
+          // Sack — cursor wasn't on any windowed receiver
+          BCI.recordAttempt(analyticsSession, clickId, false);
+          resolvePlay('sack', null, clickId);
+          return;
+        }
+
+        if (target.windowColor === colorName) {
+          BCI.recordAttempt(analyticsSession, clickId, true);
+          resolvePlay('completion', target, clickId);
+        } else {
+          BCI.recordAttempt(analyticsSession, clickId, false);
+          target.targetedFlashUntil = performance.now() + FLASH_MS;
+          resolvePlay('incompletion', target, clickId);
+        }
+      });
+
+      function findAimedReceiver() {
+        const cx = virtualCursor.x;
+        const cy = virtualCursor.y;
+        const cursorOnLeft = cx < W / 2;
+
+        let best = null;
+        let bestDy = Infinity;
+
+        for (const r of receivers) {
+          if (!r.hasWindow || r.windowClosed) continue;
+          const elapsed = performance.now() - r.windowOpenedAt;
+          if (r.windowOpenedAt === 0 || elapsed > r.windowDurationMs) continue;
+
+          const pos = receiverPos(r);
+          const recOnLeft = pos.x < W / 2;
+          if (recOnLeft !== cursorOnLeft) continue;
+
+          const chestY = receiverChestY(r, pos);
+          const dy = Math.abs(cy - chestY);
+          if (dy > tunables.yBandTolerance) continue;
+
+          if (dy < bestDy) {
+            bestDy = dy;
+            best = r;
+          }
+        }
+
+        return best;
+      }
+
+      function resolvePlay(outcome, target, clickId) {
+        resolveOutcome = outcome;
+        resolveTarget = target;
+
+        if (outcome === 'completion') {
+          completions++;
+          streak++;
+          if (streak > longestStreak) longestStreak = streak;
+
+          // Start ball flight
+          const pos = receiverPos(target);
+          const chestY = receiverChestY(target, pos);
+          ballFlight = {
+            fromX: FIELD.qbX,
+            fromY: FIELD.qbY - 70,
+            toX: pos.x,
+            toY: chestY,
+            startMs: performance.now(),
+          };
+          gameState = STATE.BALL_FLIGHT;
+          stateEnteredAt = performance.now();
+          target.wasTargeted = true;
+          updateStatus(
+            `<span class="accent-good">Completion!</span> &mdash; ${target.windowColor.toUpperCase()} hit`
+          );
+        } else if (outcome === 'incompletion') {
+          incompletions++;
+          streak = 0;
+          incompletionFlashUntil = performance.now() + FLASH_MS;
+          gameState = STATE.RESOLVING;
+          stateEnteredAt = performance.now();
+          target.wasTargeted = true;
+          updateStatus(
+            `<span class="accent-bad">Incompletion</span> &mdash; wrong color on ${target.windowColor.toUpperCase()}`
+          );
+        } else {
+          // sack
+          sacks++;
+          streak = 0;
+          sackFlashUntil = performance.now() + 700;
+          gameState = STATE.RESOLVING;
+          stateEnteredAt = performance.now();
+          updateStatus(`<span class="accent-bad">SACKED</span> &mdash; nobody open`);
+        }
+
+        updateHUD();
+      }
+
+      /* ── HUD + status ─────────────────────────────────────────── */
+      function updateHUD() {
+        document.getElementById('hud-play').textContent =
+          `${Math.min(currentPlay, TOTAL_PLAYS)}/${TOTAL_PLAYS}`;
+        document.getElementById('hud-comp').textContent = String(completions);
+        document.getElementById('hud-streak').textContent = String(streak);
+        document.getElementById('hud-sacks').textContent = String(sacks);
+      }
+
+      function updateStatus(html) {
+        document.getElementById('status-msg').innerHTML = html;
+      }
+
+      /* ── Round lifecycle ──────────────────────────────────────── */
+      function startNewRound() {
+        currentPlay = 1;
+        completions = 0;
+        incompletions = 0;
+        sacks = 0;
+        streak = 0;
+        longestStreak = 0;
+        analyticsSession = BCI.createSession();
+        ballFlight = null;
+        resolveOutcome = null;
+        resolveTarget = null;
+        sackFlashUntil = 0;
+        completionFlashUntil = 0;
+        incompletionFlashUntil = 0;
+        document.getElementById('results-overlay').classList.remove('is-visible');
+        setupNewPlay();
+        gameState = STATE.PRE_SNAP;
+        stateEnteredAt = performance.now();
+        updateHUD();
+        updateStatus(`Play 1 of ${TOTAL_PLAYS} &mdash; <span class="accent">snap incoming</span>`);
+      }
+
+      function endRound() {
+        gameState = STATE.ROUND_END;
+        stateEnteredAt = performance.now();
+
+        const completionPct = TOTAL_PLAYS > 0 ? Math.round((completions / TOTAL_PLAYS) * 100) : 0;
+
+        if (analyticsSession) {
+          BCI.saveSession(GAME_ID, analyticsSession, {
+            completions,
+            attempts: TOTAL_PLAYS,
+            sacks,
+            longestStreak,
+            completionPct,
+          });
+        }
+
+        document.getElementById('result-comp').textContent = `${completions}/${TOTAL_PLAYS}`;
+        document.getElementById('result-pct').textContent = `${completionPct}%`;
+        document.getElementById('result-streak').textContent = String(longestStreak);
+        document.getElementById('result-sacks').textContent = String(sacks);
+        document.getElementById('results-overlay').classList.add('is-visible');
+        updateStatus(
+          `Round complete &mdash; <span class="accent">${completionPct}% completion</span>`
+        );
+      }
+
+      /* ── Render loop ──────────────────────────────────────────── */
+      function render() {
+        ctx.clearRect(0, 0, W, H);
+        drawSky();
+        drawCrowd();
+        drawField();
+
+        // Sort receivers back-to-front so closer ones overlap deeper ones
+        const sortedReceivers = [...receivers].sort((a, b) => {
+          const ay = receiverPos(a).y;
+          const by = receiverPos(b).y;
+          return ay - by;
+        });
+        for (const r of sortedReceivers) {
+          drawReceiver(r);
+        }
+
+        drawQB();
+
+        if (ballFlight) {
+          const elapsed = performance.now() - ballFlight.startMs;
+          if (elapsed <= BALL_FLIGHT_MS + 60) drawBall();
+        }
+
+        drawCompletionFlash();
+        drawIncompletionFlash();
+        drawSackOverlay();
+        drawHelpText();
+
+        // Cursor only visible during live play (when input matters)
+        if (gameState === STATE.LIVE || gameState === STATE.PRE_SNAP) {
+          drawCursorReticle();
+        }
+      }
+
+      function loop() {
+        const now = performance.now();
+        const dtSec = Math.min(0.05, (now - lastFrameMs) / 1000);
+        lastFrameMs = now;
+        if (!paused) update(dtSec);
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      /* ── Results buttons ──────────────────────────────────────── */
+      document.getElementById('result-replay').addEventListener('click', () => {
+        startNewRound();
+      });
+      document.getElementById('result-home').addEventListener('click', () => {
+        BCI.goToLauncher();
+      });
+
+      /* ── Settings panel ───────────────────────────────────────── */
+      const settingsOverlay = document.getElementById('settings-overlay');
+      const setSens = document.getElementById('set-sens');
+      const setSize = document.getElementById('set-size');
+      const setDur = document.getElementById('set-dur');
+      const setAim = document.getElementById('set-aim');
+      const setSensVal = document.getElementById('set-sens-val');
+      const setSizeVal = document.getElementById('set-size-val');
+      const setDurVal = document.getElementById('set-dur-val');
+      const setAimVal = document.getElementById('set-aim-val');
+
+      function loadSettingsIntoUI() {
+        const eff = BCI.getEffectiveSettings(GAME_ID);
+        const cs = eff.cursorSensitivity ?? 1.0;
+        setSens.value = Math.round(cs * 100);
+        setSensVal.textContent = cs.toFixed(2) + '×';
+
+        setSize.value = Math.round(tunables.windowSizeMul * 100);
+        setSizeVal.textContent = tunables.windowSizeMul.toFixed(2) + '×';
+
+        setDur.value = Math.round(tunables.windowDurationMul * 100);
+        setDurVal.textContent = tunables.windowDurationMul.toFixed(2) + '×';
+
+        setAim.value = Math.round(tunables.yBandTolerance);
+        setAimVal.textContent = `${Math.round(tunables.yBandTolerance)} px`;
+      }
+
+      function openSettings() {
+        if (
+          gameState === STATE.LIVE ||
+          gameState === STATE.PRE_SNAP ||
+          gameState === STATE.BALL_FLIGHT ||
+          gameState === STATE.RESOLVING
+        ) {
+          pauseGame();
+        }
+        loadSettingsIntoUI();
+        settingsOverlay.classList.add('is-visible');
+      }
+      function closeSettings() {
+        settingsOverlay.classList.remove('is-visible');
+        unpauseGame();
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', openSettings);
+      document.getElementById('set-close').addEventListener('click', closeSettings);
+      settingsOverlay.addEventListener('mousedown', (e) => {
+        if (e.target === settingsOverlay) closeSettings();
+      });
+
+      setSens.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        setSensVal.textContent = v.toFixed(2) + '×';
+        BCI.saveGlobalSettings({ cursorSensitivity: v });
+        virtualCursor.setSensitivity(v);
+      });
+      setSize.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        setSizeVal.textContent = v.toFixed(2) + '×';
+        tunables.windowSizeMul = v;
+        BCI.saveGameSettings(GAME_ID, { windowSizeMul: v });
+      });
+      setDur.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        setDurVal.textContent = v.toFixed(2) + '×';
+        tunables.windowDurationMul = v;
+        BCI.saveGameSettings(GAME_ID, { windowDurationMul: v });
+      });
+      setAim.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10);
+        setAimVal.textContent = `${v} px`;
+        tunables.yBandTolerance = v;
+        BCI.saveGameSettings(GAME_ID, { yBandTolerance: v });
+      });
+
+      document.getElementById('set-replay').addEventListener('click', () => {
+        closeSettings();
+        startNewRound();
+      });
+      document.getElementById('set-reset').addEventListener('click', () => {
+        BCI.saveGlobalSettings({ cursorSensitivity: 1.0 });
+        virtualCursor.setSensitivity(1.0);
+        tunables.windowSizeMul = DEFAULTS.windowSizeMul;
+        tunables.windowDurationMul = DEFAULTS.windowDurationMul;
+        tunables.yBandTolerance = DEFAULTS.yBandTolerance;
+        BCI.saveGameSettings(GAME_ID, {
+          windowSizeMul: DEFAULTS.windowSizeMul,
+          windowDurationMul: DEFAULTS.windowDurationMul,
+          yBandTolerance: DEFAULTS.yBandTolerance,
+        });
+        loadSettingsIntoUI();
+      });
+
+      /* ── Analytics view ───────────────────────────────────────── */
+      const analyticsOverlay = document.getElementById('analytics-overlay');
+
+      function openAnalytics() {
+        if (
+          gameState === STATE.LIVE ||
+          gameState === STATE.PRE_SNAP ||
+          gameState === STATE.BALL_FLIGHT ||
+          gameState === STATE.RESOLVING
+        ) {
+          pauseGame();
+        }
+        renderAnalytics();
+        analyticsOverlay.classList.add('is-visible');
+      }
+      function closeAnalytics() {
+        analyticsOverlay.classList.remove('is-visible');
+        unpauseGame();
+      }
+
+      function renderAnalytics() {
+        // All-time per-color (blue/purple/orange map to clickIds 0,1,2)
+        const allTime = BCI.getAllTimeStats(GAME_ID);
+        const grid = document.getElementById('alltime-grid');
+        grid.innerHTML = '';
+        const order = ['blue', 'purple', 'orange'];
+        for (const colorName of order) {
+          const id = colorNameToClickId(colorName);
+          const f = allTime.fingers[id] || { attempts: 0, correct: 0, totalReactionMs: 0 };
+          const acc = f.attempts > 0 ? Math.round((f.correct / f.attempts) * 100) : 0;
+          const avgRt = f.attempts > 0 ? Math.round(f.totalReactionMs / f.attempts) : 0;
+          const cell = document.createElement('div');
+          cell.className = 'alltime-cell';
+          cell.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="alltime-cell-color" style="background: ${COLOR_HEX[colorName]}"></span>
+              <span class="alltime-cell-name">${colorName}</span>
+            </div>
+            <div class="alltime-cell-stat">${acc}%</div>
+            <div class="alltime-cell-sub">${f.attempts} thrown · avg ${avgRt}ms</div>
+          `;
+          grid.appendChild(cell);
+        }
+
+        // Recent rounds
+        const history = BCI.getSessionHistory(GAME_ID);
+        const rows = document.getElementById('history-rows');
+        rows.innerHTML = '';
+        if (history.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'analytics-empty';
+          empty.textContent = 'No rounds yet — finish one to see stats.';
+          rows.appendChild(empty);
+          return;
+        }
+        for (const h of history) {
+          const row = document.createElement('div');
+          row.className = 'analytics-row';
+          row.innerHTML = `
+            <span class="a-date">${h.dateStr || ''}</span>
+            <span>${h.completions ?? 0}/${h.attempts ?? 0} comp · ${h.sacks ?? 0} sack</span>
+            <span class="a-stat">streak ${h.longestStreak ?? 0}</span>
+            <span class="a-stat-strong">${h.completionPct ?? 0}%</span>
+          `;
+          rows.appendChild(row);
+        }
+      }
+
+      document.getElementById('btn-analytics').addEventListener('click', openAnalytics);
+      document.getElementById('analytics-close').addEventListener('click', closeAnalytics);
+      analyticsOverlay.addEventListener('mousedown', (e) => {
+        if (e.target === analyticsOverlay) closeAnalytics();
+      });
+
+      /* ── Boot ─────────────────────────────────────────────────── */
+      startNewRound();
+      requestAnimationFrame(loop);
+    </script>
   </body>
 </html>
