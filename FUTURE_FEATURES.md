@@ -17,6 +17,8 @@ Nothing in this file gets built until the current feature is complete.
 
 **Hoops — streak feedback.** Once the v1 round flow is solid, layer in visible streak rewards: crowd noise that swells as the streak builds, and a screen shake / rim flash on long streaks. Held out of v1 to keep the first shipping pass focused on core mechanic feel.
 
+**Hoops — Three-Point Contest (NBA 5-rack format).** Replace the current rotating-rim Three-Point mode with the classic NBA 3-point contest layout: 5 ball racks placed at the 5 standard 3-point spots — corner, wing, top, wing, corner — perfectly arced around the line. Player shoots through a rack of 5 balls before the rack rotates to the next spot. Last ball at each rack is the money ball worth 2 points. 25 shots total, max possible score 30. Strong NBA flavor; supersedes today's single-position 3PT once the 9-Shot Drill mode (v2) has soaked in. Likely v3 territory.
+
 ### BCI QB Targets (Football)
 
 - Cursor acts as quarterback aim

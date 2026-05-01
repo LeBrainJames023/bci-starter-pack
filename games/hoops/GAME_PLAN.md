@@ -2,9 +2,78 @@
 
 ## Status
 
-v1 shipped — Live on the launcher.
+v2 in progress — adding 9-Shot Drill mode, revising Free Throw to a single-color
+aim-lock mechanic, leaving Three-Point unchanged. NBA 3-Point Contest format
+deferred to v3 (see FUTURE_FEATURES.md).
 
-## Locked v1 Spec
+## Locked v2 Spec
+
+**Free Throw — revised mechanic.** Stationary rim, no rotation. Each shot the
+_entire_ rim takes one solid color (blue / orange / purple, ~33% each, repeats
+fine), but the color is _hidden_ during initial aim. Two-click flow per shot:
+
+1. Cursor on rim → click any color → aim locks; rim color reveals.
+2. Click matching color → fires the shot.
+
+Wrong-color second click fires and misses (color discipline rule preserved).
+Off-rim first click ignored. Once aim is locked, second click position doesn't
+matter — pure color-match input. Closing white ring around the rim telegraphs
+the shot timer (same telegraph idiom as Putt-Putt).
+
+- Shot timer: 2.5s default, both clicks must complete inside it. Toggleable in
+  Settings (off = unlimited time). Per-game setting under `bciGameSettings:hoops`.
+- Round structure: pre-round picker for **10-Shot Drill** or **20-Shot Drill**
+  (same mechanic, different commitment).
+- Analytics: rebuild bucket as `hoops-ft-v2` so v2 stats start clean. Old v1
+  bucket data is dev-only noise and can be discarded.
+
+**9-Shot Drill — new mode.** 3×3 grid of hoop positions: 3 distances (close /
+mid / deep) × 3 lateral positions (left / center / right). One hoop spawns at a
+random spot per shot (1/9 each, repeats allowed — variety from round length).
+
+- Player fixed at center, stick figure with subtle lean toward the active
+  hoop's column. Camera nudges gently in the same direction.
+- Cursor controls 2D aim. Dotted trajectory preview arc updates in real time
+  showing where the ball would land if fired right now.
+- Click color = power band: blue=close (row 1), orange=mid (row 2),
+  purple=deep (row 3). Hoop's row determines the correct color.
+- Wrong-color click fires anyway and misses (consistent with FT/3PT rule).
+- Click only registers if cursor is in a "catch zone" near the active hoop;
+  off-target clicks ignored.
+- Backboards drawn at row-appropriate perspective scale (back row smallest,
+  front row largest).
+- Per-shot soft timer: 2.5s. Hoop fades out and round advances (counted as
+  miss) on timeout.
+- Round structure: 15 shots fixed for v2 first cut. Marathon (30) reserved
+  for a later iteration.
+- Analytics bucket: `hoops-9shot`. Per-row + per-color accuracy, reaction time
+  per click, longest streak.
+
+**Three-Point — unchanged in v2.** Same rotating colored rim mechanic that
+shipped in v1. NBA 5-rack format captured in `FUTURE_FEATURES.md` for v3.
+
+## v2 Checkpoints
+
+1. Refactor FT to single-color stationary rim + 10/20 sub-mode picker +
+   two-step click flow + closing-ring timer + Settings timer toggle.
+2. Scaffold 9-Shot mode: state machine entries, mode-select card, baseline
+   plumbing.
+3. 9-Shot scene: 3×3 hoop grid spawn logic with per-row perspective scaling.
+4. 9-Shot player rendering: stick figure + lean toward active column + camera
+   nudge.
+5. 9-Shot trajectory preview: dotted arc that follows the cursor in real time.
+6. 9-Shot click handling: cursor-near-hoop check + power-band color match.
+7. 9-Shot per-shot soft timer (2.5s, timeout → miss + auto-advance).
+8. 9-Shot round flow (15 shots) + integration with results overlay + analytics
+   bucket.
+
+## Currently Building
+
+v2 — checkpoint 1 next: FT mechanic refactor.
+
+---
+
+## Locked v1 Spec (archival — superseded by v2)
 
 **Mechanic.** Cursor is the aim reticle, ball sits at a fixed launch point.
 Clicking fires the ball in an arc toward the cursor's position on the rim.
@@ -38,9 +107,7 @@ hover-only, no keyboard.
 per-color accuracy, reaction time per shot, longest streak. Stored under
 `hoops` game id.
 
-## v1 Checkpoints
-
-All shipped.
+## v1 Checkpoints (archival — all shipped)
 
 1. ✅ Folder + index.html scaffold + locked spec + FUTURE_FEATURES entry.
 2. ✅ Static gym scene — floor, crowd, spotlight, backboard, rim, net, ball.
@@ -65,11 +132,6 @@ All shipped.
   dunk challenges at close range.
 - Difficulty knobs beyond rotation speed: zone-shrink (neutral gaps in the
   rim), longer flight time.
-
-## Currently Building
-
-Nothing active. Next milestone is v1.5 polish (visual pass + streak
-feedback per FUTURE_FEATURES).
 
 ## Tech Notes
 
