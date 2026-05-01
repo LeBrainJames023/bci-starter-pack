@@ -348,7 +348,7 @@
         flex-direction: column;
         gap: 22px;
         align-items: center;
-        min-width: 480px;
+        min-width: 600px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
       }
       .mode-title {
@@ -363,6 +363,9 @@
         grid-template-columns: 1fr 1fr;
         gap: 14px;
         width: 100%;
+      }
+      #mode-overlay .mode-grid {
+        grid-template-columns: 1fr 1fr 1fr;
       }
       .mode-btn {
         background: var(--bg-card-hover);
@@ -535,7 +538,7 @@
             <button class="back-btn" id="btn-back">&larr; Arcade</button>
             <div class="title-block">
               <div class="game-title">BCI Hoops</div>
-              <div class="game-subtitle">Free Throw &middot; Three-Point</div>
+              <div class="game-subtitle">Free Throw &middot; Three-Point &middot; 9-Shot</div>
             </div>
           </div>
 
@@ -601,6 +604,12 @@
                 <button class="mode-btn" data-mode="threePt">
                   <div class="mode-btn-name">Three-Point</div>
                   <div class="mode-btn-desc">Rotating colored rim &middot; 10 shots</div>
+                </button>
+                <button class="mode-btn" data-mode="nineshot">
+                  <div class="mode-btn-name">9-Shot Drill</div>
+                  <div class="mode-btn-desc">
+                    3&times;3 grid &middot; click power band &middot; 15 shots
+                  </div>
                 </button>
               </div>
             </div>
@@ -944,7 +953,9 @@
       /* ── Modes ────────────────────────────────────────────────
          FT v2: stationary single-color rim, two-click aim-lock + color-
          match flow, 2.5s shot timer (toggleable). 3PT: unchanged from v1
-         (rotating colored rim, single click on matching zone). */
+         (rotating colored rim, single click on matching zone). 9-Shot:
+         3×3 grid, one active hoop at a time, click color = power band
+         that must match the hoop's row. */
       const MODES = {
         ft: {
           name: 'Free Throw',
@@ -953,7 +964,7 @@
           rimRx: 70,
           rimRy: 18,
           flightMs: 300,
-          rimSpeedMul: 0.0, // no rotation in FT v2
+          rimSpeedMul: 0.0,
         },
         threePt: {
           name: 'Three-Point',
@@ -964,7 +975,52 @@
           flightMs: 420,
           rimSpeedMul: 1.0,
         },
+        nineshot: {
+          name: '9-Shot Drill',
+          launchX: 400,
+          launchY: 470,
+          rimRx: 70, // baseline; per-hoop overrides applied via NINESHOT_GRID
+          rimRy: 18,
+          flightMs: 320,
+          rimSpeedMul: 0.0,
+        },
       };
+
+      /* 9-Shot grid — 3 rows of distance × 3 lateral positions. Closer
+         rows are larger and spread wider on screen (real basketball
+         perspective); deeper rows shrink and converge toward a vanishing
+         point above the hoop. Click color must match the row's color. */
+      const NINESHOT_GRID = {
+        rows: [
+          { y: 290, rimRx: 68, rimRy: 18, boardScale: 1.0, color: 'blue' }, // close
+          { y: 200, rimRx: 54, rimRy: 14, boardScale: 0.78, color: 'orange' }, // mid
+          { y: 132, rimRx: 42, rimRy: 11, boardScale: 0.6, color: 'purple' }, // deep
+        ],
+        cols: [
+          [220, 400, 580], // close — wide spread
+          [275, 400, 525], // mid
+          [325, 400, 475], // deep — narrow spread
+        ],
+      };
+
+      function nineshotHoopAt(row, col) {
+        const r = NINESHOT_GRID.rows[row];
+        const x = NINESHOT_GRID.cols[row][col];
+        return {
+          row,
+          col,
+          x,
+          y: r.y,
+          rimRx: r.rimRx,
+          rimRy: r.rimRy,
+          boardScale: r.boardScale,
+          correctColor: r.color,
+        };
+      }
+
+      function pickActiveHoop() {
+        return nineshotHoopAt(Math.floor(Math.random() * 3), Math.floor(Math.random() * 3));
+      }
 
       let activeMode = 'ft';
       let currentFlightMs = MODES.ft.flightMs;
@@ -999,8 +1055,13 @@
       let lockedAimX = 0;
       let lockedAimY = 0;
       let lockedTargetAngle = 0;
-      let ftTimerStartedAt = 0;
-      let ftTimedOut = false;
+
+      /* 9-Shot-specific state */
+      let activeHoop = null; // current spawn position + correct-color metadata
+
+      /* Shared shot timer (FT and 9-Shot use the same 2.5s window). */
+      let shotTimerStartedAt = 0;
+      let shotTimedOut = false;
 
       /* Analytics — separate session per round, separate game id per
          mode so all-time totals stay clean. FT v2 uses a fresh bucket
@@ -1010,6 +1071,7 @@
       let aimingStartedAt = 0;
       function analyticsGameId() {
         if (activeMode === 'ft') return 'hoops-ft-v2';
+        if (activeMode === 'nineshot') return 'hoops-9shot';
         return 'hoops-3pt';
       }
 
@@ -1115,25 +1177,34 @@
         ctx.stroke();
       }
 
-      /* FT timer ring — closing white ellipse around the rim that
-         shrinks toward the rim as the 2.5s window elapses. Mirrors
-         Putt-Putt's sequence telegraph. Hidden when timer disabled. */
-      function drawFTTimerRing() {
-        if (activeMode !== 'ft') return;
-        if (!ftTimerEnabled) return;
+      /* Closing-ring timer telegraph. Wraps the active rim (FT center
+         or 9-Shot active hoop) and shrinks toward it as the 2.5s window
+         elapses. FT respects the user's timer toggle; 9-Shot always
+         shows it. Hidden during SHOOTING/RESOLVING/menus. */
+      function drawShotTimerRing() {
+        const enabled = (activeMode === 'ft' && ftTimerEnabled) || activeMode === 'nineshot';
+        if (!enabled) return;
         if (gameState !== STATE.AIMING && gameState !== STATE.LOCKED) return;
-        if (!ftTimerStartedAt) return;
+        if (!shotTimerStartedAt) return;
 
-        const elapsed = Date.now() - ftTimerStartedAt;
-        const t = Math.min(1, elapsed / FT_TIMER_MS); // 0 → 1
+        const elapsed = Date.now() - shotTimerStartedAt;
+        const t = Math.min(1, elapsed / FT_TIMER_MS);
         if (t >= 1) return;
 
-        const cx = SCENE.hoopX;
-        const cy = SCENE.hoopY;
-        const rx = SCENE.rimRx;
-        const ry = SCENE.rimRy;
+        let cx, cy, rx, ry;
+        if (activeMode === 'nineshot' && activeHoop) {
+          cx = activeHoop.x;
+          cy = activeHoop.y;
+          rx = activeHoop.rimRx;
+          ry = activeHoop.rimRy;
+        } else {
+          cx = SCENE.hoopX;
+          cy = SCENE.hoopY;
+          rx = SCENE.rimRx;
+          ry = SCENE.rimRy;
+        }
 
-        const ringScale = 1 + (1 - t) * 0.55; // shrinks from 1.55× to 1.0×
+        const ringScale = 1 + (1 - t) * 0.55;
         const urgent = t > 0.7;
         const alpha = urgent ? 0.55 + ((t - 0.7) / 0.3) * 0.4 : 0.25 + t * 0.3;
         const color = urgent
@@ -1145,6 +1216,171 @@
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx * ringScale, ry * ringScale, 0, 0, Math.PI * 2);
         ctx.stroke();
+      }
+
+      /* ── 9-Shot rendering ─────────────────────────────────────
+         Active hoop drawn at its grid position with row-appropriate
+         perspective scale. Other 8 positions are conceptual — only the
+         active spawn renders. */
+      function drawNineshotHoop(hoop) {
+        const cx = hoop.x;
+        const cy = hoop.y;
+        const rx = hoop.rimRx;
+        const ry = hoop.rimRy;
+        const s = hoop.boardScale;
+
+        /* Backboard scaled per row */
+        const boardW = SCENE.boardW * s;
+        const boardH = SCENE.boardH * s;
+        const boardTop = cy - boardH - 10; // sit above the rim with a tiny gap
+        const sqW = 78 * s;
+        const sqH = 56 * s;
+
+        ctx.fillStyle = '#f3eee2';
+        ctx.fillRect(cx - boardW / 2, boardTop, boardW, boardH);
+        ctx.strokeStyle = '#b8b0a0';
+        ctx.lineWidth = Math.max(1, 2 * s);
+        ctx.strokeRect(cx - boardW / 2, boardTop, boardW, boardH);
+        ctx.strokeStyle = '#2a2f38';
+        ctx.lineWidth = Math.max(1.5, 3 * s);
+        ctx.strokeRect(cx - sqW / 2, boardTop + boardH - sqH - 14 * s, sqW, sqH);
+
+        /* Pole stub */
+        ctx.fillStyle = '#1a1f26';
+        ctx.fillRect(cx - 6 * s, boardTop - 8 * s, 12 * s, 8 * s);
+
+        /* Net — V-mesh */
+        const netDrop = 56 * s;
+        ctx.strokeStyle = 'rgba(243, 238, 226, 0.85)';
+        ctx.lineWidth = 1.4 * Math.max(0.6, s);
+        const cords = 9;
+        for (let i = 0; i <= cords; i++) {
+          const t = i / cords;
+          const xTop = cx - rx + t * rx * 2;
+          const xBottom = cx - rx * 1.05 + t * rx * 1.05 * 2 * 0.85;
+          ctx.beginPath();
+          ctx.moveTo(xTop, cy);
+          ctx.lineTo(xBottom, cy + netDrop);
+          ctx.stroke();
+        }
+        for (let band = 1; band <= 2; band++) {
+          const t = band / 3;
+          const yLine = cy + t * netDrop;
+          const halfW = rx + (rx * 1.05 - rx) * t * 0.85;
+          ctx.beginPath();
+          ctx.moveTo(cx - halfW, yLine);
+          ctx.lineTo(cx + halfW, yLine);
+          ctx.stroke();
+        }
+
+        /* Rim ring — drawn in the row's correct color so the player can
+           tell at a glance which click maps to this hoop. */
+        ctx.fillStyle = 'rgba(10, 13, 16, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 4 * s, rx + 2, ry + 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = COLOR_HEX[hoop.correctColor];
+        ctx.lineWidth = Math.max(3, SCENE.rimThickness * Math.max(0.6, s));
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.2 * Math.max(0.6, s);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      function drawNineshotScene() {
+        if (activeHoop) drawNineshotHoop(activeHoop);
+      }
+
+      /* Stick figure player at the launch point. Leans subtly toward
+         the active column so the player feels reactive to where the
+         hoop spawned. */
+      function drawPlayerStickFigure() {
+        if (activeMode !== 'nineshot') return;
+
+        const px = SCENE.launchX;
+        const py = SCENE.launchY;
+        let lean = 0;
+        if (activeHoop) {
+          if (activeHoop.col === 0) lean = -8;
+          else if (activeHoop.col === 2) lean = 8;
+        }
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.strokeStyle = '#1a1f26';
+        ctx.fillStyle = '#1a1f26';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+
+        /* Head */
+        ctx.beginPath();
+        ctx.arc(lean * 0.5, -52, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* Torso — leans slightly toward active column */
+        ctx.beginPath();
+        ctx.moveTo(lean * 0.5, -42);
+        ctx.lineTo(lean, -10);
+        ctx.stroke();
+
+        /* Arms in shooting pose — front arm raised, back arm balancing */
+        ctx.beginPath();
+        ctx.moveTo(lean, -36);
+        ctx.lineTo(lean + 14, -50);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(lean, -36);
+        ctx.lineTo(lean - 14, -28);
+        ctx.stroke();
+
+        /* Legs */
+        ctx.beginPath();
+        ctx.moveTo(lean, -10);
+        ctx.lineTo(lean - 8, 18);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(lean, -10);
+        ctx.lineTo(lean + 8, 18);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      /* Dotted trajectory preview — predicts where the ball will land
+         if fired this instant. Mirrors drawBallInFlight's parabola. */
+      function drawTrajectoryPreview() {
+        if (activeMode !== 'nineshot') return;
+        if (gameState !== STATE.AIMING) return;
+
+        const fromX = SCENE.launchX;
+        const fromY = SCENE.launchY;
+        const toX = virtualCursor.x;
+        const toY = virtualCursor.y;
+
+        ctx.save();
+        ctx.setLineDash([4, 6]);
+        ctx.strokeStyle = 'rgba(232, 228, 217, 0.5)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        const steps = 26;
+        const apex = -110;
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = fromX + (toX - fromX) * t;
+          const flatY = fromY + (toY - fromY) * t;
+          const arc = -4 * apex * t * (1 - t);
+          const y = flatY + arc;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.restore();
       }
 
       function drawBallAt(x, y, r) {
@@ -1186,8 +1422,10 @@
       function drawBall() {
         /* Ball at the launch point — visible during AIMING. Hidden
            during SHOOTING (the in-flight ball is drawn instead) so we
-           don't show two balls at once. */
+           don't show two balls at once. In 9-Shot the ball is implicit
+           in the stick figure's raised hand. */
         if (gameState === STATE.SHOOTING || gameState === STATE.RESOLVING) return;
+        if (activeMode === 'nineshot') return;
         drawBallAt(SCENE.launchX, SCENE.launchY, SCENE.ballR);
       }
 
@@ -1214,43 +1452,52 @@
         }
         const fade = 1 - elapsed / FLASH_MS;
 
+        /* For 9-Shot, flash positions on the active hoop (which moves
+           every shot). For FT/3PT, the rim is centered. */
+        let cx, cy, rx, ry, netDrop;
+        if (activeMode === 'nineshot' && activeHoop) {
+          cx = activeHoop.x;
+          cy = activeHoop.y;
+          rx = activeHoop.rimRx;
+          ry = activeHoop.rimRy;
+          netDrop = SCENE.netDrop * activeHoop.boardScale;
+        } else {
+          cx = SCENE.hoopX;
+          cy = SCENE.hoopY;
+          rx = SCENE.rimRx;
+          ry = SCENE.rimRy;
+          netDrop = SCENE.netDrop;
+        }
+
         if (flashType === 'make') {
-          /* Green pulse over the net area */
           ctx.fillStyle = `rgba(95, 191, 110, ${0.32 * fade})`;
           ctx.beginPath();
-          ctx.ellipse(
-            SCENE.hoopX,
-            SCENE.hoopY + 18,
-            SCENE.rimRx * 1.05,
-            SCENE.netDrop * 0.9,
-            0,
-            0,
-            Math.PI * 2
-          );
+          ctx.ellipse(cx, cy + 18, rx * 1.05, netDrop * 0.9, 0, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          /* Red rim halo */
           ctx.strokeStyle = `rgba(212, 75, 75, ${0.7 * fade})`;
           ctx.lineWidth = SCENE.rimThickness + 4;
           ctx.beginPath();
-          ctx.ellipse(
-            SCENE.hoopX,
-            SCENE.hoopY,
-            SCENE.rimRx + 4,
-            SCENE.rimRy + 4,
-            0,
-            0,
-            Math.PI * 2
-          );
+          ctx.ellipse(cx, cy, rx + 4, ry + 4, 0, 0, Math.PI * 2);
           ctx.stroke();
         }
       }
 
       function drawReticle() {
-        const info = cursorRimInfo();
         const x = virtualCursor.x;
         const y = virtualCursor.y;
-        const lit = info.onRim;
+
+        /* "Lit" means the cursor is in a catch zone where a click
+           would register — on the rim for FT/3PT, near the active hoop
+           for 9-Shot. */
+        let lit;
+        if (activeMode === 'nineshot' && activeHoop) {
+          const dx = (x - activeHoop.x) / activeHoop.rimRx;
+          const dy = (y - activeHoop.y) / activeHoop.rimRy;
+          lit = Math.sqrt(dx * dx + dy * dy) <= 1.7;
+        } else {
+          lit = cursorRimInfo().onRim;
+        }
         const color = lit ? 'rgba(255, 255, 255, 1)' : 'rgba(232, 228, 217, 0.6)';
 
         ctx.save();
@@ -1290,13 +1537,24 @@
         drawCrowd();
         drawSpotlight();
         drawFloor();
-        drawBackboardAndNet();
-        if (activeMode === 'ft') {
-          drawRimFT();
-          drawFTTimerRing();
+
+        if (activeMode === 'nineshot') {
+          /* 9-Shot has its own self-contained backboard+rim+net since
+             the active hoop sits at variable grid positions and scales
+             per row. */
+          drawNineshotScene();
+          drawPlayerStickFigure();
+          drawTrajectoryPreview();
         } else {
-          drawRimRotating();
+          drawBackboardAndNet();
+          if (activeMode === 'ft') {
+            drawRimFT();
+          } else {
+            drawRimRotating();
+          }
         }
+        drawShotTimerRing();
+
         drawOutcomeFlash();
         drawBall();
         drawBallInFlight();
@@ -1331,6 +1589,9 @@
         if (activeMode === 'ft') {
           return '<span class="accent">Free Throw</span> &middot; aim at the rim &middot; click any color to lock';
         }
+        if (activeMode === 'nineshot') {
+          return '<span class="accent">9-Shot</span> &middot; aim &middot; blue / orange / purple = close / mid / deep';
+        }
         const modeName = MODES[activeMode].name;
         return `<span class="accent">${modeName}</span> &middot; aim at a zone &middot; click matching color`;
       }
@@ -1342,8 +1603,14 @@
 
       function beginFTShot() {
         ftRimColor = pickFtRimColor();
-        ftTimerStartedAt = Date.now();
-        ftTimedOut = false;
+        shotTimerStartedAt = Date.now();
+        shotTimedOut = false;
+      }
+
+      function begin9ShotShot() {
+        activeHoop = pickActiveHoop();
+        shotTimerStartedAt = Date.now();
+        shotTimedOut = false;
       }
 
       function startRound(roundShots) {
@@ -1360,6 +1627,7 @@
         aimingStartedAt = Date.now();
 
         if (activeMode === 'ft') beginFTShot();
+        else if (activeMode === 'nineshot') begin9ShotShot();
 
         gameState = STATE.AIMING;
         resultsOverlay.classList.remove('is-visible');
@@ -1395,6 +1663,8 @@
         analyticsSession = null;
         shot = null;
         flashType = null;
+        activeHoop = null;
+        shotTimerStartedAt = 0;
         resultsOverlay.classList.remove('is-visible');
         lengthOverlay.classList.remove('is-visible');
         modeOverlay.classList.add('is-visible');
@@ -1415,7 +1685,7 @@
         .addEventListener('click', () => BCI.goToLauncher());
 
       /* Mode-select buttons — FT routes through length picker first;
-         3PT goes straight to a 10-shot round. */
+         3PT and 9-Shot go straight to their fixed-length rounds. */
       document.querySelectorAll('#mode-overlay .mode-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const modeId = btn.dataset.mode;
@@ -1423,6 +1693,8 @@
           applyMode(modeId);
           if (modeId === 'ft') {
             showLengthPicker();
+          } else if (modeId === 'nineshot') {
+            startRound(15);
           } else {
             startRound(10);
           }
@@ -1482,7 +1754,7 @@
         /* If currently mid-FT shot, reset the timer reference so the
            closing ring picks up the new setting cleanly on next shot. */
         if (activeMode === 'ft' && ftTimerEnabled && gameState === STATE.AIMING) {
-          ftTimerStartedAt = Date.now();
+          shotTimerStartedAt = Date.now();
         }
       });
 
@@ -1518,6 +1790,8 @@
 
         if (activeMode === 'ft') {
           handleFTClick(click, colorName);
+        } else if (activeMode === 'nineshot') {
+          handle9ShotClick(click, colorName);
         } else {
           handle3PTClick(click, colorName);
         }
@@ -1601,6 +1875,47 @@
         setStatus('<span class="accent">Shot fired</span>');
       }
 
+      function handle9ShotClick(click, colorName) {
+        if (gameState !== STATE.AIMING) return;
+        if (!activeHoop) return;
+
+        /* Catch-zone gate: cursor must be near the active hoop in
+           ellipse-normalized space. Off-target clicks ignored. */
+        const dx = (virtualCursor.x - activeHoop.x) / activeHoop.rimRx;
+        const dy = (virtualCursor.y - activeHoop.y) / activeHoop.rimRy;
+        const distNorm = Math.sqrt(dx * dx + dy * dy);
+        if (distNorm > 1.7) return;
+
+        const reactionMs = Date.now() - aimingStartedAt;
+        if (analyticsSession) {
+          BCI.recordReaction(analyticsSession, click.id, reactionMs);
+        }
+
+        const make = colorName === activeHoop.correctColor;
+
+        shot = {
+          startedAt: performance.now(),
+          fromX: SCENE.launchX,
+          fromY: SCENE.launchY,
+          toX: virtualCursor.x,
+          toY: virtualCursor.y,
+          targetAngle: 0,
+          clickColor: colorName,
+          clickId: click.id,
+          outcome: make ? 'make' : 'miss', // 9-Shot outcome predetermined
+          resolvedAt: 0,
+        };
+
+        if (analyticsSession) {
+          BCI.recordAttempt(analyticsSession, click.id, make);
+        }
+
+        gameState = STATE.SHOOTING;
+        setStatus(
+          make ? '<span class="accent">Shot fired</span>' : '<span class="accent">Off color</span>'
+        );
+      }
+
       /* ── Tick ────────────────────────────────────────────────── */
 
       function currentRimSpeed() {
@@ -1621,6 +1936,7 @@
           gameState = STATE.AIMING;
           aimingStartedAt = Date.now();
           if (activeMode === 'ft') beginFTShot();
+          else if (activeMode === 'nineshot') begin9ShotShot();
           setStatus(aimingPromptHTML());
           updateHud();
         }
@@ -1630,10 +1946,11 @@
         const dt = Math.min(0.05, (now - lastFrameMs) / 1000);
         lastFrameMs = now;
 
-        /* 3PT rim rotation. FT's rimSpeedMul is 0, but skip the work
-           entirely for clarity. Rim freezes on menus and round-end. */
+        /* 3PT rim rotation only. FT and 9-Shot have rimSpeedMul=0 but
+           skipping the math here is also clearer. Rim freezes on menus
+           and round-end. */
         if (
-          activeMode !== 'ft' &&
+          activeMode === 'threePt' &&
           (gameState === STATE.AIMING ||
             gameState === STATE.SHOOTING ||
             gameState === STATE.RESOLVING)
@@ -1641,30 +1958,25 @@
           rimAngle = (rimAngle + currentRimSpeed() * dt) % (Math.PI * 2);
         }
 
-        /* FT shot timer — both clicks must happen inside FT_TIMER_MS
-           total. Timeout = miss, brief pause, then advance. */
+        /* Per-shot timer — FT (toggleable) and 9-Shot (always on) both
+           use the FT_TIMER_MS window from shot start to shot resolve.
+           Timeout = miss + brief pause + auto-advance. */
+        const timerActive = (activeMode === 'ft' && ftTimerEnabled) || activeMode === 'nineshot';
         if (
-          activeMode === 'ft' &&
-          ftTimerEnabled &&
-          ftTimerStartedAt &&
+          timerActive &&
+          shotTimerStartedAt &&
           (gameState === STATE.AIMING || gameState === STATE.LOCKED) &&
-          Date.now() - ftTimerStartedAt > FT_TIMER_MS
+          Date.now() - shotTimerStartedAt > FT_TIMER_MS
         ) {
           miss++;
           streak = 0;
-          flashType = null; // no rim flash for timeout — status only
+          flashType = null;
           setStatus('<span class="accent">Time out</span>');
-          ftTimedOut = true;
-          /* Synthetic shot so RESOLVING auto-advance fires after the
-             standard pause. No ball gets drawn (drawBallInFlight gates
-             on gameState === SHOOTING). */
-          shot = { resolvedAt: now, ftTimedOut: true };
+          shotTimedOut = true;
+          shot = { resolvedAt: now, shotTimedOut: true };
           gameState = STATE.RESOLVING;
           updateHud();
           if (analyticsSession) {
-            /* Record the timeout as a missed attempt against the rim
-               color the player was supposed to match. clickId 0 is a
-               placeholder since no click happened. */
             BCI.recordAttempt(analyticsSession, 0, false);
           }
         }
@@ -1672,10 +1984,10 @@
         if (gameState === STATE.SHOOTING) {
           if (now - shot.startedAt >= currentFlightMs) {
             /* Resolve outcome:
-               - FT: predetermined at click 2 — just read shot.outcome.
+               - FT / 9-Shot: predetermined at click — just read shot.outcome.
                - 3PT: compute against current rotating rim at arrival. */
             let make;
-            if (activeMode === 'ft') {
+            if (activeMode === 'ft' || activeMode === 'nineshot') {
               make = shot.outcome === 'make';
             } else {
               const zoneColor = zoneColorAt(shot.targetAngle);
