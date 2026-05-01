@@ -2,7 +2,7 @@
 
 ## Status
 
-v1 spec locked. Ready to build.
+v1 Live. Visual polish pass deferred — functionality validated end-to-end.
 
 ---
 
@@ -111,15 +111,18 @@ v1 spec locked. Ready to build.
 
 ## Currently Building
 
-v1 MVP — about to kick off checkpoint build.
+Nothing active. v1 shipped autonomously without screenshot review — visual
+tweaks (camera framing, receiver detail, ball trajectory feel) are next when
+the user is ready to spot-check.
 
 ## Up Next
 
-Build checkpoints to follow once `GAME_PLAN.md` is reviewed and committed.
+- Visual tuning pass on whatever feels off in real play
+- v1.5 features per the section above
 
 ## Known Issues
 
-None yet.
+None reported yet (no real-play feedback collected).
 
 ---
 
