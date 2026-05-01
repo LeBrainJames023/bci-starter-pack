@@ -452,6 +452,43 @@
         width: 100%;
         accent-color: var(--click-orange);
       }
+      .settings-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-badge-dim);
+        cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      .settings-toggle:hover {
+        border-color: var(--border-strong);
+      }
+      .settings-toggle input[type='checkbox'] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--click-orange);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .settings-toggle-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .settings-toggle-name {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .settings-toggle-desc {
+        font-size: 10px;
+        color: var(--text-muted);
+      }
       .settings-buttons {
         display: flex;
         gap: 10px;
@@ -557,15 +594,34 @@
               <div class="mode-grid">
                 <button class="mode-btn" data-mode="ft">
                   <div class="mode-btn-name">Free Throw</div>
-                  <div class="mode-btn-desc">15 ft &middot; baseline timing &middot; 10 shots</div>
+                  <div class="mode-btn-desc">
+                    Aim, lock, react to color &middot; 2.5s shot timer
+                  </div>
                 </button>
                 <button class="mode-btn" data-mode="threePt">
                   <div class="mode-btn-name">Three-Point</div>
-                  <div class="mode-btn-desc">
-                    Pulled-back camera &middot; longer flight &middot; 10 shots
-                  </div>
+                  <div class="mode-btn-desc">Rotating colored rim &middot; 10 shots</div>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div class="mode-overlay" id="length-overlay">
+            <div class="mode-card">
+              <div class="mode-title">Free Throw &middot; Drill Length</div>
+              <div class="mode-grid">
+                <button class="mode-btn" data-shots="10">
+                  <div class="mode-btn-name">10-Shot Drill</div>
+                  <div class="mode-btn-desc">Quick warm-up &middot; ~30s</div>
+                </button>
+                <button class="mode-btn" data-shots="20">
+                  <div class="mode-btn-name">20-Shot Drill</div>
+                  <div class="mode-btn-desc">Longer practice &middot; ~60s</div>
+                </button>
+              </div>
+              <button class="results-btn results-btn--ghost" id="btn-length-back">
+                Back to Mode Select
+              </button>
             </div>
           </div>
         </div>
@@ -600,6 +656,13 @@
             value="100"
           />
         </div>
+        <label class="settings-toggle" for="settings-ft-timer">
+          <input type="checkbox" id="settings-ft-timer" checked />
+          <span class="settings-toggle-text">
+            <span class="settings-toggle-name">Free Throw Timer</span>
+            <span class="settings-toggle-desc">2.5s shot clock; off = unlimited time</span>
+          </span>
+        </label>
         <div class="settings-buttons">
           <button class="settings-btn" id="settings-replay">Replay Round</button>
           <button class="settings-btn" id="settings-modes">Mode Select</button>
@@ -853,30 +916,35 @@
       }
 
       /* ── Game state machine ───────────────────────────────────
-         AIMING — rim spinning, waiting for click on rim.
-         SHOOTING — ball in flight (~300ms), no input accepted.
-         RESOLVING — outcome flash; rim keeps rotating; brief pause.
+         MODE_SELECT — overlay shown, no play.
+         AIMING — waiting for click 1 (cursor on rim for FT, on rotating
+                  zone for 3PT).
+         LOCKED — FT only: aim is locked, color revealed, waiting for
+                  matching color click.
+         SHOOTING — ball in flight, no input accepted.
+         RESOLVING — outcome flash; brief pause before next shot.
          ROUND_END — results overlay shown; loop still ticks for the
                      visual but no shots happen. */
       const STATE = {
         MODE_SELECT: 'mode_select',
         AIMING: 'aiming',
+        LOCKED: 'locked',
         SHOOTING: 'shooting',
         RESOLVING: 'resolving',
         ROUND_END: 'round_end',
       };
 
-      const ROUND_SHOTS = 10;
       const RESOLVE_MS = 700;
       const FLASH_MS = 500;
-      const RIM_SPEED_BASE = 0.55; // rad/s baseline — modulated by ramp + mode
+      const RIM_SPEED_BASE = 0.55; // rad/s baseline — 3PT only
       const RIM_SPEED_RAMP_PER_SHOT = 0.13; // shot 10 = 2.17× shot 1
+      const FT_TIMER_MS = 2500; // both clicks must complete inside this
+      const FT_TIMEOUT_PAUSE_MS = 600; // brief pause on timeout before advancing
 
       /* ── Modes ────────────────────────────────────────────────
-         Each mode overrides scene + flight tunables. Free Throw is
-         the baseline; Three-Point pulls the launch point back, shrinks
-         the rim slightly, and lengthens the flight so prediction
-         pressure goes up even before the difficulty ramp kicks in. */
+         FT v2: stationary single-color rim, two-click aim-lock + color-
+         match flow, 2.5s shot timer (toggleable). 3PT: unchanged from v1
+         (rotating colored rim, single click on matching zone). */
       const MODES = {
         ft: {
           name: 'Free Throw',
@@ -885,7 +953,7 @@
           rimRx: 70,
           rimRy: 18,
           flightMs: 300,
-          rimSpeedMul: 1.0,
+          rimSpeedMul: 0.0, // no rotation in FT v2
         },
         threePt: {
           name: 'Three-Point',
@@ -898,8 +966,9 @@
         },
       };
 
-      let activeMode = 'ft'; // changes via mode select
+      let activeMode = 'ft';
       let currentFlightMs = MODES.ft.flightMs;
+      let currentRoundShots = 10; // set by length picker (FT) or mode default
 
       function applyMode(modeId) {
         activeMode = modeId;
@@ -915,23 +984,45 @@
       let lastFrameMs = performance.now();
       let rimAngle = 0;
 
-      let shotIndex = 0; // 0..ROUND_SHOTS-1
+      let shotIndex = 0;
       let score = 0;
       let miss = 0;
       let streak = 0;
       let longestStreak = 0;
 
-      let shot = null; // { startedAt, fromX, fromY, toX, toY, targetAngle, clickColor, clickId, outcome, resolvedAt }
+      let shot = null;
       let flashAt = 0;
-      let flashType = null; // 'make' | 'miss' | null
+      let flashType = null;
+
+      /* FT-specific state */
+      let ftRimColor = null; // 'blue' | 'orange' | 'purple' — set at shot start, revealed at lock
+      let lockedAimX = 0;
+      let lockedAimY = 0;
+      let lockedTargetAngle = 0;
+      let ftTimerStartedAt = 0;
+      let ftTimedOut = false;
 
       /* Analytics — separate session per round, separate game id per
-         mode so all-time totals stay clean. */
+         mode so all-time totals stay clean. FT v2 uses a fresh bucket
+         (`hoops-ft-v2`) since the mechanic changed; old v1 data stays
+         under `hoops-ft` and is dev-only noise. */
       let analyticsSession = null;
       let aimingStartedAt = 0;
       function analyticsGameId() {
-        return activeMode === 'ft' ? 'hoops-ft' : 'hoops-3pt';
+        if (activeMode === 'ft') return 'hoops-ft-v2';
+        return 'hoops-3pt';
       }
+
+      /* Persistent settings — FT timer on/off lives under
+         bciGameSettings:hoops so it survives refreshes. */
+      function getFtTimerEnabled() {
+        const g = BCI.getGameSettings(GAME_ID);
+        return g.ftTimerEnabled !== false; // default true
+      }
+      function setFtTimerEnabled(enabled) {
+        BCI.saveGameSettings(GAME_ID, { ftTimerEnabled: !!enabled });
+      }
+      let ftTimerEnabled = getFtTimerEnabled();
 
       /* ── Geometry helpers ─────────────────────────────────────
          cursorRimInfo: convert a screen point into ellipse-parametric
@@ -989,6 +1080,70 @@
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      /* FT v2 rim — stationary, single solid color. Color is hidden
+         (neutral grey) during AIMING; revealed at lock. */
+      function drawRimFT() {
+        const cx = SCENE.hoopX;
+        const cy = SCENE.hoopY;
+        const rx = SCENE.rimRx;
+        const ry = SCENE.rimRy;
+
+        ctx.fillStyle = 'rgba(10, 13, 16, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 4, rx + 2, ry + 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const colorRevealed =
+          gameState === STATE.LOCKED ||
+          gameState === STATE.SHOOTING ||
+          gameState === STATE.RESOLVING;
+        const strokeColor = colorRevealed && ftRimColor ? COLOR_HEX[ftRimColor] : '#7d8590';
+
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = SCENE.rimThickness;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      /* FT timer ring — closing white ellipse around the rim that
+         shrinks toward the rim as the 2.5s window elapses. Mirrors
+         Putt-Putt's sequence telegraph. Hidden when timer disabled. */
+      function drawFTTimerRing() {
+        if (activeMode !== 'ft') return;
+        if (!ftTimerEnabled) return;
+        if (gameState !== STATE.AIMING && gameState !== STATE.LOCKED) return;
+        if (!ftTimerStartedAt) return;
+
+        const elapsed = Date.now() - ftTimerStartedAt;
+        const t = Math.min(1, elapsed / FT_TIMER_MS); // 0 → 1
+        if (t >= 1) return;
+
+        const cx = SCENE.hoopX;
+        const cy = SCENE.hoopY;
+        const rx = SCENE.rimRx;
+        const ry = SCENE.rimRy;
+
+        const ringScale = 1 + (1 - t) * 0.55; // shrinks from 1.55× to 1.0×
+        const urgent = t > 0.7;
+        const alpha = urgent ? 0.55 + ((t - 0.7) / 0.3) * 0.4 : 0.25 + t * 0.3;
+        const color = urgent
+          ? `rgba(255, 200, 100, ${alpha.toFixed(3)})`
+          : `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = urgent ? 3 : 2.4;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx * ringScale, ry * ringScale, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
 
@@ -1136,7 +1291,12 @@
         drawSpotlight();
         drawFloor();
         drawBackboardAndNet();
-        drawRimRotating();
+        if (activeMode === 'ft') {
+          drawRimFT();
+          drawFTTimerRing();
+        } else {
+          drawRimRotating();
+        }
         drawOutcomeFlash();
         drawBall();
         drawBallInFlight();
@@ -1151,8 +1311,8 @@
       const statusMsg = document.getElementById('status-msg');
 
       function updateHud() {
-        const display = Math.min(shotIndex + 1, ROUND_SHOTS);
-        hudShot.textContent = `${display} / ${ROUND_SHOTS}`;
+        const display = Math.min(shotIndex + 1, currentRoundShots);
+        hudShot.textContent = `${display} / ${currentRoundShots}`;
         hudScore.textContent = String(score);
         hudStreak.textContent = String(streak);
       }
@@ -1165,13 +1325,30 @@
 
       const resultsOverlay = document.getElementById('results-overlay');
       const modeOverlay = document.getElementById('mode-overlay');
+      const lengthOverlay = document.getElementById('length-overlay');
 
       function aimingPromptHTML() {
+        if (activeMode === 'ft') {
+          return '<span class="accent">Free Throw</span> &middot; aim at the rim &middot; click any color to lock';
+        }
         const modeName = MODES[activeMode].name;
         return `<span class="accent">${modeName}</span> &middot; aim at a zone &middot; click matching color`;
       }
 
-      function startRound() {
+      function pickFtRimColor() {
+        const colors = ['blue', 'orange', 'purple'];
+        return colors[Math.floor(Math.random() * 3)];
+      }
+
+      function beginFTShot() {
+        ftRimColor = pickFtRimColor();
+        ftTimerStartedAt = Date.now();
+        ftTimedOut = false;
+      }
+
+      function startRound(roundShots) {
+        if (typeof roundShots === 'number') currentRoundShots = roundShots;
+
         shotIndex = 0;
         score = 0;
         miss = 0;
@@ -1181,16 +1358,20 @@
         flashType = null;
         analyticsSession = BCI.createSession();
         aimingStartedAt = Date.now();
+
+        if (activeMode === 'ft') beginFTShot();
+
         gameState = STATE.AIMING;
         resultsOverlay.classList.remove('is-visible');
         modeOverlay.classList.remove('is-visible');
+        lengthOverlay.classList.remove('is-visible');
         updateHud();
         setStatus(aimingPromptHTML());
       }
 
       function showResults() {
-        document.getElementById('results-made').textContent = `${score} / ${ROUND_SHOTS}`;
-        const accPct = Math.round((score / ROUND_SHOTS) * 100);
+        document.getElementById('results-made').textContent = `${score} / ${currentRoundShots}`;
+        const accPct = Math.round((score / currentRoundShots) * 100);
         document.getElementById('results-acc').textContent = accPct + '%';
         document.getElementById('results-streak').textContent = String(longestStreak);
         resultsOverlay.classList.add('is-visible');
@@ -1203,7 +1384,7 @@
             score,
             miss,
             longestStreak,
-            roundShots: ROUND_SHOTS,
+            roundShots: currentRoundShots,
           });
           analyticsSession = null;
         }
@@ -1215,35 +1396,62 @@
         shot = null;
         flashType = null;
         resultsOverlay.classList.remove('is-visible');
+        lengthOverlay.classList.remove('is-visible');
         modeOverlay.classList.add('is-visible');
         setStatus('<span class="accent">Select a mode</span>');
       }
 
-      document.getElementById('btn-play-again').addEventListener('click', startRound);
+      function showLengthPicker() {
+        gameState = STATE.MODE_SELECT;
+        modeOverlay.classList.remove('is-visible');
+        lengthOverlay.classList.add('is-visible');
+        setStatus('<span class="accent">Free Throw</span> &middot; pick drill length');
+      }
+
+      document.getElementById('btn-play-again').addEventListener('click', () => startRound());
       document.getElementById('btn-results-modes').addEventListener('click', showModeSelect);
       document
         .getElementById('btn-results-home')
         .addEventListener('click', () => BCI.goToLauncher());
 
-      document.querySelectorAll('.mode-btn').forEach((btn) => {
+      /* Mode-select buttons — FT routes through length picker first;
+         3PT goes straight to a 10-shot round. */
+      document.querySelectorAll('#mode-overlay .mode-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const modeId = btn.dataset.mode;
           if (!MODES[modeId]) return;
           applyMode(modeId);
-          startRound();
+          if (modeId === 'ft') {
+            showLengthPicker();
+          } else {
+            startRound(10);
+          }
         });
       });
+
+      /* Length picker buttons — pick 10 or 20 shots and start FT round. */
+      document.querySelectorAll('#length-overlay .mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const shots = parseInt(btn.dataset.shots, 10);
+          if (!shots) return;
+          startRound(shots);
+        });
+      });
+
+      document.getElementById('btn-length-back').addEventListener('click', showModeSelect);
 
       /* ── Settings ────────────────────────────────────────────── */
 
       const settingsModal = document.getElementById('settings-modal');
       const sensSlider = document.getElementById('settings-sens-slider');
       const sensVal = document.getElementById('settings-sens-val');
+      const ftTimerCheckbox = document.getElementById('settings-ft-timer');
 
       function loadSettingsIntoUI() {
         const s = BCI.getEffectiveSettings(GAME_ID);
         sensSlider.value = Math.round(s.cursorSensitivity * 100);
         sensVal.textContent = s.cursorSensitivity.toFixed(2) + '×';
+        ftTimerCheckbox.checked = ftTimerEnabled;
       }
 
       function openSettings() {
@@ -1268,11 +1476,23 @@
         if (virtualCursor) virtualCursor.setSensitivity(sens);
       });
 
+      ftTimerCheckbox.addEventListener('change', (e) => {
+        ftTimerEnabled = !!e.target.checked;
+        setFtTimerEnabled(ftTimerEnabled);
+        /* If currently mid-FT shot, reset the timer reference so the
+           closing ring picks up the new setting cleanly on next shot. */
+        if (activeMode === 'ft' && ftTimerEnabled && gameState === STATE.AIMING) {
+          ftTimerStartedAt = Date.now();
+        }
+      });
+
       document.getElementById('settings-reset').addEventListener('click', () => {
         BCI.saveGlobalSettings({
           cursorSensitivity: 1.0,
           enabledClicks: { 0: true, 1: true, 2: true },
         });
+        setFtTimerEnabled(true);
+        ftTimerEnabled = true;
         loadSettingsIntoUI();
         if (virtualCursor) virtualCursor.setSensitivity(1.0);
       });
@@ -1291,16 +1511,74 @@
 
       canvas.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        if (gameState !== STATE.AIMING) return;
-
         const click = BCI.CLICK_BY_BUTTON[e.button];
         if (!click) return;
-
-        const info = cursorRimInfo();
-        if (!info.onRim) return; // off-rim clicks ignored — no shot, no miss
-
         const colorName = clickIdToColorName(click.id);
         if (!colorName) return;
+
+        if (activeMode === 'ft') {
+          handleFTClick(click, colorName);
+        } else {
+          handle3PTClick(click, colorName);
+        }
+      });
+
+      function handleFTClick(click, colorName) {
+        if (gameState === STATE.AIMING) {
+          /* First click: must be on rim. Locks aim, reveals color. */
+          const info = cursorRimInfo();
+          if (!info.onRim) return; // off-rim ignored, timer keeps running
+
+          const reactionMs = Date.now() - aimingStartedAt;
+          if (analyticsSession) {
+            BCI.recordReaction(analyticsSession, click.id, reactionMs);
+          }
+
+          lockedAimX = virtualCursor.x;
+          lockedAimY = virtualCursor.y;
+          lockedTargetAngle = info.angle;
+          gameState = STATE.LOCKED;
+          setStatus(
+            `<span class="accent">${ftRimColor.toUpperCase()}</span> &middot; click to match`
+          );
+          return;
+        }
+
+        if (gameState === STATE.LOCKED) {
+          /* Second click: fires regardless of cursor position. Color
+             match determines outcome; ball arcs to locked aim point. */
+          const make = colorName === ftRimColor;
+
+          shot = {
+            startedAt: performance.now(),
+            fromX: SCENE.launchX,
+            fromY: SCENE.launchY,
+            toX: lockedAimX,
+            toY: lockedAimY,
+            targetAngle: lockedTargetAngle,
+            clickColor: colorName,
+            clickId: click.id,
+            outcome: make ? 'make' : 'miss', // FT outcome predetermined here
+            resolvedAt: 0,
+          };
+
+          if (analyticsSession) {
+            BCI.recordAttempt(analyticsSession, click.id, make);
+          }
+
+          gameState = STATE.SHOOTING;
+          setStatus(
+            make
+              ? '<span class="accent">Shot fired</span>'
+              : '<span class="accent">Off color</span>'
+          );
+        }
+      }
+
+      function handle3PTClick(click, colorName) {
+        if (gameState !== STATE.AIMING) return;
+        const info = cursorRimInfo();
+        if (!info.onRim) return;
 
         const reactionMs = Date.now() - aimingStartedAt;
         if (analyticsSession) {
@@ -1316,51 +1594,100 @@
           targetAngle: info.angle,
           clickColor: colorName,
           clickId: click.id,
-          outcome: null,
+          outcome: null, // resolved at arrival vs current rim rotation
           resolvedAt: 0,
         };
         gameState = STATE.SHOOTING;
         setStatus('<span class="accent">Shot fired</span>');
-      });
+      }
 
       /* ── Tick ────────────────────────────────────────────────── */
 
       function currentRimSpeed() {
         /* Ramp up over the round so shot 10 demands real prediction.
-           shot 1 = 1.00× base, shot 10 = 1 + 9 * 0.13 = 2.17× base. */
+           shot 1 = 1.00× base, shot 10 = 1 + 9 * 0.13 = 2.17× base.
+           FT mode has rimSpeedMul=0 so this naturally evaluates to 0. */
         const ramp = 1 + shotIndex * RIM_SPEED_RAMP_PER_SHOT;
         return RIM_SPEED_BASE * ramp * MODES[activeMode].rimSpeedMul;
+      }
+
+      function advanceShot(now) {
+        shotIndex++;
+        if (shotIndex >= currentRoundShots) {
+          gameState = STATE.ROUND_END;
+          showResults();
+        } else {
+          shot = null;
+          gameState = STATE.AIMING;
+          aimingStartedAt = Date.now();
+          if (activeMode === 'ft') beginFTShot();
+          setStatus(aimingPromptHTML());
+          updateHud();
+        }
       }
 
       function tick(now) {
         const dt = Math.min(0.05, (now - lastFrameMs) / 1000);
         lastFrameMs = now;
 
-        /* Rim spins during all play states; freezes on round-end and
-           mode-select so the menus feel still. */
+        /* 3PT rim rotation. FT's rimSpeedMul is 0, but skip the work
+           entirely for clarity. Rim freezes on menus and round-end. */
         if (
-          gameState === STATE.AIMING ||
-          gameState === STATE.SHOOTING ||
-          gameState === STATE.RESOLVING
+          activeMode !== 'ft' &&
+          (gameState === STATE.AIMING ||
+            gameState === STATE.SHOOTING ||
+            gameState === STATE.RESOLVING)
         ) {
           rimAngle = (rimAngle + currentRimSpeed() * dt) % (Math.PI * 2);
         }
 
+        /* FT shot timer — both clicks must happen inside FT_TIMER_MS
+           total. Timeout = miss, brief pause, then advance. */
+        if (
+          activeMode === 'ft' &&
+          ftTimerEnabled &&
+          ftTimerStartedAt &&
+          (gameState === STATE.AIMING || gameState === STATE.LOCKED) &&
+          Date.now() - ftTimerStartedAt > FT_TIMER_MS
+        ) {
+          miss++;
+          streak = 0;
+          flashType = null; // no rim flash for timeout — status only
+          setStatus('<span class="accent">Time out</span>');
+          ftTimedOut = true;
+          /* Synthetic shot so RESOLVING auto-advance fires after the
+             standard pause. No ball gets drawn (drawBallInFlight gates
+             on gameState === SHOOTING). */
+          shot = { resolvedAt: now, ftTimedOut: true };
+          gameState = STATE.RESOLVING;
+          updateHud();
+          if (analyticsSession) {
+            /* Record the timeout as a missed attempt against the rim
+               color the player was supposed to match. clickId 0 is a
+               placeholder since no click happened. */
+            BCI.recordAttempt(analyticsSession, 0, false);
+          }
+        }
+
         if (gameState === STATE.SHOOTING) {
           if (now - shot.startedAt >= currentFlightMs) {
-            /* Resolve: which zone is under the locked target angle right
-               now? The rim has kept rotating during flight, so the answer
-               depends on flight-time prediction — that's the skill. */
-            const zoneColor = zoneColorAt(shot.targetAngle);
-            const make = zoneColor === shot.clickColor;
-            shot.outcome = make ? 'make' : 'miss';
+            /* Resolve outcome:
+               - FT: predetermined at click 2 — just read shot.outcome.
+               - 3PT: compute against current rotating rim at arrival. */
+            let make;
+            if (activeMode === 'ft') {
+              make = shot.outcome === 'make';
+            } else {
+              const zoneColor = zoneColorAt(shot.targetAngle);
+              make = zoneColor === shot.clickColor;
+              shot.outcome = make ? 'make' : 'miss';
+              if (analyticsSession) {
+                BCI.recordAttempt(analyticsSession, shot.clickId, make);
+              }
+            }
             shot.resolvedAt = now;
             flashAt = now;
             flashType = make ? 'make' : 'miss';
-
-            if (analyticsSession) {
-              BCI.recordAttempt(analyticsSession, shot.clickId, make);
-            }
 
             if (make) {
               score++;
@@ -1377,17 +1704,7 @@
           }
         } else if (gameState === STATE.RESOLVING) {
           if (now - shot.resolvedAt >= RESOLVE_MS) {
-            shotIndex++;
-            if (shotIndex >= ROUND_SHOTS) {
-              gameState = STATE.ROUND_END;
-              showResults();
-            } else {
-              shot = null;
-              gameState = STATE.AIMING;
-              aimingStartedAt = Date.now();
-              setStatus(aimingPromptHTML());
-              updateHud();
-            }
+            advanceShot(now);
           }
         }
       }
