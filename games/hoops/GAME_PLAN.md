@@ -2,8 +2,8 @@
 
 ## Status
 
-v2 in progress — adding 9-Shot Drill mode, revising Free Throw to a single-color
-aim-lock mechanic, leaving Three-Point unchanged. NBA 3-Point Contest format
+v2 shipped — Free Throw revised to single-color aim-lock mechanic, 9-Shot
+Drill mode added, Three-Point unchanged. NBA 3-Point Contest format
 deferred to v3 (see FUTURE_FEATURES.md).
 
 ## Locked v2 Spec
@@ -54,22 +54,31 @@ shipped in v1. NBA 5-rack format captured in `FUTURE_FEATURES.md` for v3.
 
 ## v2 Checkpoints
 
-1. Refactor FT to single-color stationary rim + 10/20 sub-mode picker +
+All shipped.
+
+1. ✅ FT refactor to single-color stationary rim + 10/20 sub-mode picker +
    two-step click flow + closing-ring timer + Settings timer toggle.
-2. Scaffold 9-Shot mode: state machine entries, mode-select card, baseline
+2. ✅ Scaffold 9-Shot mode: state machine entries, mode-select card, baseline
    plumbing.
-3. 9-Shot scene: 3×3 hoop grid spawn logic with per-row perspective scaling.
-4. 9-Shot player rendering: stick figure + lean toward active column + camera
-   nudge.
-5. 9-Shot trajectory preview: dotted arc that follows the cursor in real time.
-6. 9-Shot click handling: cursor-near-hoop check + power-band color match.
-7. 9-Shot per-shot soft timer (2.5s, timeout → miss + auto-advance).
-8. 9-Shot round flow (15 shots) + integration with results overlay + analytics
-   bucket.
+3. ✅ 9-Shot scene: 3×3 hoop grid spawn logic with per-row perspective
+   scaling.
+4. ✅ 9-Shot player rendering: stick figure + lean toward active column.
+   Camera nudge intentionally skipped — tabled as polish.
+5. ✅ 9-Shot trajectory preview: dotted arc that follows the cursor in real
+   time.
+6. ✅ 9-Shot click handling: cursor-near-hoop check + power-band color
+   match.
+7. ✅ 9-Shot per-shot soft timer (2.5s, timeout → miss + auto-advance).
+8. ✅ 9-Shot round flow (15 shots) + integration with results overlay +
+   analytics bucket (`hoops-9shot`).
 
 ## Currently Building
 
-v2 — checkpoint 1 next: FT mechanic refactor.
+Nothing active. Next milestones:
+
+- **v2.1 polish:** camera-nudge toward active column in 9-Shot, ball-in-hand
+  visual on the stick figure, visual tuning on the gym scene.
+- **v3 preview:** NBA 5-rack 3-Point Contest format (see FUTURE_FEATURES.md).
 
 ---
 
