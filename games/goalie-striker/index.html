@@ -640,6 +640,7 @@
             </div>
           </div>
           <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
             <button class="icon-btn" id="btn-analytics">Stats</button>
             <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
@@ -807,6 +808,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
     <script>
       'use strict';
 
@@ -1376,56 +1378,141 @@
       }
 
       function drawKicker() {
-        // Kicker silhouette near the penalty spot. During PRE_SHOT does
-        // a small "step-up" wiggle to telegraph the snap.
+        // Kicker silhouette near the penalty spot. PRE_SHOT plays a quick
+        // back-then-forward run-up; SHOT_FLIGHT lands a brief plant +
+        // follow-through pose. Now with arms + cleats so the figure reads
+        // as a player, not a stick.
+        if (!activeShot) return;
         const cx = FIELD.penaltyX;
         const cy = FIELD.kickerY;
-        const t = (performance.now() - stateEnteredAt) / PRE_SHOT_MS;
-        let leanX = 0;
-        let leanY = 0;
+
+        // Approach side — kicker steps back to the opposite side from
+        // where they're shooting (right-footed inside-of-foot intuition).
+        const approachSign = activeShot.side === 'right' ? -1 : 1;
+
+        let offsetX = 0;
+        let offsetY = 0;
+        let armSwingL = 0;
+        let armSwingR = 0;
+        let kickFootExtendY = 0; // pushes kicking foot forward (toward camera)
+        let kickFootExtendX = 0; // and slightly to the shot side
+
         if (gameState === STATE.PRE_SHOT) {
-          leanX = Math.sin(t * Math.PI) * 4;
-        }
-        if (gameState === STATE.SHOT_FLIGHT) {
-          // Brief follow-through pose for the first ~150ms
+          const t = Math.min(1, (performance.now() - stateEnteredAt) / PRE_SHOT_MS);
+          if (t < 0.5) {
+            // Phase 1 — step back (away from camera, slight side offset)
+            const tt = t / 0.5;
+            const e = 1 - (1 - tt) * (1 - tt); // easeOut
+            offsetX = approachSign * 14 * e;
+            offsetY = -7 * e;
+            // Arms gently swing as the body shifts
+            armSwingL = -approachSign * 1.5 * Math.sin(tt * Math.PI);
+            armSwingR = approachSign * 1.5 * Math.sin(tt * Math.PI);
+          } else {
+            // Phase 2 — run forward back to the spot
+            const tt = (t - 0.5) / 0.5;
+            const e = tt * tt; // easeIn
+            offsetX = approachSign * 14 * (1 - e);
+            offsetY = -7 * (1 - e);
+            // Running arm swing
+            const swing = Math.sin(tt * Math.PI * 3) * 3;
+            armSwingL = swing;
+            armSwingR = -swing;
+          }
+        } else if (gameState === STATE.SHOT_FLIGHT) {
           const since = performance.now() - activeShot.startMs;
-          if (since < 200) {
-            leanY = -3;
-            leanX = activeShot.toX > FIELD.midlineX ? -3 : 3;
+          if (since < 280) {
+            // Plant + follow-through
+            offsetY = -2;
+            offsetX = -approachSign * 1.5; // slight body lean toward kick
+            armSwingL = approachSign * 5;
+            armSwingR = -approachSign * 5;
+            kickFootExtendY = 5;
+            kickFootExtendX = approachSign * -2; // foot swings toward shot side
           }
         }
 
-        // Shadow
+        const px = cx + offsetX;
+        const py = cy + offsetY;
+
+        // Shadow stays at the planted spot (subtly stretches during follow-through)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
-        ctx.ellipse(cx, cy + 10, 14, 3, 0, 0, Math.PI * 2);
+        const shadowW = 14 + Math.abs(offsetX) * 0.3;
+        ctx.ellipse(cx, cy + 11, shadowW, 3, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Legs — back leg planted, front leg may swing through
+        ctx.strokeStyle = '#dca37a';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        // Plant leg (left from kicker's POV — drawn on screen-left)
+        ctx.beginPath();
+        ctx.moveTo(px - 4, py + 8);
+        ctx.lineTo(px - 5, py + 18);
+        ctx.stroke();
+        // Kick leg (extends during follow-through)
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + 8);
+        if (kickFootExtendY > 0) {
+          ctx.lineTo(px + 4 + kickFootExtendX, py + 18 + kickFootExtendY);
+        } else {
+          ctx.lineTo(px + 5, py + 18);
+        }
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+
+        // Cleats — small dark wedges at the foot of each leg
+        ctx.fillStyle = '#0d0d0d';
+        ctx.fillRect(px - 8, py + 17, 6, 3);
+        if (kickFootExtendY > 0) {
+          ctx.fillRect(px + 1 + kickFootExtendX, py + 17 + kickFootExtendY, 7, 3);
+        } else {
+          ctx.fillRect(px + 2, py + 17, 6, 3);
+        }
 
         // Shorts
         ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(cx - 8 + leanX, cy - 6 + leanY, 16, 14);
+        ctx.fillRect(px - 8, py - 6, 16, 14);
         // Jersey
         ctx.fillStyle = '#c9202a';
-        ctx.fillRect(cx - 10 + leanX, cy - 24 + leanY, 20, 20);
+        ctx.fillRect(px - 10, py - 24, 20, 20);
+        // Jersey collar (subtle darker band)
+        ctx.fillStyle = '#9a1820';
+        ctx.fillRect(px - 5, py - 24, 10, 2);
+
+        // Arms — drawn after jersey so shoulders attach correctly
+        ctx.strokeStyle = '#dca37a';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        // Left arm
+        ctx.beginPath();
+        ctx.moveTo(px - 10, py - 22);
+        ctx.lineTo(px - 13 + armSwingL, py - 6);
+        ctx.stroke();
+        // Right arm
+        ctx.beginPath();
+        ctx.moveTo(px + 10, py - 22);
+        ctx.lineTo(px + 13 + armSwingR, py - 6);
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+
         // Number
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('9', cx + leanX, cy - 11 + leanY);
+        ctx.fillText('9', px, py - 11);
+
         // Head
         ctx.fillStyle = '#dca37a';
         ctx.beginPath();
-        ctx.arc(cx + leanX, cy - 32 + leanY, 6, 0, Math.PI * 2);
+        ctx.arc(px, py - 32, 6, 0, Math.PI * 2);
         ctx.fill();
-        // Legs
-        ctx.strokeStyle = '#dca37a';
-        ctx.lineWidth = 3;
+        // Hair / cap shadow on top of head
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.6)';
         ctx.beginPath();
-        ctx.moveTo(cx - 4 + leanX, cy + 8 + leanY);
-        ctx.lineTo(cx - 5 + leanX, cy + 18 + leanY);
-        ctx.moveTo(cx + 4 + leanX, cy + 8 + leanY);
-        ctx.lineTo(cx + 5 + leanX, cy + 18 + leanY);
-        ctx.stroke();
+        ctx.arc(px, py - 33, 6, Math.PI, 2 * Math.PI);
+        ctx.fill();
       }
 
       function drawGoalFrame() {
@@ -1590,14 +1677,21 @@
       function drawGloves() {
         // Two goalkeeper gloves at the bottom of screen, sliding with cursor X.
         // Embodied feel of the goalie's body in the scene — finger ridges +
-        // thumb hint + soft shadow so they read as hands, not UI chips.
+        // thumb hint + soft shadow so they read as hands, not UI chips. Dark
+        // forearm sleeves rise from below the canvas to ground the hands.
         const cx = virtualCursor.x;
         const baseY = FIELD.glovesY;
         const gap = 22;
         const gloveW = 64;
         const gloveH = 50;
 
-        // Soft shadow on the ground beneath both gloves (drawn first)
+        // Forearms first (behind everything else)
+        for (let side = -1; side <= 1; side += 2) {
+          const gx = cx + side * (gap / 2 + gloveW / 2);
+          drawForearm(gx, baseY, gloveH);
+        }
+
+        // Soft shadow on the ground beneath both gloves
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
         ctx.beginPath();
@@ -1619,6 +1713,43 @@
         ctx.moveTo(0, baseY + gloveH / 2 + 11);
         ctx.lineTo(W, baseY + gloveH / 2 + 11);
         ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawForearm(gx, baseY, gloveH) {
+        // Goalkeeper forearm rising from below the canvas up to where the
+        // glove sits. Slightly tapered (wider at the bottom). Dark sleeve
+        // material with a faint center highlight for depth.
+        const armTopY = baseY + gloveH / 2 - 4;
+        const armBottomY = H + 12;
+        const topHalfW = 13;
+        const bottomHalfW = 18;
+
+        ctx.save();
+        ctx.fillStyle = '#1c232c';
+        ctx.strokeStyle = '#0a0d12';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(gx - topHalfW, armTopY);
+        ctx.lineTo(gx + topHalfW, armTopY);
+        ctx.lineTo(gx + bottomHalfW, armBottomY);
+        ctx.lineTo(gx - bottomHalfW, armBottomY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Subtle center highlight stripe for depth
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.fillRect(gx - 1, armTopY, 2, armBottomY - armTopY);
+
+        // A small wrist seam line just under the cuff
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(gx - topHalfW + 2, armTopY + 1);
+        ctx.lineTo(gx + topHalfW - 2, armTopY + 1);
+        ctx.stroke();
+
         ctx.restore();
       }
 
@@ -1899,13 +2030,38 @@
         requestAnimationFrame(loop);
       }
 
+      /* ── Walkthrough ──────────────────────────────────────────
+         Goalie mode only for v1 (Striker is coming soon). When
+         Striker ships, add a sibling 'goalie-striker/striker' walk-
+         through and route based on the chosen mode. */
+      const GOALIE_WT_ID = 'goalie-striker/goalie';
+      const GOALIE_WT_STEPS = [
+        {
+          title: 'Goalie',
+          body: 'Move your cursor to the left or right side of the goal — that picks the side you dive to.',
+        },
+        {
+          title: 'Pick the Height',
+          body: 'Blue = high save. Orange = middle save. Purple = low save. Read the shot, click the matching height.',
+          clicks: ['left', 'right', 'middle'],
+        },
+        {
+          title: 'Read and React',
+          body: 'You have to match BOTH the side (cursor) and the height (click color). Wrong on either = goal. Each round is 10 or 20 shots and the kicks get faster.',
+        },
+      ];
+
+      document
+        .getElementById('help-slot')
+        .appendChild(BCI.createHelpButton(() => ({ id: GOALIE_WT_ID, steps: GOALIE_WT_STEPS })));
+
       /* ── Menu wiring ──────────────────────────────────────────── */
       document.querySelectorAll('.mode-actions .mode-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const shots = parseInt(btn.dataset.shots, 10);
           if (!Number.isFinite(shots) || shots < 1) return;
           totalShots = shots;
-          startNewRound();
+          BCI.showWalkthrough(GOALIE_WT_ID, GOALIE_WT_STEPS, { onClose: () => startNewRound() });
         });
       });
 

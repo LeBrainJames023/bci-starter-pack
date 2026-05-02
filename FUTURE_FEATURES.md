@@ -43,6 +43,55 @@ Nothing in this file gets built until the current feature is complete.
 
 **Curved shots (v2+).** Late-curving balls that change side mid-flight, forcing a re-read. Adds a new dimension on top of the side+color baseline.
 
+#### Goalie/Striker — v1.5 polish
+
+Backlog from the v1 ship session — held until the arcade-wide polish sweep so we don't deep-polish a single game while other MVPs are still pending.
+
+**Kicker silhouette.**
+
+- Defined athletic stance (wider legs, slight crouch — currently flat T-pose)
+- Foot plant on the ball — visible left or right foot connecting at the strike moment
+- Pick a kicking foot per shot direction (left foot for right-side shots, right foot for left-side) so the player gets a tell
+- Subtle uniform variation across shots (jersey numbers / kit accents) for variety, or commit to one team identity
+
+**Goalie / keeper POV.**
+
+- Save hand animation — gloves snap up/forward at the click moment to read as a "punch out" or "catch"
+- Goal hand animation — gloves drop or freeze on a conceded shot
+- Idle nervous energy between shots — subtle camera bob, hands twitching slightly
+- Body shadow cast into the goal area for physical presence
+
+**Ball & trajectory.**
+
+- Spin trail / motion wake — faint white streak fading behind the ball as it speeds up
+- Exaggerated arc differences — top shots arc higher, bottom shots more like ground drives (apex variance is in code, could be more dramatic)
+
+**Scene & atmosphere.**
+
+- Crowd reactions — silhouette swells/pulses on goals, color flash on streak milestones (3 / 5 / 10 saves)
+- Stadium lights bloom — subtle lens-flare on the upper-corner pylons
+- Visible netting behind the posts — very subtle diamond mesh fading toward the back
+- Worn grass at the penalty spot — slight darker scuff mark for realism
+- Night-game lighting variant — could feel iconic for the soccer mode
+
+**HUD & feedback.**
+
+- Prominent streak indicator at 3+ saves (pulse, color shift)
+- Last-shot outcome stays visible briefly during the next PRE_SHOT (small ✓ / ✗ icon)
+- Tutorial-style hints on misses ("That was a low shot — you needed PURPLE")
+- Real-time save % updating during the round, not just at end
+
+**Mechanics that would extend v1 scope (flag before building).**
+
+- Rebounds — saved shot bounces back, second click chance
+- Power meter on the kicker for a visible difficulty signal
+- Wind / pitch condition modifier
+
+**Cross-cutting (whole-pack, not goalie-specific).**
+
+- Sound system — kick thud, ball whoosh, save smack, goal cheer (needs a shared schema across the pack)
+- Heatmap analytics — shot zone heatmap in the Stats panel
+
 ### BCI Batter / Pitcher (Baseball)
 
 - Batter: color-coded pitch types, click matching intent at the right moment
