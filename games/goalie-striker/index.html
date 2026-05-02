@@ -897,16 +897,25 @@
         // Kicker silhouette anchor
         kickerY: 215,
 
-        // Arrival plane (where the ball lands in screen space)
-        // 6-zone grid: 2 cols × 3 rows
-        arrivalLeftX: 130,
-        arrivalRightX: 670,
-        arrivalTopY: 175,
-        arrivalBottomY: 460,
+        // Goal frame (first-person periphery — posts on screen edges, crossbar
+        // across the top). The inside of this frame defines the goal mouth.
+        postW: 14,
+        leftPostX: 24,
+        rightPostX: W - 24 - 14, // W - 24 - postW
+        crossbarTopY: 78,
+        crossbarH: 16,
+        postBottomY: H - 26,
+
+        // Arrival plane — fills just inside the goal mouth so the visible
+        // posts/crossbar are the literal save area.
+        arrivalLeftX: 60,
+        arrivalRightX: W - 60,
+        arrivalTopY: 110,
+        arrivalBottomY: H - 56,
         midlineX: W / 2,
 
         // Goalie gloves Y position (bottom of screen)
-        glovesY: H - 38,
+        glovesY: H - 50,
       };
 
       function zoneCenter(side, height) {
@@ -940,8 +949,8 @@
 
       /* ── Tunables ─────────────────────────────────────────────── */
       const DEFAULTS = {
-        ballFlightBaseMs: 1500, // shot 1
-        ballFlightFloorMs: 720, // hardest shot
+        ballFlightBaseMs: 2000, // shot 1 — readable opener
+        ballFlightFloorMs: 950, // hardest shot — still tense but fair
         ballFlightRampPerShot: 0.045, // linear shrink per shot
         ballSizeMul: 1.0,
         ballSpeedMul: 1.0,
@@ -1064,8 +1073,8 @@
           toX: target.x,
           toY: target.y,
           // Visual: ball grows from r0 to r1 over flight
-          r0: 4,
-          r1: 26 * tunables.ballSizeMul,
+          r0: 5,
+          r1: 34 * tunables.ballSizeMul,
         };
       }
 
@@ -1230,6 +1239,31 @@
           ctx.arc(x, y, 2.4, 0, Math.PI * 2);
           ctx.fill();
         }
+
+        // Distant scoreboard silhouette behind the kicker — adds depth
+        // and stadium feel without competing with the foreground action.
+        const sbX = W / 2 - 70;
+        const sbY = FIELD.crowdY - 30;
+        ctx.fillStyle = 'rgba(30, 35, 42, 0.85)';
+        ctx.fillRect(sbX, sbY, 140, 18);
+        // Two faint LED-style lines on the scoreboard
+        ctx.fillStyle = 'rgba(255, 200, 80, 0.35)';
+        ctx.fillRect(sbX + 14, sbY + 4, 50, 3);
+        ctx.fillStyle = 'rgba(120, 200, 255, 0.30)';
+        ctx.fillRect(sbX + 76, sbY + 4, 50, 3);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.20)';
+        ctx.fillRect(sbX + 14, sbY + 11, 112, 2);
+
+        // Two stadium light pylons flanking the scoreboard (very subtle)
+        ctx.fillStyle = 'rgba(60, 70, 82, 0.7)';
+        ctx.fillRect(40, 4, 3, 28);
+        ctx.fillRect(W - 43, 4, 3, 28);
+        // Light glows
+        ctx.fillStyle = 'rgba(255, 244, 200, 0.35)';
+        ctx.beginPath();
+        ctx.arc(41.5, 6, 4, 0, Math.PI * 2);
+        ctx.arc(W - 41.5, 6, 4, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       function drawField() {
@@ -1394,38 +1428,88 @@
         ctx.stroke();
       }
 
+      function drawGoalFrame() {
+        // First-person goal frame: posts on the left/right edges of the
+        // camera, crossbar across the top. The inside of this frame is
+        // literally the save area — anything that crosses inside without
+        // a save is a goal. Stylized (in reality the posts would be
+        // behind the goalie's torso) for legibility.
+        const lp = FIELD.leftPostX;
+        const rp = FIELD.rightPostX;
+        const pw = FIELD.postW;
+        const cbTop = FIELD.crossbarTopY;
+        const cbH = FIELD.crossbarH;
+        const pBot = FIELD.postBottomY;
+
+        ctx.save();
+
+        // Soft shadow inside the frame (gives depth — looks like the post
+        // casts shadow into the goal mouth).
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(lp + pw, cbTop, 6, pBot - cbTop);
+        ctx.fillRect(rp - 6, cbTop, 6, pBot - cbTop);
+        ctx.fillRect(lp + pw, cbTop + cbH, rp - lp - pw, 5);
+
+        // Posts + crossbar — bright white with a subtle inside bevel
+        ctx.fillStyle = '#f4f4f4';
+        ctx.fillRect(lp, cbTop, pw, pBot - cbTop);
+        ctx.fillRect(rp, cbTop, pw, pBot - cbTop);
+        ctx.fillRect(lp, cbTop, rp + pw - lp, cbH);
+
+        // Inside bevel (slightly darker on the inner edge for depth)
+        ctx.fillStyle = 'rgba(180, 180, 180, 0.55)';
+        ctx.fillRect(lp + pw - 2, cbTop, 2, pBot - cbTop);
+        ctx.fillRect(rp, cbTop, 2, pBot - cbTop);
+        ctx.fillRect(lp, cbTop + cbH - 2, rp + pw - lp, 2);
+
+        // Top highlight on the crossbar — sun catching the bar
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillRect(lp, cbTop, rp + pw - lp, 2);
+
+        // Post base caps — small triangles where post meets ground
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(lp - 4, pBot);
+        ctx.lineTo(lp + pw + 4, pBot);
+        ctx.lineTo(lp + pw, pBot + 6);
+        ctx.lineTo(lp, pBot + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(rp - 4, pBot);
+        ctx.lineTo(rp + pw + 4, pBot);
+        ctx.lineTo(rp + pw, pBot + 6);
+        ctx.lineTo(rp, pBot + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
       function drawZoneGuides() {
-        // Very subtle grid showing the 6 arrival zones — helps player
-        // build a mental map of where the ball can land. Off during
-        // SHOT_FLIGHT so it doesn't compete with the ball.
+        // Two faint horizontal divider lines marking high/middle/low bands.
+        // The goal frame + midline already mark side edges, so we only need
+        // the height bands here. Off during SHOT_FLIGHT so they don't compete
+        // with the ball.
         if (gameState !== STATE.PRE_SHOT && gameState !== STATE.MENU) return;
 
         ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 6]);
+        ctx.setLineDash([5, 7]);
 
-        // Three horizontal divider lines (top, mid-top, mid-bottom, bottom)
-        const divs = [
-          FIELD.arrivalTopY,
-          FIELD.arrivalTopY + (FIELD.arrivalBottomY - FIELD.arrivalTopY) / 3,
-          FIELD.arrivalTopY + ((FIELD.arrivalBottomY - FIELD.arrivalTopY) * 2) / 3,
-          FIELD.arrivalBottomY,
-        ];
-        for (const y of divs) {
+        const range = FIELD.arrivalBottomY - FIELD.arrivalTopY;
+        const div1 = FIELD.arrivalTopY + range / 3;
+        const div2 = FIELD.arrivalTopY + (range * 2) / 3;
+        const innerLeft = FIELD.leftPostX + FIELD.postW + 2;
+        const innerRight = FIELD.rightPostX - 2;
+
+        for (const y of [div1, div2]) {
           ctx.beginPath();
-          ctx.moveTo(FIELD.arrivalLeftX, y);
-          ctx.lineTo(FIELD.arrivalRightX, y);
+          ctx.moveTo(innerLeft, y);
+          ctx.lineTo(innerRight, y);
           ctx.stroke();
         }
-        // Vertical sides (already have midline drawn elsewhere)
-        ctx.beginPath();
-        ctx.moveTo(FIELD.arrivalLeftX, FIELD.arrivalTopY);
-        ctx.lineTo(FIELD.arrivalLeftX, FIELD.arrivalBottomY);
-        ctx.moveTo(FIELD.arrivalRightX, FIELD.arrivalTopY);
-        ctx.lineTo(FIELD.arrivalRightX, FIELD.arrivalBottomY);
-        ctx.stroke();
-
         ctx.restore();
       }
 
@@ -1505,44 +1589,109 @@
 
       function drawGloves() {
         // Two goalkeeper gloves at the bottom of screen, sliding with cursor X.
-        // Provide embodied feel of the goalie's body in the scene.
+        // Embodied feel of the goalie's body in the scene — finger ridges +
+        // thumb hint + soft shadow so they read as hands, not UI chips.
         const cx = virtualCursor.x;
         const baseY = FIELD.glovesY;
-        const gap = 18;
-        const gloveW = 38;
-        const gloveH = 30;
+        const gap = 22;
+        const gloveW = 64;
+        const gloveH = 50;
+
+        // Soft shadow on the ground beneath both gloves (drawn first)
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        ctx.beginPath();
+        ctx.ellipse(cx, baseY + gloveH / 2 + 8, gloveW + 18, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         for (let side = -1; side <= 1; side += 2) {
           const gx = cx + side * (gap / 2 + gloveW / 2);
-
-          // Glove silhouette
-          ctx.save();
-          ctx.fillStyle = '#2c3138';
-          ctx.strokeStyle = '#0d1014';
-          ctx.lineWidth = 2;
-          // Rounded rectangle
-          roundRect(ctx, gx - gloveW / 2, baseY - gloveH / 2, gloveW, gloveH, 8);
-          ctx.fill();
-          ctx.stroke();
-
-          // Color stripes (BCI palette) on the cuff
-          ctx.fillStyle = COLOR_HEX.blue;
-          ctx.fillRect(gx - gloveW / 2 + 4, baseY + gloveH / 2 - 7, 8, 4);
-          ctx.fillStyle = COLOR_HEX.orange;
-          ctx.fillRect(gx - gloveW / 2 + 14, baseY + gloveH / 2 - 7, 8, 4);
-          ctx.fillStyle = COLOR_HEX.purple;
-          ctx.fillRect(gx - gloveW / 2 + 24, baseY + gloveH / 2 - 7, 8, 4);
-          ctx.restore();
+          const isLeftHand = side === -1;
+          drawSingleGlove(gx, baseY, gloveW, gloveH, isLeftHand);
         }
 
-        // A faint horizontal "ground line" under gloves to anchor them
+        // Faint horizontal "ground line" under gloves to anchor them
         ctx.save();
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, baseY + gloveH / 2 + 4);
-        ctx.lineTo(W, baseY + gloveH / 2 + 4);
+        ctx.moveTo(0, baseY + gloveH / 2 + 11);
+        ctx.lineTo(W, baseY + gloveH / 2 + 11);
         ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawSingleGlove(gx, baseY, w, h, isLeftHand) {
+        // A glove = palm body + 4 finger ridges along the top + thumb on
+        // the inside edge + cuff with the three BCI color stripes.
+        const left = gx - w / 2;
+        const top = baseY - h / 2;
+        const palmTop = top + 8; // fingers above palmTop
+        const cuffH = 10;
+
+        ctx.save();
+
+        // Palm body (rounded rect)
+        ctx.fillStyle = '#3a4148';
+        ctx.strokeStyle = '#0d1014';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, left, palmTop, w, h - 8, 9);
+        ctx.fill();
+        ctx.stroke();
+
+        // 4 finger ridges along the top of the palm
+        ctx.fillStyle = '#3a4148';
+        ctx.strokeStyle = '#0d1014';
+        const fingerCount = 4;
+        const fingerWidth = (w - 14) / fingerCount;
+        for (let i = 0; i < fingerCount; i++) {
+          const fx = left + 7 + i * fingerWidth + fingerWidth / 2;
+          // Pinky shorter, then ring, middle, index — slight stagger for natural feel
+          const heights = isLeftHand ? [10, 14, 16, 14] : [14, 16, 14, 10];
+          const fHeight = heights[i];
+          ctx.beginPath();
+          ctx.ellipse(fx, palmTop, fingerWidth * 0.42, fHeight, 0, Math.PI, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Thumb on the inside edge (the side facing the other glove)
+        const thumbX = isLeftHand ? left + w - 4 : left + 4;
+        const thumbDir = isLeftHand ? 1 : -1;
+        ctx.save();
+        ctx.translate(thumbX, palmTop + 14);
+        ctx.rotate(thumbDir * 0.55);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 7, 13, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#3a4148';
+        ctx.fill();
+        ctx.strokeStyle = '#0d1014';
+        ctx.stroke();
+        ctx.restore();
+
+        // Cuff (darker band along the bottom of the palm)
+        ctx.fillStyle = '#1f2429';
+        roundRect(ctx, left + 2, top + h - cuffH - 2, w - 4, cuffH, 4);
+        ctx.fill();
+
+        // Three BCI color stripes on the cuff (top → middle → bottom = blue → orange → purple)
+        const stripeY = top + h - cuffH + 1;
+        const stripeH = 4;
+        const stripeW = 12;
+        const totalStripesW = stripeW * 3 + 6;
+        const stripeStart = gx - totalStripesW / 2;
+        ctx.fillStyle = COLOR_HEX.blue;
+        ctx.fillRect(stripeStart, stripeY, stripeW, stripeH);
+        ctx.fillStyle = COLOR_HEX.orange;
+        ctx.fillRect(stripeStart + stripeW + 3, stripeY, stripeW, stripeH);
+        ctx.fillStyle = COLOR_HEX.purple;
+        ctx.fillRect(stripeStart + (stripeW + 3) * 2, stripeY, stripeW, stripeH);
+
+        // Subtle highlight along the upper palm edge
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(left + 6, palmTop + 4, w - 12, 2);
+
         ctx.restore();
       }
 
@@ -1727,8 +1876,9 @@
         drawSky();
         drawCrowd();
         drawField();
-        drawZoneGuides();
         drawKicker();
+        drawGoalFrame();
+        drawZoneGuides();
         drawBall();
         drawGloves();
 
