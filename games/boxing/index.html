@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Boxing — BCI Arcade</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Boxing arena palette — environment colors only, no BCI palette here */
+        --arena-frame: #06080d;
+        --arena-ceiling: #050810;
+        --arena-mid: #0c1220;
+        --crowd-back: #0a0a14;
+        --rope-tint: #cfd6df;
+        --post-tint: #1a1a22;
+        --canvas-floor: #c8b388;
+        --canvas-floor-dark: #9a8260;
+        --opponent-skin: #c69b7a;
+        --opponent-trunks: #0e1830;
+        --opponent-trunks-trim: #2a3a5c;
+        --opponent-glove: #1a2030;
+        --player-glove: #b22020;
+        --player-glove-dark: #7a1414;
+        --hp-fill: #d44b4b;
+        --hp-empty: #2a1a1a;
+        --hp-stroke: #602020;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+
+      /* ── Arena frame + canvas ────────────────────────────────── */
+      .arena-frame {
+        position: relative;
+        flex: 1;
+        background: var(--arena-frame);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <!-- ── Header ──────────────────────────────────────────── -->
+        <header class="game-header">
+          <div class="header-left">
+            <div id="home-slot"></div>
+            <div class="title-block">
+              <div class="game-title">Boxing</div>
+              <div class="game-subtitle">First-Person Exchange</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="icon-btn" id="btn-stats">Stats</button>
+            <button class="icon-btn" id="btn-settings">Settings</button>
+          </div>
+        </header>
+
+        <!-- ── Arena ───────────────────────────────────────────── -->
+        <div class="arena-frame">
+          <canvas id="canvas" width="900" height="616"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared BCI modules -->
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+
+    <script>
+      'use strict';
+
+      /* ─────────────────────────────────────────────────────────
+         Boxing — BCI Arcade
+         Single-file game. Checkpoint 1: static scene + HUD + bob.
+         ───────────────────────────────────────────────────────── */
+
+      const GAME_ID = 'boxing';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      /* Disable native context menu so right-click reads as Orange */
+      document.body.addEventListener('contextmenu', (e) => e.preventDefault());
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      /* Home button into the header */
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: false }));
+
+      /* Viewport fitter — scales the 900×700 game wrapper to the window */
+      const wrapper = document.getElementById('game-wrapper');
+      const fitter = BCI.createViewportFitter(wrapper);
+      fitter.fit();
+
+      /* Virtual cursor — used in combo phase aim resolution later */
+      const cursor = BCI.createVirtualCursor(canvas, {
+        sensitivity: BCI.getEffectiveSettings(GAME_ID).cursorSensitivity ?? 1.0,
+      });
+
+      /* ─────────────────────────────────────────────────────────
+         Game state
+         ───────────────────────────────────────────────────────── */
+      const ROUND_DURATION_MS = 90_000;
+
+      const STATE = {
+        IDLE: 'idle',
+        // Reserved for future checkpoints:
+        //   PRE_INIT, COMBO, COUNTER, RECOVERY, ROUND_END
+      };
+
+      const game = {
+        state: STATE.IDLE,
+        roundEndsAt: performance.now() + ROUND_DURATION_MS,
+        playerHP: 100,
+        opponentHP: 100,
+      };
+
+      /* ─────────────────────────────────────────────────────────
+         Helpers
+         ───────────────────────────────────────────────────────── */
+      function clamp(v, lo, hi) {
+        return Math.max(lo, Math.min(hi, v));
+      }
+
+      function formatTime(ms) {
+        const total = Math.max(0, Math.ceil(ms / 1000));
+        const m = Math.floor(total / 60);
+        const s = total % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      }
+
+      /* Seeded pseudo-random for crowd silhouettes — stable across frames */
+      function seededRand(seed) {
+        let x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      }
+
+      /* ─────────────────────────────────────────────────────────
+         Bob calculations — fighter footwork rhythm
+         ───────────────────────────────────────────────────────── */
+      function getOpponentBob(t) {
+        // Opponent shifts left/right and bobs up/down on offset sine periods.
+        // Periods chosen to feel like two-step boxing footwork (~120 BPM-ish).
+        const horizontal = Math.sin(t / 520) * 14;
+        const vertical = Math.abs(Math.sin(t / 260)) * 7;
+        return { x: horizontal, y: -vertical };
+      }
+
+      function getPlayerCameraBob(t) {
+        // Subtle camera sway — entire scene shifts a little to simulate the
+        // player's own breathing/footwork. Slower than the opponent so the two
+        // bobs read independently.
+        const horizontal = Math.sin(t / 880 + 1.3) * 5;
+        const vertical = Math.sin(t / 440 + 0.7) * 3;
+        return { x: horizontal, y: vertical };
+      }
+
+      /* ─────────────────────────────────────────────────────────
+         Rendering — back to front
+         ───────────────────────────────────────────────────────── */
+      function drawBackdrop(ctx, cam) {
+        // Vertical gradient for the arena ceiling band
+        const grad = ctx.createLinearGradient(0, 0, 0, H * 0.6);
+        grad.addColorStop(0, getCSS('--arena-ceiling'));
+        grad.addColorStop(0.55, getCSS('--arena-mid'));
+        grad.addColorStop(1, getCSS('--crowd-back'));
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H * 0.62);
+
+        // A pair of overhead spot beams converging onto the ring
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const beamGrad = ctx.createLinearGradient(W / 2, 0, W / 2, H * 0.7);
+        beamGrad.addColorStop(0, 'rgba(255, 240, 210, 0.10)');
+        beamGrad.addColorStop(1, 'rgba(255, 240, 210, 0)');
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(W / 2 - 220, 0);
+        ctx.lineTo(W / 2 + 220, 0);
+        ctx.lineTo(W / 2 + 90, H * 0.7);
+        ctx.lineTo(W / 2 - 90, H * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawCrowd(ctx, t, cam) {
+        // Crowd band ~ from y=0.35H to y=0.58H. Heads are dim half-circles,
+        // positioned with a seeded random so they don't shimmer between frames.
+        const top = H * 0.36;
+        const bottom = H * 0.58;
+        const rows = 6;
+        const headsPerRow = 60;
+
+        ctx.save();
+        for (let row = 0; row < rows; row++) {
+          const rowY = top + (row / rows) * (bottom - top);
+          const rowDepth = row / (rows - 1); // 0=back, 1=front
+          const headR = 4 + rowDepth * 4;
+          const shade = 12 + rowDepth * 28;
+          ctx.fillStyle = `rgb(${shade}, ${shade + 4}, ${shade + 10})`;
+          for (let i = 0; i < headsPerRow; i++) {
+            const seed = row * 1000 + i * 17;
+            const xJitter = seededRand(seed) * 18 - 9;
+            const yJitter = seededRand(seed + 1) * 6 - 3;
+            const x = (i / (headsPerRow - 1)) * W + xJitter + cam.x * 0.3;
+            const y = rowY + yJitter + cam.y * 0.25;
+            ctx.beginPath();
+            ctx.arc(x, y, headR, Math.PI, 0);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+
+        // Occasional camera flash — soft white blink at random crowd spots
+        const flashSeed = Math.floor(t / 240);
+        if (seededRand(flashSeed) > 0.93) {
+          const fx = seededRand(flashSeed + 7) * W;
+          const fy = top + seededRand(flashSeed + 11) * (bottom - top);
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          const flash = ctx.createRadialGradient(fx, fy, 0, fx, fy, 28);
+          flash.addColorStop(0, 'rgba(255, 245, 220, 0.55)');
+          flash.addColorStop(1, 'rgba(255, 245, 220, 0)');
+          ctx.fillStyle = flash;
+          ctx.beginPath();
+          ctx.arc(fx, fy, 28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawRingRopes(ctx, cam) {
+        // Three horizontal rope levels, sweeping in from the side edges
+        // toward the ring center. They go off-frame at frame edges.
+        const ropeY = [H * 0.46, H * 0.55, H * 0.66];
+        const ropeColors = [
+          'rgba(220, 220, 230, 0.55)',
+          'rgba(190, 60, 60, 0.55)',
+          'rgba(220, 220, 230, 0.55)',
+        ];
+
+        ctx.save();
+        ctx.lineWidth = 4;
+        for (let i = 0; i < ropeY.length; i++) {
+          ctx.strokeStyle = ropeColors[i];
+
+          // Left side
+          ctx.beginPath();
+          ctx.moveTo(-20 + cam.x * 0.5, ropeY[i] + cam.y * 0.4);
+          ctx.lineTo(W * 0.22 + cam.x * 0.5, ropeY[i] + 6 + cam.y * 0.4);
+          ctx.stroke();
+
+          // Right side
+          ctx.beginPath();
+          ctx.moveTo(W * 0.78 + cam.x * 0.5, ropeY[i] + 6 + cam.y * 0.4);
+          ctx.lineTo(W + 20 + cam.x * 0.5, ropeY[i] + cam.y * 0.4);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawCornerPosts(ctx, cam) {
+        // Two corner posts framing the back of the ring
+        const postW = 18;
+        const postH = 220;
+        const postYTop = H * 0.42;
+
+        ctx.save();
+        for (const [px, side] of [
+          [W * 0.2, 'L'],
+          [W * 0.8, 'R'],
+        ]) {
+          const x = px + cam.x * 0.55;
+          const y = postYTop + cam.y * 0.4;
+          // Post shaft
+          const grad = ctx.createLinearGradient(x - postW / 2, 0, x + postW / 2, 0);
+          grad.addColorStop(0, '#0c0c14');
+          grad.addColorStop(0.5, '#262630');
+          grad.addColorStop(1, '#0c0c14');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x - postW / 2, y, postW, postH);
+
+          // Turnbuckle pad — a softer rectangle near the ropes
+          ctx.fillStyle = '#5a1a1a';
+          ctx.fillRect(x - postW / 2 - 4, y + 4, postW + 8, 70);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+          ctx.fillRect(x - postW / 2 - 4, y + 4, postW + 8, 14);
+        }
+        ctx.restore();
+      }
+
+      function drawCanvasFloor(ctx, cam) {
+        // The canvas (boxing ring floor) — bottom 25% of the frame.
+        // Slight trapezoidal perspective: narrower at the back, wider at front.
+        const top = H * 0.66;
+        const bottom = H;
+        const backInset = W * 0.18;
+        const frontInset = -W * 0.05; // floor extends past the frame at the front
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(backInset + cam.x * 0.4, top + cam.y * 0.3);
+        ctx.lineTo(W - backInset + cam.x * 0.4, top + cam.y * 0.3);
+        ctx.lineTo(W - frontInset + cam.x * 0.7, bottom + cam.y * 0.6);
+        ctx.lineTo(frontInset + cam.x * 0.7, bottom + cam.y * 0.6);
+        ctx.closePath();
+
+        const grad = ctx.createLinearGradient(0, top, 0, bottom);
+        grad.addColorStop(0, getCSS('--canvas-floor-dark'));
+        grad.addColorStop(0.5, getCSS('--canvas-floor'));
+        grad.addColorStop(1, '#a88e62');
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Faint perspective lines on the canvas
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.10)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 6; i++) {
+          const ty = top + ((bottom - top) * (i + 1)) / 7;
+          ctx.beginPath();
+          ctx.moveTo(0, ty + cam.y * 0.4);
+          ctx.lineTo(W, ty + cam.y * 0.4);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawOpponent(ctx, t, cam) {
+        const bob = getOpponentBob(t);
+        const cx = W / 2 + bob.x + cam.x * 0.3;
+        // Opponent vertical anchor — feet roughly at the ring floor line
+        const feetY = H * 0.86 + bob.y + cam.y * 0.3;
+
+        // Sizes
+        const torsoW = 230;
+        const torsoH = 220;
+        const headR = 52;
+        const shoulderW = 280;
+
+        // Torso top / bottom
+        const torsoBottom = feetY - 60; // a bit above feet to leave room for trunks shadow
+        const torsoTop = torsoBottom - torsoH;
+
+        ctx.save();
+
+        // ── Trunks (lower torso silhouette) ──
+        ctx.fillStyle = getCSS('--opponent-trunks');
+        ctx.beginPath();
+        ctx.moveTo(cx - torsoW / 2 + 10, torsoBottom);
+        ctx.lineTo(cx + torsoW / 2 - 10, torsoBottom);
+        ctx.lineTo(cx + torsoW / 2 - 30, torsoBottom + 90);
+        ctx.lineTo(cx - torsoW / 2 + 30, torsoBottom + 90);
+        ctx.closePath();
+        ctx.fill();
+
+        // Trunks waistband trim
+        ctx.fillStyle = getCSS('--opponent-trunks-trim');
+        ctx.fillRect(cx - torsoW / 2 + 10, torsoBottom - 4, torsoW - 20, 8);
+
+        // ── Torso (skin + tank top suggestion) ──
+        ctx.fillStyle = getCSS('--opponent-skin');
+        // Tapered torso: shoulders wider than waist
+        ctx.beginPath();
+        ctx.moveTo(cx - shoulderW / 2, torsoTop + 30);
+        ctx.lineTo(cx + shoulderW / 2, torsoTop + 30);
+        ctx.lineTo(cx + torsoW / 2, torsoBottom);
+        ctx.lineTo(cx - torsoW / 2, torsoBottom);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle chest shading (centerline)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+        ctx.fillRect(cx - 1, torsoTop + 60, 2, torsoH - 80);
+
+        // ── Shoulders / deltoids ──
+        ctx.fillStyle = getCSS('--opponent-skin');
+        ctx.beginPath();
+        ctx.arc(cx - shoulderW / 2 + 20, torsoTop + 40, 42, 0, Math.PI * 2);
+        ctx.arc(cx + shoulderW / 2 - 20, torsoTop + 40, 42, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Head ──
+        const headY = torsoTop - headR + 14;
+        // Head shadow (under chin)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+        ctx.beginPath();
+        ctx.ellipse(cx, headY + headR - 4, headR * 0.7, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head fill
+        ctx.fillStyle = getCSS('--opponent-skin');
+        ctx.beginPath();
+        ctx.ellipse(cx, headY, headR, headR * 1.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hair (top of head, dark)
+        ctx.fillStyle = '#1c1410';
+        ctx.beginPath();
+        ctx.ellipse(cx, headY - headR * 0.45, headR * 0.95, headR * 0.55, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes (dim slits)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillRect(cx - 18, headY - 4, 12, 3);
+        ctx.fillRect(cx + 6, headY - 4, 12, 3);
+
+        // Mouthguard hint (a slight white slash)
+        ctx.fillStyle = 'rgba(220, 220, 220, 0.6)';
+        ctx.fillRect(cx - 8, headY + 18, 16, 3);
+
+        // ── Guard: forearms + gloves up at chest height ──
+        const gloveY = torsoTop + 100;
+        const gloveR = 38;
+
+        // Forearms (skin tones)
+        ctx.fillStyle = getCSS('--opponent-skin');
+        // Left forearm
+        ctx.beginPath();
+        ctx.moveTo(cx - shoulderW / 2 + 20, torsoTop + 60);
+        ctx.lineTo(cx - 60, gloveY);
+        ctx.lineTo(cx - 60 + 30, gloveY + 8);
+        ctx.lineTo(cx - shoulderW / 2 + 50, torsoTop + 70);
+        ctx.closePath();
+        ctx.fill();
+        // Right forearm
+        ctx.beginPath();
+        ctx.moveTo(cx + shoulderW / 2 - 20, torsoTop + 60);
+        ctx.lineTo(cx + 60, gloveY);
+        ctx.lineTo(cx + 60 - 30, gloveY + 8);
+        ctx.lineTo(cx + shoulderW / 2 - 50, torsoTop + 70);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gloves (left + right, raised in guard)
+        drawGlove(ctx, cx - 60, gloveY, gloveR, getCSS('--opponent-glove'), '#0a0d18');
+        drawGlove(ctx, cx + 60, gloveY, gloveR, getCSS('--opponent-glove'), '#0a0d18');
+
+        ctx.restore();
+      }
+
+      function drawGlove(ctx, x, y, r, fill, dark) {
+        // A boxing glove: rounded body + thumb nub + wrist cuff
+        ctx.save();
+        // Glove body
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * 1.05, r, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Thumb (small nub on the inside)
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.55, y - r * 0.1, r * 0.32, r * 0.45, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highlight crease
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * 0.85, r * 0.78, 0, Math.PI * 0.05, Math.PI * 0.95);
+        ctx.stroke();
+
+        // Wrist cuff
+        ctx.fillStyle = dark;
+        ctx.fillRect(x - r * 0.7, y + r * 0.7, r * 1.4, r * 0.45);
+        ctx.fillStyle = fill;
+        ctx.fillRect(x - r * 0.55, y + r * 0.78, r * 1.1, r * 0.12);
+        ctx.restore();
+      }
+
+      function drawPlayerGloves(ctx, t, cam) {
+        // Player POV: two red gloves at the bottom corners, partially in frame.
+        // They're attached to the camera bob more heavily than the world.
+        const lx = 90 + cam.x * 1.2;
+        const rx = W - 90 + cam.x * 1.2;
+        const gy = H - 50 + cam.y * 1.0;
+        const r = 70;
+
+        // Subtle shadow on the floor under each glove
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(lx + 6, gy + r * 0.95, r * 0.95, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(rx - 6, gy + r * 0.95, r * 0.95, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        drawGlove(ctx, lx, gy, r, getCSS('--player-glove'), getCSS('--player-glove-dark'));
+        drawGlove(ctx, rx, gy, r, getCSS('--player-glove'), getCSS('--player-glove-dark'));
+      }
+
+      /* ─────────────────────────────────────────────────────────
+         HUD — health bars (top corners), round timer (top center)
+         ───────────────────────────────────────────────────────── */
+      function drawHUD(ctx, msLeft) {
+        // Top safe band
+        const padX = 24;
+        const padY = 22;
+        const barW = 240;
+        const barH = 14;
+
+        // ── Player HP (top-left) ──
+        drawHPBar(ctx, padX, padY, barW, barH, game.playerHP / 100, 'left', 'PLAYER');
+
+        // ── Opponent HP (top-right, mirrored) ──
+        drawHPBar(
+          ctx,
+          W - padX - barW,
+          padY,
+          barW,
+          barH,
+          game.opponentHP / 100,
+          'right',
+          'OPPONENT'
+        );
+
+        // ── Round timer (center) ──
+        ctx.save();
+        const timeStr = formatTime(msLeft);
+        ctx.fillStyle = 'rgba(10, 10, 14, 0.55)';
+        ctx.fillRect(W / 2 - 56, padY - 4, 112, 36);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(W / 2 - 56, padY - 4, 112, 36);
+
+        ctx.fillStyle = '#e8e4d9';
+        ctx.font = 'bold 22px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(timeStr, W / 2, padY + 14);
+
+        ctx.font = '8px "Courier New", monospace';
+        ctx.fillStyle = '#9aa4b1';
+        ctx.fillText('ROUND', W / 2, padY + 30);
+        ctx.restore();
+      }
+
+      function drawHPBar(ctx, x, y, w, h, pct, side, label) {
+        ctx.save();
+
+        // Label
+        ctx.fillStyle = '#9aa4b1';
+        ctx.font = 'bold 10px "Courier New", monospace';
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = side === 'left' ? 'left' : 'right';
+        const labelX = side === 'left' ? x : x + w;
+        ctx.fillText(label, labelX, y - 6);
+
+        // Empty track
+        ctx.fillStyle = getCSS('--hp-empty');
+        ctx.fillRect(x, y, w, h);
+
+        // Filled portion (mirror direction for opponent so it depletes inward)
+        const fillW = Math.max(0, w * clamp(pct, 0, 1));
+        ctx.fillStyle = getCSS('--hp-fill');
+        if (side === 'left') {
+          ctx.fillRect(x, y, fillW, h);
+        } else {
+          ctx.fillRect(x + w - fillW, y, fillW, h);
+        }
+
+        // Soft top highlight on the filled portion
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        if (side === 'left') {
+          ctx.fillRect(x, y, fillW, 3);
+        } else {
+          ctx.fillRect(x + w - fillW, y, fillW, 3);
+        }
+
+        // Border
+        ctx.strokeStyle = getCSS('--hp-stroke');
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+        // HP number
+        ctx.fillStyle = '#e8e4d9';
+        ctx.font = 'bold 11px "Courier New", monospace';
+        ctx.textAlign = side === 'left' ? 'left' : 'right';
+        const hpVal = Math.round(pct * 100);
+        ctx.fillText(`${hpVal} / 100`, labelX, y + h + 14);
+
+        ctx.restore();
+      }
+
+      /* ─────────────────────────────────────────────────────────
+         Loop
+         ───────────────────────────────────────────────────────── */
+      function getCSS(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+
+      function update(now) {
+        // Clamp the round timer; later checkpoints will pause it during modals
+        // and end the round when it expires.
+        if (game.state === STATE.IDLE) {
+          // No state transitions yet — initiation logic lands in checkpoint 2
+        }
+      }
+
+      function render(now) {
+        const cam = getPlayerCameraBob(now);
+
+        ctx.fillStyle = getCSS('--arena-frame');
+        ctx.fillRect(0, 0, W, H);
+
+        drawBackdrop(ctx, cam);
+        drawCrowd(ctx, now, cam);
+        drawCornerPosts(ctx, cam);
+        drawRingRopes(ctx, cam);
+        drawCanvasFloor(ctx, cam);
+        drawOpponent(ctx, now, cam);
+        drawPlayerGloves(ctx, now, cam);
+
+        const msLeft = game.roundEndsAt - now;
+        drawHUD(ctx, msLeft);
+      }
+
+      function loop(now) {
+        update(now);
+        render(now);
+        requestAnimationFrame(loop);
+      }
+
+      requestAnimationFrame(loop);
+
+      /* ─────────────────────────────────────────────────────────
+         Header buttons — placeholders until checkpoints 6 & 7 land
+         ───────────────────────────────────────────────────────── */
+      document.getElementById('btn-settings').addEventListener('click', () => {
+        // Placeholder — settings panel ships in checkpoint 6
+      });
+      document.getElementById('btn-stats').addEventListener('click', () => {
+        // Placeholder — analytics view ships in checkpoint 7
+      });
+    </script>
+  </body>
+</html>
