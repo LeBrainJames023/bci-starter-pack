@@ -1,0 +1,1961 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Goalie / Striker — BCI Arcade</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Soccer field palette */
+        --field-frame: #0a1410;
+        --sky: #6e93b0;
+        --grass: #2f7a36;
+        --grass-dark: #235c28;
+        --grass-line: #ffffff;
+        --crowd: #2a2f38;
+        --post: #f5f5f5;
+        --net: rgba(255, 255, 255, 0.18);
+        --kicker-jersey: #c9202a;
+        --kicker-shorts: #1a1a1a;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        min-width: 56px;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+      .icon-btn[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── Canvas + field frame ────────────────────────────────── */
+      .field-frame {
+        position: relative;
+        flex: 1;
+        background: var(--field-frame);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+      }
+
+      /* ── Bottom bar ──────────────────────────────────────────── */
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .status-msg .accent-good {
+        color: var(--good);
+      }
+      .status-msg .accent-bad {
+        color: var(--bad);
+      }
+      .home-slot {
+        display: flex;
+        align-items: center;
+      }
+
+      /* ── Overlay base ────────────────────────────────────────── */
+      .overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.85);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 6;
+      }
+      .overlay.is-visible {
+        display: flex;
+      }
+      .overlay-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 26px 32px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+        min-width: 440px;
+        max-width: 620px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .overlay-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .overlay-sub {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: -8px;
+      }
+
+      /* ── Mode-select menu ────────────────────────────────────── */
+      .menu-card {
+        min-width: 580px;
+      }
+      .modes-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        width: 100%;
+      }
+      .mode-card {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 16px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 200px;
+      }
+      .mode-card--active {
+        border-color: var(--click-blue);
+      }
+      .mode-card--disabled {
+        opacity: 0.55;
+      }
+      .mode-name {
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+      }
+      .mode-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        flex: 1;
+      }
+      .mode-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .mode-actions .mode-btn {
+        flex: 1;
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .mode-actions .mode-btn:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--click-blue);
+      }
+      .mode-status {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--click-orange);
+        text-align: center;
+        padding: 9px 12px;
+        border: 1px dashed var(--border-strong);
+        border-radius: 6px;
+      }
+      .menu-help {
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--text-dim);
+        line-height: 1.55;
+        text-align: center;
+        max-width: 480px;
+      }
+
+      /* ── Round-end results ───────────────────────────────────── */
+      .results-grid {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .results-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+        min-width: 84px;
+      }
+      .results-stat-label {
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .results-stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .results-buttons {
+        display: flex;
+        gap: 12px;
+      }
+      .results-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .results-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-blue);
+      }
+      .results-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .results-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      /* ── Settings panel ──────────────────────────────────────── */
+      .settings-card {
+        min-width: 480px;
+        gap: 14px;
+      }
+      .settings-row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .settings-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .settings-value {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+        border: none;
+      }
+      .settings-help {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+      .settings-buttons {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+      .settings-btn {
+        flex: 1;
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .settings-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-orange);
+      }
+      .settings-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .settings-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      /* ── Analytics panel ─────────────────────────────────────── */
+      .analytics-card {
+        min-width: 560px;
+      }
+      .analytics-section {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .analytics-h {
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .analytics-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .analytics-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 80px 80px;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+        padding: 4px 0;
+      }
+      .analytics-row .a-date {
+        color: var(--text-dim);
+      }
+      .analytics-row .a-stat {
+        text-align: right;
+      }
+      .analytics-row .a-stat-strong {
+        text-align: right;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .analytics-empty {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-align: center;
+        padding: 16px;
+      }
+      .alltime-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+      .alltime-cell {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .alltime-cell-color {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .alltime-cell-name {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .alltime-cell-stat {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .alltime-cell-sub {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .sides-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button class="back-btn" id="btn-back">&larr; Back</button>
+            <div class="title-block">
+              <div class="game-title">Goalie / Striker</div>
+              <div class="game-subtitle">v1 — Penalty Shootout</div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="hud-stat">
+              <div class="hud-label">Shot</div>
+              <div class="hud-value" id="hud-shot">–/–</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Saves</div>
+              <div class="hud-value" id="hud-saves">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Streak</div>
+              <div class="hud-value" id="hud-streak">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Goals</div>
+              <div class="hud-value" id="hud-goals">0</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="icon-btn" id="btn-analytics">Stats</button>
+            <button class="icon-btn" id="btn-settings">Settings</button>
+          </div>
+        </header>
+
+        <div class="field-frame">
+          <canvas id="canvas" width="800" height="540"></canvas>
+
+          <!-- Mode-select menu (shown on load and via "New Round") -->
+          <div class="overlay is-visible" id="menu-overlay">
+            <div class="overlay-card menu-card">
+              <div class="overlay-title">Penalty Shootout</div>
+              <div class="overlay-sub">Pick a mode &middot; pick a length</div>
+              <div class="modes-grid">
+                <div class="mode-card mode-card--active">
+                  <div class="mode-name">Goalie</div>
+                  <div class="mode-desc">
+                    Cursor left or right of the midline picks your side.
+                    <br />
+                    Click color picks the height: Blue = top, Orange = middle, Purple = bottom.
+                  </div>
+                  <div class="mode-actions">
+                    <button class="mode-btn" data-shots="10">10 Shots</button>
+                    <button class="mode-btn" data-shots="20">20 Shots</button>
+                  </div>
+                </div>
+                <div class="mode-card mode-card--disabled">
+                  <div class="mode-name">Striker</div>
+                  <div class="mode-desc">
+                    Pick a corner, beat the keeper. Aim with cursor, click matching color to shoot.
+                  </div>
+                  <div class="mode-status">Coming Soon &middot; v1.5</div>
+                </div>
+              </div>
+              <div class="menu-help">
+                Difficulty ramps as the round goes on. Use Settings to tune ball size, speed, and
+                the side-band tolerance if needed.
+              </div>
+            </div>
+          </div>
+
+          <!-- Round-end results -->
+          <div class="overlay" id="results-overlay">
+            <div class="overlay-card">
+              <div class="overlay-title">Round Complete</div>
+              <div class="results-grid">
+                <div class="results-stat">
+                  <div class="results-stat-label">Saves</div>
+                  <div class="results-stat-value" id="result-saves">0/0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Pct</div>
+                  <div class="results-stat-value" id="result-pct">0%</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Streak</div>
+                  <div class="results-stat-value" id="result-streak">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Goals</div>
+                  <div class="results-stat-value" id="result-goals">0</div>
+                </div>
+              </div>
+              <div class="results-buttons">
+                <button class="results-btn" id="result-replay">Play Again</button>
+                <button class="results-btn results-btn--ghost" id="result-menu">
+                  Change Length
+                </button>
+                <button class="results-btn results-btn--ghost" id="result-home">Home</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="overlay" id="settings-overlay">
+            <div class="overlay-card settings-card">
+              <div class="overlay-title">Settings</div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Cursor Sensitivity</span>
+                  <span class="settings-value" id="set-sens-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-sens" min="25" max="200" step="5" value="100" />
+                <div class="settings-help">
+                  How fast the on-screen cursor moves with your input.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Ball Size</span>
+                  <span class="settings-value" id="set-size-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-size" min="70" max="160" step="5" value="100" />
+                <div class="settings-help">
+                  Bigger ball = easier to read color and trajectory. 100% is the default.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Ball Speed</span>
+                  <span class="settings-value" id="set-speed-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-speed" min="60" max="160" step="5" value="100" />
+                <div class="settings-help">
+                  Lower = slower flight, more time to react. Higher = harder.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Side-Band Tolerance</span>
+                  <span class="settings-value" id="set-band-val">30 px</span>
+                </div>
+                <input type="range" id="set-band" min="0" max="120" step="5" value="30" />
+                <div class="settings-help">
+                  Dead zone around the midline so cursor jitter near center doesn't punish.
+                </div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn" id="set-replay">Replay Round</button>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="set-reset">
+                  Reset Defaults
+                </button>
+                <button class="settings-btn settings-btn--ghost" id="set-close">Close</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="overlay" id="analytics-overlay">
+            <div class="overlay-card analytics-card">
+              <div class="overlay-title">Stats</div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-color save rate</div>
+                <div class="alltime-grid" id="alltime-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-side save rate</div>
+                <div class="sides-grid" id="sides-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">Recent rounds</div>
+                <div class="analytics-rows" id="history-rows"></div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="analytics-close">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">
+              Read the shot. <span class="accent">Right side, right color, right time.</span>
+            </div>
+          </div>
+          <div class="home-slot" id="home-slot"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+    <script>
+      'use strict';
+
+      const GAME_ID = 'goalie-striker';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      /* Suppress the right-click context menu so the orange (right) click
+         is usable inside the canvas. */
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      /* Header buttons */
+      document.getElementById('btn-back').addEventListener('click', () => BCI.goToLauncher());
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      /* Viewport fitter */
+      const wrapper = document.getElementById('game-wrapper');
+      const fitter = BCI.createViewportFitter(wrapper);
+      fitter.fit();
+      requestAnimationFrame(() => fitter.fit());
+
+      /* ── Color setup ──────────────────────────────────────────── */
+      const COLOR_HEX = {
+        blue: '#4488ff',
+        orange: '#ff8833',
+        purple: '#aa44ff',
+      };
+
+      /* Color → height mapping per locked spec (finger progression):
+           Left  / index  / Blue   = TOP
+           Right / middle / Orange = MIDDLE
+           Middle/ ring   / Purple = BOTTOM
+         Mouse button id → color name comes from bci-input.js conventions
+         (0=blue, 1=purple, 2=orange). */
+      const HEIGHTS = ['top', 'middle', 'bottom'];
+      const SIDES = ['left', 'right'];
+
+      const HEIGHT_TO_COLOR = {
+        top: 'blue',
+        middle: 'orange',
+        bottom: 'purple',
+      };
+      const COLOR_TO_HEIGHT = {
+        blue: 'top',
+        orange: 'middle',
+        purple: 'bottom',
+      };
+
+      function clickIdToColorName(id) {
+        if (id === 0) return 'blue';
+        if (id === 1) return 'purple';
+        if (id === 2) return 'orange';
+        return null;
+      }
+      function colorNameToClickId(name) {
+        if (name === 'blue') return 0;
+        if (name === 'purple') return 1;
+        if (name === 'orange') return 2;
+        return null;
+      }
+
+      /* ── Field geometry (first-person goalie) ──────────────────
+         The camera is the goalie. Sky + crowd at top, grass extending
+         away with perspective taper. The kicker stands at the penalty
+         spot in mid-distance. The "arrival plane" is the 2D plane
+         right in front of the goalie where the ball lands — divided
+         into 6 zones (left/right × top/middle/bottom). */
+      const FIELD = {
+        skyY: 0,
+        skyBottomY: 110,
+        crowdY: 95,
+        grassTopY: 110,
+        grassBottomY: H,
+
+        // Trapezoidal grass perspective
+        grassTopLeftX: 240,
+        grassTopRightX: 560,
+        grassBottomLeftX: -160,
+        grassBottomRightX: W + 160,
+
+        // Penalty spot in the field (perspective space)
+        penaltyY: 200,
+        penaltyX: W / 2,
+
+        // Kicker silhouette anchor
+        kickerY: 215,
+
+        // Arrival plane (where the ball lands in screen space)
+        // 6-zone grid: 2 cols × 3 rows
+        arrivalLeftX: 130,
+        arrivalRightX: 670,
+        arrivalTopY: 175,
+        arrivalBottomY: 460,
+        midlineX: W / 2,
+
+        // Goalie gloves Y position (bottom of screen)
+        glovesY: H - 38,
+      };
+
+      function zoneCenter(side, height) {
+        const xCenter =
+          side === 'left'
+            ? (FIELD.arrivalLeftX + FIELD.midlineX) / 2
+            : (FIELD.midlineX + FIELD.arrivalRightX) / 2;
+        const range = FIELD.arrivalBottomY - FIELD.arrivalTopY;
+        const yCenter =
+          height === 'top'
+            ? FIELD.arrivalTopY + range * 0.16
+            : height === 'middle'
+              ? FIELD.arrivalTopY + range * 0.5
+              : FIELD.arrivalTopY + range * 0.84;
+        return { x: xCenter, y: yCenter };
+      }
+
+      function fieldEdgesAtY(y) {
+        const t = (y - FIELD.grassTopY) / (FIELD.grassBottomY - FIELD.grassTopY);
+        const tt = Math.max(0, Math.min(1, t));
+        const leftX = FIELD.grassTopLeftX + tt * (FIELD.grassBottomLeftX - FIELD.grassTopLeftX);
+        const rightX = FIELD.grassTopRightX + tt * (FIELD.grassBottomRightX - FIELD.grassTopRightX);
+        return { leftX, rightX };
+      }
+
+      function perspectiveScale(y) {
+        // 0 at horizon, 1 at foreground
+        const t = (y - FIELD.grassTopY) / (FIELD.grassBottomY - FIELD.grassTopY);
+        return Math.max(0, Math.min(1, t));
+      }
+
+      /* ── Tunables ─────────────────────────────────────────────── */
+      const DEFAULTS = {
+        ballFlightBaseMs: 1500, // shot 1
+        ballFlightFloorMs: 720, // hardest shot
+        ballFlightRampPerShot: 0.045, // linear shrink per shot
+        ballSizeMul: 1.0,
+        ballSpeedMul: 1.0,
+        sideBandPx: 30,
+      };
+
+      const tunables = { ...DEFAULTS };
+
+      function loadTunablesFromSettings() {
+        const g = BCI.getGameSettings(GAME_ID);
+        if (typeof g.ballSizeMul === 'number') tunables.ballSizeMul = g.ballSizeMul;
+        if (typeof g.ballSpeedMul === 'number') tunables.ballSpeedMul = g.ballSpeedMul;
+        if (typeof g.sideBandPx === 'number') tunables.sideBandPx = g.sideBandPx;
+      }
+      loadTunablesFromSettings();
+
+      /* ── Virtual cursor ───────────────────────────────────────── */
+      const settings = BCI.getEffectiveSettings(GAME_ID);
+      const virtualCursor = BCI.createVirtualCursor(canvas, {
+        sensitivity: settings.cursorSensitivity,
+        startX: W / 2,
+        startY: H - 80,
+      });
+
+      /* ── Game state ───────────────────────────────────────────── */
+      const STATE = {
+        MENU: 'menu',
+        PRE_SHOT: 'pre_shot',
+        SHOT_FLIGHT: 'shot_flight',
+        RESOLVING: 'resolving',
+        ROUND_END: 'round_end',
+      };
+
+      const PRE_SHOT_MS = 800; // pause between shots, kicker plants foot
+      const RESOLVE_MS = 750;
+      const FLASH_MS = 500;
+
+      let gameState = STATE.MENU;
+      let stateEnteredAt = 0;
+      let lastFrameMs = performance.now();
+
+      let totalShots = 10;
+      let currentShot = 0;
+      let saves = 0;
+      let goals = 0;
+      let streak = 0;
+      let longestStreak = 0;
+
+      let activeShot = null; // { side, height, color, flightMs, startMs }
+      let resolveOutcome = null; // 'save' | 'goal_wrong_side' | 'goal_wrong_color' | 'goal_no_react'
+      let resolveCorrectSide = null;
+      let resolveCorrectHeight = null;
+
+      let saveFlashUntil = 0;
+      let goalFlashUntil = 0;
+      let goalFlashType = null; // 'wrong_side' | 'wrong_color' | 'no_react'
+
+      let analyticsSession = null;
+      let shotStartedAt = 0;
+
+      /* Per-side analytics tracking (independent of color analytics
+         which is handled by bci-analytics.js fingers schema). Saved
+         into the session extra-stats payload at round end. */
+      let sideStats = { left: { attempts: 0, saved: 0 }, right: { attempts: 0, saved: 0 } };
+
+      /* Pause for modal overlays (matches QB Targets pattern) */
+      let paused = false;
+      let pauseStartedAt = 0;
+
+      function pauseGame() {
+        if (paused) return;
+        if (
+          gameState !== STATE.PRE_SHOT &&
+          gameState !== STATE.SHOT_FLIGHT &&
+          gameState !== STATE.RESOLVING
+        )
+          return;
+        paused = true;
+        pauseStartedAt = performance.now();
+      }
+
+      function unpauseGame() {
+        if (!paused) return;
+        const delta = performance.now() - pauseStartedAt;
+        paused = false;
+        stateEnteredAt += delta;
+        shotStartedAt += delta;
+        if (activeShot) activeShot.startMs += delta;
+        if (saveFlashUntil > 0) saveFlashUntil += delta;
+        if (goalFlashUntil > 0) goalFlashUntil += delta;
+        lastFrameMs = performance.now();
+      }
+
+      /* ── Shot generation ──────────────────────────────────────── */
+      function computeFlightMsForShot(shotIdx) {
+        const baseMs = DEFAULTS.ballFlightBaseMs;
+        const floorMs = DEFAULTS.ballFlightFloorMs;
+        const ramped = baseMs * (1 - DEFAULTS.ballFlightRampPerShot * shotIdx);
+        const flightMs = Math.max(floorMs, ramped);
+        // ballSpeedMul: higher value = faster ball = shorter flight
+        return flightMs / Math.max(0.4, tunables.ballSpeedMul);
+      }
+
+      function setupNewShot() {
+        const side = SIDES[Math.floor(Math.random() * SIDES.length)];
+        const height = HEIGHTS[Math.floor(Math.random() * HEIGHTS.length)];
+        const color = HEIGHT_TO_COLOR[height];
+        const flightMs = computeFlightMsForShot(currentShot - 1);
+
+        const target = zoneCenter(side, height);
+
+        activeShot = {
+          side,
+          height,
+          color,
+          flightMs,
+          startMs: 0, // set when SHOT_FLIGHT begins
+          fromX: FIELD.penaltyX,
+          fromY: FIELD.kickerY - 10,
+          toX: target.x,
+          toY: target.y,
+          // Visual: ball grows from r0 to r1 over flight
+          r0: 4,
+          r1: 26 * tunables.ballSizeMul,
+        };
+      }
+
+      /* ── Click handling ───────────────────────────────────────── */
+      canvas.addEventListener('mousedown', (e) => {
+        if (gameState !== STATE.SHOT_FLIGHT) return;
+        e.preventDefault();
+        const colorName = clickIdToColorName(e.button);
+        const clickId = e.button;
+        if (colorName == null || clickId == null) return;
+        if (!activeShot) return;
+
+        const clickedHeight = COLOR_TO_HEIGHT[colorName];
+        const cursorSide = cursorSideOfMidline(virtualCursor.x);
+        const reactionMs = performance.now() - shotStartedAt;
+        BCI.recordReaction(analyticsSession, clickId, reactionMs);
+
+        const correctSide = cursorSide === activeShot.side;
+        const correctColor = clickedHeight === activeShot.height;
+
+        if (correctSide && correctColor) {
+          BCI.recordAttempt(analyticsSession, clickId, true);
+          recordSide(activeShot.side, true);
+          resolveShot('save');
+        } else if (!correctSide) {
+          BCI.recordAttempt(analyticsSession, clickId, false);
+          recordSide(activeShot.side, false);
+          resolveShot('goal_wrong_side');
+        } else {
+          BCI.recordAttempt(analyticsSession, clickId, false);
+          recordSide(activeShot.side, false);
+          resolveShot('goal_wrong_color');
+        }
+      });
+
+      function cursorSideOfMidline(x) {
+        // Returns 'left', 'right', or null if inside the dead-zone band
+        const band = tunables.sideBandPx;
+        if (x < FIELD.midlineX - band) return 'left';
+        if (x > FIELD.midlineX + band) return 'right';
+        return null;
+      }
+
+      function recordSide(side, saved) {
+        if (!sideStats[side]) sideStats[side] = { attempts: 0, saved: 0 };
+        sideStats[side].attempts++;
+        if (saved) sideStats[side].saved++;
+      }
+
+      function resolveShot(outcome) {
+        resolveOutcome = outcome;
+        resolveCorrectSide = activeShot ? activeShot.side : null;
+        resolveCorrectHeight = activeShot ? activeShot.height : null;
+
+        if (outcome === 'save') {
+          saves++;
+          streak++;
+          if (streak > longestStreak) longestStreak = streak;
+          saveFlashUntil = performance.now() + FLASH_MS;
+          updateStatus(
+            `<span class="accent-good">SAVE!</span> &mdash; ${activeShot.side.toUpperCase()} ${activeShot.height.toUpperCase()}`
+          );
+        } else {
+          goals++;
+          streak = 0;
+          goalFlashUntil = performance.now() + 700;
+          goalFlashType = outcome.replace('goal_', '');
+          let why;
+          if (outcome === 'goal_wrong_side') why = 'wrong side';
+          else if (outcome === 'goal_wrong_color') why = 'wrong height';
+          else why = 'no reaction';
+          updateStatus(
+            `<span class="accent-bad">GOAL</span> &mdash; ${why} (${activeShot.side.toUpperCase()} ${activeShot.height.toUpperCase()})`
+          );
+        }
+
+        gameState = STATE.RESOLVING;
+        stateEnteredAt = performance.now();
+        updateHUD();
+      }
+
+      /* ── Update ───────────────────────────────────────────────── */
+      function update() {
+        const now = performance.now();
+
+        if (gameState === STATE.PRE_SHOT) {
+          if (now - stateEnteredAt > PRE_SHOT_MS) {
+            // Snap! Ball flies
+            activeShot.startMs = now;
+            shotStartedAt = now;
+            gameState = STATE.SHOT_FLIGHT;
+            stateEnteredAt = now;
+            updateStatus(
+              `Shot ${currentShot} of ${totalShots} &mdash; <span class="accent">read it</span>`
+            );
+          }
+          return;
+        }
+
+        if (gameState === STATE.SHOT_FLIGHT) {
+          // Check for timeout — ball arrives without a click. Per-color stats
+          // only count actual clicks (no-react has no click), so we just record
+          // the side miss and resolve.
+          const elapsed = now - activeShot.startMs;
+          if (elapsed > activeShot.flightMs) {
+            recordSide(activeShot.side, false);
+            resolveShot('goal_no_react');
+          }
+          return;
+        }
+
+        if (gameState === STATE.RESOLVING) {
+          if (now - stateEnteredAt > RESOLVE_MS) {
+            advanceToNextShot();
+          }
+          return;
+        }
+      }
+
+      function advanceToNextShot() {
+        if (currentShot >= totalShots) {
+          endRound();
+          return;
+        }
+        currentShot++;
+        setupNewShot();
+        gameState = STATE.PRE_SHOT;
+        stateEnteredAt = performance.now();
+        resolveOutcome = null;
+        resolveCorrectSide = null;
+        resolveCorrectHeight = null;
+        goalFlashType = null;
+        updateHUD();
+        updateStatus(
+          `Shot ${currentShot} of ${totalShots} &mdash; <span class="accent">kicker stepping up</span>`
+        );
+      }
+
+      /* ── Drawing ──────────────────────────────────────────────── */
+      function drawSky() {
+        const grad = ctx.createLinearGradient(0, 0, 0, FIELD.skyBottomY);
+        grad.addColorStop(0, '#4a6e8a');
+        grad.addColorStop(1, '#a3bfd1');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, FIELD.skyBottomY);
+      }
+
+      function drawCrowd() {
+        // Stadium silhouette band
+        ctx.fillStyle = 'rgba(20, 25, 30, 0.85)';
+        ctx.fillRect(0, FIELD.crowdY - 8, W, 22);
+
+        // Pseudo-random head bumps
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        const heads = 90;
+        for (let i = 0; i < heads; i++) {
+          const t = (i + 0.5) / heads;
+          const jitter = Math.sin(i * 12.9898) * 0.5;
+          const x = t * W + jitter * 6;
+          const y = FIELD.crowdY + Math.sin(i * 7.13) * 1.6;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawField() {
+        // Trapezoidal grass
+        ctx.fillStyle = 'var(--grass)';
+        ctx.fillStyle = '#2f7a36';
+        ctx.beginPath();
+        ctx.moveTo(FIELD.grassTopLeftX, FIELD.grassTopY);
+        ctx.lineTo(FIELD.grassTopRightX, FIELD.grassTopY);
+        ctx.lineTo(FIELD.grassBottomRightX, FIELD.grassBottomY);
+        ctx.lineTo(FIELD.grassBottomLeftX, FIELD.grassBottomY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Grass mowing pattern — alternating subtle bands
+        for (let i = 0; i < 8; i++) {
+          const y0 = FIELD.grassTopY + i * 60;
+          const y1 = y0 + 30;
+          if (y0 > FIELD.grassBottomY) break;
+          const e0 = fieldEdgesAtY(y0);
+          const e1 = fieldEdgesAtY(y1);
+          ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 0, 0, 0.04)';
+          ctx.beginPath();
+          ctx.moveTo(e0.leftX, y0);
+          ctx.lineTo(e0.rightX, y0);
+          ctx.lineTo(e1.rightX, y1);
+          ctx.lineTo(e1.leftX, y1);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // 18-yard box outline (drawn in perspective)
+        // The box stretches across the field at a defined Y range
+        const box18Top = FIELD.penaltyY - 30;
+        const box18Bottom = H - 90;
+        const e18top = fieldEdgesAtY(box18Top);
+        const e18bot = fieldEdgesAtY(box18Bottom);
+        const insetTop = 0.18;
+        const insetBot = 0.22;
+        const tl = {
+          x: e18top.leftX + (e18top.rightX - e18top.leftX) * insetTop,
+          y: box18Top,
+        };
+        const tr = {
+          x: e18top.rightX - (e18top.rightX - e18top.leftX) * insetTop,
+          y: box18Top,
+        };
+        const bl = {
+          x: e18bot.leftX + (e18bot.rightX - e18bot.leftX) * insetBot,
+          y: box18Bottom,
+        };
+        const br = {
+          x: e18bot.rightX - (e18bot.rightX - e18bot.leftX) * insetBot,
+          y: box18Bottom,
+        };
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(tl.x, tl.y);
+        ctx.lineTo(tr.x, tr.y);
+        ctx.lineTo(br.x, br.y);
+        ctx.lineTo(bl.x, bl.y);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Six-yard box (smaller, closer to camera)
+        const box6Top = FIELD.penaltyY + 50;
+        const box6Bottom = H - 30;
+        const e6top = fieldEdgesAtY(box6Top);
+        const e6bot = fieldEdgesAtY(box6Bottom);
+        const i6Top = 0.32;
+        const i6Bot = 0.34;
+        ctx.beginPath();
+        ctx.moveTo(e6top.leftX + (e6top.rightX - e6top.leftX) * i6Top, box6Top);
+        ctx.lineTo(e6top.rightX - (e6top.rightX - e6top.leftX) * i6Top, box6Top);
+        ctx.lineTo(e6bot.rightX - (e6bot.rightX - e6bot.leftX) * i6Bot, box6Bottom);
+        ctx.lineTo(e6bot.leftX + (e6bot.rightX - e6bot.leftX) * i6Bot, box6Bottom);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Penalty spot
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(FIELD.penaltyX, FIELD.penaltyY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Penalty arc (D) — top of box partial circle
+        ctx.beginPath();
+        ctx.arc(FIELD.penaltyX, FIELD.penaltyY, 28, Math.PI, 0);
+        ctx.stroke();
+
+        // Subtle vertical midline reference (camera plane)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(FIELD.midlineX, FIELD.grassTopY);
+        ctx.lineTo(FIELD.midlineX, H - 10);
+        ctx.stroke();
+
+        // Side-band tolerance indicators (very faint at midline)
+        if (tunables.sideBandPx > 0) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.045)';
+          ctx.beginPath();
+          ctx.moveTo(FIELD.midlineX - tunables.sideBandPx, FIELD.grassTopY + 50);
+          ctx.lineTo(FIELD.midlineX - tunables.sideBandPx, H - 10);
+          ctx.moveTo(FIELD.midlineX + tunables.sideBandPx, FIELD.grassTopY + 50);
+          ctx.lineTo(FIELD.midlineX + tunables.sideBandPx, H - 10);
+          ctx.stroke();
+        }
+      }
+
+      function drawKicker() {
+        // Kicker silhouette near the penalty spot. During PRE_SHOT does
+        // a small "step-up" wiggle to telegraph the snap.
+        const cx = FIELD.penaltyX;
+        const cy = FIELD.kickerY;
+        const t = (performance.now() - stateEnteredAt) / PRE_SHOT_MS;
+        let leanX = 0;
+        let leanY = 0;
+        if (gameState === STATE.PRE_SHOT) {
+          leanX = Math.sin(t * Math.PI) * 4;
+        }
+        if (gameState === STATE.SHOT_FLIGHT) {
+          // Brief follow-through pose for the first ~150ms
+          const since = performance.now() - activeShot.startMs;
+          if (since < 200) {
+            leanY = -3;
+            leanX = activeShot.toX > FIELD.midlineX ? -3 : 3;
+          }
+        }
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 10, 14, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shorts
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(cx - 8 + leanX, cy - 6 + leanY, 16, 14);
+        // Jersey
+        ctx.fillStyle = '#c9202a';
+        ctx.fillRect(cx - 10 + leanX, cy - 24 + leanY, 20, 20);
+        // Number
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('9', cx + leanX, cy - 11 + leanY);
+        // Head
+        ctx.fillStyle = '#dca37a';
+        ctx.beginPath();
+        ctx.arc(cx + leanX, cy - 32 + leanY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Legs
+        ctx.strokeStyle = '#dca37a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 4 + leanX, cy + 8 + leanY);
+        ctx.lineTo(cx - 5 + leanX, cy + 18 + leanY);
+        ctx.moveTo(cx + 4 + leanX, cy + 8 + leanY);
+        ctx.lineTo(cx + 5 + leanX, cy + 18 + leanY);
+        ctx.stroke();
+      }
+
+      function drawZoneGuides() {
+        // Very subtle grid showing the 6 arrival zones — helps player
+        // build a mental map of where the ball can land. Off during
+        // SHOT_FLIGHT so it doesn't compete with the ball.
+        if (gameState !== STATE.PRE_SHOT && gameState !== STATE.MENU) return;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+
+        // Three horizontal divider lines (top, mid-top, mid-bottom, bottom)
+        const divs = [
+          FIELD.arrivalTopY,
+          FIELD.arrivalTopY + (FIELD.arrivalBottomY - FIELD.arrivalTopY) / 3,
+          FIELD.arrivalTopY + ((FIELD.arrivalBottomY - FIELD.arrivalTopY) * 2) / 3,
+          FIELD.arrivalBottomY,
+        ];
+        for (const y of divs) {
+          ctx.beginPath();
+          ctx.moveTo(FIELD.arrivalLeftX, y);
+          ctx.lineTo(FIELD.arrivalRightX, y);
+          ctx.stroke();
+        }
+        // Vertical sides (already have midline drawn elsewhere)
+        ctx.beginPath();
+        ctx.moveTo(FIELD.arrivalLeftX, FIELD.arrivalTopY);
+        ctx.lineTo(FIELD.arrivalLeftX, FIELD.arrivalBottomY);
+        ctx.moveTo(FIELD.arrivalRightX, FIELD.arrivalTopY);
+        ctx.lineTo(FIELD.arrivalRightX, FIELD.arrivalBottomY);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawBall() {
+        if (!activeShot || gameState !== STATE.SHOT_FLIGHT) return;
+        const elapsed = performance.now() - activeShot.startMs;
+        const t = Math.max(0, Math.min(1, elapsed / activeShot.flightMs));
+        const x = activeShot.fromX + (activeShot.toX - activeShot.fromX) * t;
+        const linearY = activeShot.fromY + (activeShot.toY - activeShot.fromY) * t;
+        // Parabolic arc — peak height varies with shot height
+        // Top shots arc less; bottom shots arc more (roll-toward-camera feel)
+        const apex = activeShot.height === 'top' ? 18 : activeShot.height === 'middle' ? 28 : 14;
+        const y = linearY - Math.sin(t * Math.PI) * apex;
+        const r = activeShot.r0 + (activeShot.r1 - activeShot.r0) * t;
+
+        const tintColor = COLOR_HEX[activeShot.color];
+
+        // Ball shadow on the grass (only while still in mid-air)
+        const shadowY = linearY + 4;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        ctx.beginPath();
+        ctx.ellipse(x, shadowY, r * 0.7, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Ball: white base, classic black pentagons (simplified), color-tinted glow
+        ctx.save();
+        // Glow
+        ctx.shadowColor = tintColor;
+        ctx.shadowBlur = 12 + 8 * t;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Pentagon pattern
+        ctx.save();
+        ctx.fillStyle = '#1a1a1a';
+        const pentR = r * 0.32;
+        // Center pentagon
+        drawPentagon(ctx, x, y, pentR);
+        // 3 satellite pentagons rotating with t for spin feel
+        const spin = t * Math.PI * 2;
+        for (let i = 0; i < 3; i++) {
+          const ang = spin + (i * 2 * Math.PI) / 3;
+          const sx = x + Math.cos(ang) * r * 0.55;
+          const sy = y + Math.sin(ang) * r * 0.55;
+          drawPentagon(ctx, sx, sy, pentR * 0.7);
+        }
+        ctx.restore();
+
+        // Color tint ring overlay (more vivid as ball approaches)
+        ctx.save();
+        ctx.strokeStyle = tintColor;
+        ctx.globalAlpha = 0.35 + 0.55 * t;
+        ctx.lineWidth = Math.max(1.5, 2 + t * 2);
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.05, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawPentagon(ctx, cx, cy, r) {
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+          const px = cx + Math.cos(a) * r;
+          const py = cy + Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawGloves() {
+        // Two goalkeeper gloves at the bottom of screen, sliding with cursor X.
+        // Provide embodied feel of the goalie's body in the scene.
+        const cx = virtualCursor.x;
+        const baseY = FIELD.glovesY;
+        const gap = 18;
+        const gloveW = 38;
+        const gloveH = 30;
+
+        for (let side = -1; side <= 1; side += 2) {
+          const gx = cx + side * (gap / 2 + gloveW / 2);
+
+          // Glove silhouette
+          ctx.save();
+          ctx.fillStyle = '#2c3138';
+          ctx.strokeStyle = '#0d1014';
+          ctx.lineWidth = 2;
+          // Rounded rectangle
+          roundRect(ctx, gx - gloveW / 2, baseY - gloveH / 2, gloveW, gloveH, 8);
+          ctx.fill();
+          ctx.stroke();
+
+          // Color stripes (BCI palette) on the cuff
+          ctx.fillStyle = COLOR_HEX.blue;
+          ctx.fillRect(gx - gloveW / 2 + 4, baseY + gloveH / 2 - 7, 8, 4);
+          ctx.fillStyle = COLOR_HEX.orange;
+          ctx.fillRect(gx - gloveW / 2 + 14, baseY + gloveH / 2 - 7, 8, 4);
+          ctx.fillStyle = COLOR_HEX.purple;
+          ctx.fillRect(gx - gloveW / 2 + 24, baseY + gloveH / 2 - 7, 8, 4);
+          ctx.restore();
+        }
+
+        // A faint horizontal "ground line" under gloves to anchor them
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, baseY + gloveH / 2 + 4);
+        ctx.lineTo(W, baseY + gloveH / 2 + 4);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function drawCursorReticle() {
+        // Show the cursor as a soft crosshair so the player can see exactly
+        // where the side-detection samples from.
+        const cx = virtualCursor.x;
+        const cy = virtualCursor.y;
+        const onLeft = cursorSideOfMidline(cx);
+        const accent =
+          onLeft === 'left'
+            ? 'rgba(120, 200, 255, 0.92)'
+            : onLeft === 'right'
+              ? 'rgba(255, 180, 120, 0.92)'
+              : 'rgba(255, 255, 255, 0.5)';
+        ctx.save();
+        ctx.strokeStyle = accent;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+        ctx.shadowBlur = 4;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, cy);
+        ctx.lineTo(cx - 4, cy);
+        ctx.moveTo(cx + 4, cy);
+        ctx.lineTo(cx + 14, cy);
+        ctx.moveTo(cx, cy - 14);
+        ctx.lineTo(cx, cy - 4);
+        ctx.moveTo(cx, cy + 4);
+        ctx.lineTo(cx, cy + 14);
+        ctx.stroke();
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawSaveFlash() {
+        if (performance.now() >= saveFlashUntil) return;
+        const remain = (saveFlashUntil - performance.now()) / FLASH_MS;
+        ctx.save();
+        ctx.fillStyle = `rgba(95, 191, 110, ${0.22 * remain})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(255, 255, 255, ${remain})`;
+        ctx.font = 'bold 44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowBlur = 6;
+        ctx.fillText('SAVE!', W / 2, H / 2 - 30);
+        ctx.restore();
+      }
+
+      function drawGoalFlash() {
+        if (performance.now() >= goalFlashUntil) return;
+        const remain = (goalFlashUntil - performance.now()) / 700;
+        ctx.save();
+        ctx.fillStyle = `rgba(212, 75, 75, ${0.22 * remain})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(255, 255, 255, ${remain})`;
+        ctx.font = 'bold 44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowBlur = 6;
+        ctx.fillText('GOAL', W / 2, H / 2 - 30);
+
+        if (goalFlashType) {
+          ctx.font = 'bold 14px Courier New, monospace';
+          let label = '';
+          if (goalFlashType === 'wrong_side') label = 'WRONG SIDE';
+          else if (goalFlashType === 'wrong_color') label = 'WRONG HEIGHT';
+          else label = 'NO REACTION';
+          ctx.fillText(label, W / 2, H / 2);
+        }
+        ctx.restore();
+      }
+
+      function drawHelpText() {
+        if (gameState !== STATE.PRE_SHOT) return;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.font = 'bold 11px Courier New, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`SHOT ${currentShot} / ${totalShots}`, W / 2, FIELD.skyBottomY + 14);
+        ctx.restore();
+      }
+
+      /* ── HUD + status ─────────────────────────────────────────── */
+      function updateHUD() {
+        const shotLabel =
+          currentShot === 0 ? '–/–' : `${Math.min(currentShot, totalShots)}/${totalShots}`;
+        document.getElementById('hud-shot').textContent = shotLabel;
+        document.getElementById('hud-saves').textContent = String(saves);
+        document.getElementById('hud-streak').textContent = String(streak);
+        document.getElementById('hud-goals').textContent = String(goals);
+      }
+
+      function updateStatus(html) {
+        document.getElementById('status-msg').innerHTML = html;
+      }
+
+      /* ── Round lifecycle ──────────────────────────────────────── */
+      function startNewRound() {
+        currentShot = 1;
+        saves = 0;
+        goals = 0;
+        streak = 0;
+        longestStreak = 0;
+        analyticsSession = BCI.createSession();
+        sideStats = { left: { attempts: 0, saved: 0 }, right: { attempts: 0, saved: 0 } };
+        activeShot = null;
+        resolveOutcome = null;
+        saveFlashUntil = 0;
+        goalFlashUntil = 0;
+        goalFlashType = null;
+
+        document.getElementById('menu-overlay').classList.remove('is-visible');
+        document.getElementById('results-overlay').classList.remove('is-visible');
+
+        setupNewShot();
+        gameState = STATE.PRE_SHOT;
+        stateEnteredAt = performance.now();
+        updateHUD();
+        updateStatus(
+          `Shot 1 of ${totalShots} &mdash; <span class="accent">kicker stepping up</span>`
+        );
+      }
+
+      function endRound() {
+        gameState = STATE.ROUND_END;
+        stateEnteredAt = performance.now();
+
+        const savePct = totalShots > 0 ? Math.round((saves / totalShots) * 100) : 0;
+
+        if (analyticsSession) {
+          BCI.saveSession(GAME_ID, analyticsSession, {
+            saves,
+            goals,
+            attempts: totalShots,
+            longestStreak,
+            savePct,
+            sideStats: { ...sideStats },
+            shotsPerRound: totalShots,
+          });
+        }
+
+        document.getElementById('result-saves').textContent = `${saves}/${totalShots}`;
+        document.getElementById('result-pct').textContent = `${savePct}%`;
+        document.getElementById('result-streak').textContent = String(longestStreak);
+        document.getElementById('result-goals').textContent = String(goals);
+        document.getElementById('results-overlay').classList.add('is-visible');
+        updateStatus(`Round complete &mdash; <span class="accent">${savePct}% save rate</span>`);
+      }
+
+      function returnToMenu() {
+        gameState = STATE.MENU;
+        document.getElementById('results-overlay').classList.remove('is-visible');
+        document.getElementById('settings-overlay').classList.remove('is-visible');
+        document.getElementById('analytics-overlay').classList.remove('is-visible');
+        document.getElementById('menu-overlay').classList.add('is-visible');
+        currentShot = 0;
+        updateHUD();
+        updateStatus('Pick a mode &mdash; <span class="accent">10 or 20 shots</span>');
+      }
+
+      /* ── Render loop ──────────────────────────────────────────── */
+      function render() {
+        ctx.clearRect(0, 0, W, H);
+        drawSky();
+        drawCrowd();
+        drawField();
+        drawZoneGuides();
+        drawKicker();
+        drawBall();
+        drawGloves();
+
+        drawSaveFlash();
+        drawGoalFlash();
+        drawHelpText();
+
+        if (gameState === STATE.PRE_SHOT || gameState === STATE.SHOT_FLIGHT) {
+          drawCursorReticle();
+        }
+      }
+
+      function loop() {
+        const now = performance.now();
+        lastFrameMs = now;
+        if (!paused) update();
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      /* ── Menu wiring ──────────────────────────────────────────── */
+      document.querySelectorAll('.mode-actions .mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const shots = parseInt(btn.dataset.shots, 10);
+          if (!Number.isFinite(shots) || shots < 1) return;
+          totalShots = shots;
+          startNewRound();
+        });
+      });
+
+      /* ── Results buttons ──────────────────────────────────────── */
+      document.getElementById('result-replay').addEventListener('click', () => {
+        startNewRound();
+      });
+      document.getElementById('result-menu').addEventListener('click', () => {
+        returnToMenu();
+      });
+      document.getElementById('result-home').addEventListener('click', () => {
+        BCI.goToLauncher();
+      });
+
+      /* ── Settings panel ───────────────────────────────────────── */
+      const settingsOverlay = document.getElementById('settings-overlay');
+      const setSens = document.getElementById('set-sens');
+      const setSize = document.getElementById('set-size');
+      const setSpeed = document.getElementById('set-speed');
+      const setBand = document.getElementById('set-band');
+      const setSensVal = document.getElementById('set-sens-val');
+      const setSizeVal = document.getElementById('set-size-val');
+      const setSpeedVal = document.getElementById('set-speed-val');
+      const setBandVal = document.getElementById('set-band-val');
+
+      function loadSettingsIntoUI() {
+        const eff = BCI.getEffectiveSettings(GAME_ID);
+        const cs = eff.cursorSensitivity ?? 1.0;
+        setSens.value = Math.round(cs * 100);
+        setSensVal.textContent = cs.toFixed(2) + '×';
+
+        setSize.value = Math.round(tunables.ballSizeMul * 100);
+        setSizeVal.textContent = tunables.ballSizeMul.toFixed(2) + '×';
+
+        setSpeed.value = Math.round(tunables.ballSpeedMul * 100);
+        setSpeedVal.textContent = tunables.ballSpeedMul.toFixed(2) + '×';
+
+        setBand.value = Math.round(tunables.sideBandPx);
+        setBandVal.textContent = `${Math.round(tunables.sideBandPx)} px`;
+      }
+
+      function openSettings() {
+        pauseGame();
+        loadSettingsIntoUI();
+        settingsOverlay.classList.add('is-visible');
+      }
+      function closeSettings() {
+        settingsOverlay.classList.remove('is-visible');
+        unpauseGame();
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', openSettings);
+      document.getElementById('set-close').addEventListener('click', closeSettings);
+      settingsOverlay.addEventListener('mousedown', (e) => {
+        if (e.target === settingsOverlay) closeSettings();
+      });
+
+      setSens.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        setSensVal.textContent = v.toFixed(2) + '×';
+        BCI.saveGlobalSettings({ cursorSensitivity: v });
+        virtualCursor.setSensitivity(v);
+      });
+      setSize.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        setSizeVal.textContent = v.toFixed(2) + '×';
+        tunables.ballSizeMul = v;
+        BCI.saveGameSettings(GAME_ID, { ballSizeMul: v });
+      });
+      setSpeed.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        setSpeedVal.textContent = v.toFixed(2) + '×';
+        tunables.ballSpeedMul = v;
+        BCI.saveGameSettings(GAME_ID, { ballSpeedMul: v });
+      });
+      setBand.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10);
+        setBandVal.textContent = `${v} px`;
+        tunables.sideBandPx = v;
+        BCI.saveGameSettings(GAME_ID, { sideBandPx: v });
+      });
+
+      document.getElementById('set-replay').addEventListener('click', () => {
+        closeSettings();
+        startNewRound();
+      });
+      document.getElementById('set-reset').addEventListener('click', () => {
+        BCI.saveGlobalSettings({ cursorSensitivity: 1.0 });
+        virtualCursor.setSensitivity(1.0);
+        tunables.ballSizeMul = DEFAULTS.ballSizeMul;
+        tunables.ballSpeedMul = DEFAULTS.ballSpeedMul;
+        tunables.sideBandPx = DEFAULTS.sideBandPx;
+        BCI.saveGameSettings(GAME_ID, {
+          ballSizeMul: DEFAULTS.ballSizeMul,
+          ballSpeedMul: DEFAULTS.ballSpeedMul,
+          sideBandPx: DEFAULTS.sideBandPx,
+        });
+        loadSettingsIntoUI();
+      });
+
+      /* ── Analytics view ───────────────────────────────────────── */
+      const analyticsOverlay = document.getElementById('analytics-overlay');
+
+      function openAnalytics() {
+        pauseGame();
+        renderAnalytics();
+        analyticsOverlay.classList.add('is-visible');
+      }
+      function closeAnalytics() {
+        analyticsOverlay.classList.remove('is-visible');
+        unpauseGame();
+      }
+
+      function renderAnalytics() {
+        // All-time per-color save rate (color = clickId via standard fingers schema)
+        const allTime = BCI.getAllTimeStats(GAME_ID);
+        const grid = document.getElementById('alltime-grid');
+        grid.innerHTML = '';
+        const colorOrder = ['blue', 'orange', 'purple']; // matches finger progression top→middle→bottom
+        for (const colorName of colorOrder) {
+          const id = colorNameToClickId(colorName);
+          const f = allTime.fingers[id] || { attempts: 0, correct: 0, totalReactionMs: 0 };
+          const acc = f.attempts > 0 ? Math.round((f.correct / f.attempts) * 100) : 0;
+          const avgRt = f.attempts > 0 ? Math.round(f.totalReactionMs / f.attempts) : 0;
+          const heightLabel = COLOR_TO_HEIGHT[colorName].toUpperCase();
+          const cell = document.createElement('div');
+          cell.className = 'alltime-cell';
+          cell.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="alltime-cell-color" style="background: ${COLOR_HEX[colorName]}"></span>
+              <span class="alltime-cell-name">${colorName} · ${heightLabel}</span>
+            </div>
+            <div class="alltime-cell-stat">${acc}%</div>
+            <div class="alltime-cell-sub">${f.attempts} clicks · avg ${avgRt}ms</div>
+          `;
+          grid.appendChild(cell);
+        }
+
+        // All-time per-side — derived by replaying session history sideStats
+        const history = BCI.getSessionHistory(GAME_ID);
+        const sideTotals = { left: { attempts: 0, saved: 0 }, right: { attempts: 0, saved: 0 } };
+        for (const h of history) {
+          if (!h.sideStats) continue;
+          for (const side of SIDES) {
+            const s = h.sideStats[side];
+            if (!s) continue;
+            sideTotals[side].attempts += s.attempts || 0;
+            sideTotals[side].saved += s.saved || 0;
+          }
+        }
+        const sidesGrid = document.getElementById('sides-grid');
+        sidesGrid.innerHTML = '';
+        for (const side of SIDES) {
+          const s = sideTotals[side];
+          const acc = s.attempts > 0 ? Math.round((s.saved / s.attempts) * 100) : 0;
+          const cell = document.createElement('div');
+          cell.className = 'alltime-cell';
+          cell.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="alltime-cell-name">${side.toUpperCase()} side</span>
+            </div>
+            <div class="alltime-cell-stat">${acc}%</div>
+            <div class="alltime-cell-sub">${s.attempts} shots faced · ${s.saved} saved</div>
+          `;
+          sidesGrid.appendChild(cell);
+        }
+
+        // Recent rounds
+        const rows = document.getElementById('history-rows');
+        rows.innerHTML = '';
+        if (history.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'analytics-empty';
+          empty.textContent = 'No rounds yet — finish one to see stats.';
+          rows.appendChild(empty);
+          return;
+        }
+        for (const h of history) {
+          const row = document.createElement('div');
+          row.className = 'analytics-row';
+          const length = h.shotsPerRound ?? h.attempts ?? 0;
+          row.innerHTML = `
+            <span class="a-date">${h.dateStr || ''}</span>
+            <span>${h.saves ?? 0}/${length} saved · ${h.goals ?? 0} goal</span>
+            <span class="a-stat">streak ${h.longestStreak ?? 0}</span>
+            <span class="a-stat-strong">${h.savePct ?? 0}%</span>
+          `;
+          rows.appendChild(row);
+        }
+      }
+
+      document.getElementById('btn-analytics').addEventListener('click', openAnalytics);
+      document.getElementById('analytics-close').addEventListener('click', closeAnalytics);
+      analyticsOverlay.addEventListener('mousedown', (e) => {
+        if (e.target === analyticsOverlay) closeAnalytics();
+      });
+
+      /* ── Boot ─────────────────────────────────────────────────── */
+      updateHUD();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
