@@ -806,6 +806,7 @@
                 <span class="hud-value" id="hud-strokes">0</span>
               </div>
             </div>
+            <span class="help-slot" id="help-slot"></span>
             <button id="btn-settings" class="settings-btn" title="Settings">&#9881;</button>
           </div>
         </header>
@@ -925,6 +926,7 @@
     <script src="../../../shared/bci-settings.js"></script>
     <script src="../../../shared/bci-analytics.js"></script>
     <script src="../../../shared/bci-shell.js"></script>
+    <script src="../../../shared/bci-walkthrough.js"></script>
     <script>
       /* ─────────────────────────────────────────────────────────────
          Putt-Putt — checkpoints 2-8
@@ -1868,7 +1870,36 @@
         });
         fitter.fit();
 
+        /* ── Walkthrough ──────────────────────────────────────────
+           First-time intro covers all three phases (aim, distance,
+           sequence). The "?" header button replays it on demand. */
+        const PUTT_WT_ID = 'putt-putt/howto';
+        const PUTT_WT_STEPS = [
+          {
+            title: 'Putt-Putt',
+            body: 'Move your cursor to aim — a line shows where the ball will go. Click any color to lock the aim.',
+          },
+          {
+            title: 'Pick Your Distance',
+            body: 'Blue = short putt. Orange = medium. Purple = long. Pick based on how far the cup is.',
+            clicks: ['left', 'right', 'middle'],
+          },
+          {
+            title: 'Match the Sequence',
+            body: 'Medium and long putts show 3 or 5 colored dots. Click them in order — faster and more accurate keeps the ball straight.',
+          },
+          {
+            title: 'Sink It',
+            body: 'Lower strokes is better. Walls bounce, water resets you with a penalty stroke, sand slows you down.',
+          },
+        ];
+
+        document
+          .getElementById('help-slot')
+          .appendChild(BCI.createHelpButton(() => ({ id: PUTT_WT_ID, steps: PUTT_WT_STEPS })));
+
         loop();
+        BCI.showWalkthrough(PUTT_WT_ID, PUTT_WT_STEPS);
       })();
     </script>
   </body>

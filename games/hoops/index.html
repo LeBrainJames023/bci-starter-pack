@@ -558,6 +558,7 @@
           </div>
 
           <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
             <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
         </header>
@@ -689,6 +690,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
     <script>
       'use strict';
 
@@ -706,6 +708,70 @@
 
       /* Home button slot — uses the shared component */
       document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      /* ── Walkthroughs ─────────────────────────────────────────
+         One per mode. First time a mode is opened the intro shows
+         automatically; the "?" header button replays the current
+         mode's walkthrough at any time. */
+      const WALKTHROUGHS = {
+        ft: [
+          {
+            title: 'Free Throw',
+            body: 'Move your cursor onto the rim, then click once to lock your aim. Any of the three clicks works for the lock.',
+          },
+          {
+            title: 'Match the Color',
+            body: 'After the lock, the rim reveals a color. Click the matching click-color before the timer ring closes.',
+            clicks: ['left', 'middle', 'right'],
+          },
+          {
+            title: 'Sink It',
+            body: 'Pick 10 or 20 shots, build a streak, beat your accuracy.',
+          },
+        ],
+        threePt: [
+          {
+            title: 'Three-Point',
+            body: 'Move your cursor onto the rim. It spins through all three colors while the ball flies.',
+          },
+          {
+            title: 'Match on the Fly',
+            body: 'Click the click-color the rim is showing the moment the ball arrives. The rim does not wait.',
+            clicks: ['left', 'middle', 'right'],
+          },
+          {
+            title: '10 Shots',
+            body: 'Read the rotation, time the click. Long streaks count.',
+          },
+        ],
+        nineshot: [
+          {
+            title: '9-Shot Drill',
+            body: 'A 3×3 grid of hoops. One lights up at a time — move your cursor onto the lit hoop.',
+          },
+          {
+            title: 'Each Row Has a Color',
+            body: 'Close hoops are blue. Middle row is orange. Deep hoops are purple. The color tells you the shot power you need.',
+            clicks: ['left', 'right', 'middle'],
+          },
+          {
+            title: 'Match the Row',
+            body: "Click the color of the lit hoop's row. Wrong color = wrong power = miss.",
+          },
+          {
+            title: '15 Shots',
+            body: 'All nine positions, mixed in. Drill the rhythm.',
+          },
+        ],
+      };
+
+      /* "?" Help button — replays the current mode's walkthrough on demand. */
+      document.getElementById('help-slot').appendChild(
+        BCI.createHelpButton(() => ({
+          id: 'hoops/' + activeMode,
+          steps: WALKTHROUGHS[activeMode] || WALKTHROUGHS.ft,
+        }))
+      );
 
       /* ── Scene geometry ────────────────────────────────────────
          All positions in canvas-local coords. Free-throw camera by
@@ -1685,19 +1751,28 @@
         .addEventListener('click', () => BCI.goToLauncher());
 
       /* Mode-select buttons — FT routes through length picker first;
-         3PT and 9-Shot go straight to their fixed-length rounds. */
+         3PT and 9-Shot go straight to their fixed-length rounds. The
+         first time a mode is opened, its walkthrough runs before play
+         starts; subsequent opens skip it. */
       document.querySelectorAll('#mode-overlay .mode-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const modeId = btn.dataset.mode;
           if (!MODES[modeId]) return;
           applyMode(modeId);
-          if (modeId === 'ft') {
-            showLengthPicker();
-          } else if (modeId === 'nineshot') {
-            startRound(15);
-          } else {
-            startRound(10);
-          }
+
+          const startSelected = () => {
+            if (modeId === 'ft') {
+              showLengthPicker();
+            } else if (modeId === 'nineshot') {
+              startRound(15);
+            } else {
+              startRound(10);
+            }
+          };
+
+          BCI.showWalkthrough('hoops/' + modeId, WALKTHROUGHS[modeId], { onClose: startSelected });
+          /* showWalkthrough is a no-op (and fires onClose synchronously
+             with autoSkipped=true) once the user has seen this mode. */
         });
       });
 

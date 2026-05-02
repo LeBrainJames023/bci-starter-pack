@@ -4,12 +4,13 @@ Reusable code every game in the BCI Starter Pack can import.
 
 ## Files
 
-| File               | Purpose                                                               |
-| ------------------ | --------------------------------------------------------------------- |
-| `bci-input.js`     | Universal click colors, virtual cursor tracker, cursor drawing helper |
-| `bci-settings.js`  | Global + per-game settings stored in localStorage                     |
-| `bci-analytics.js` | Standard analytics schema so every game's data is cross-compatible    |
-| `bci-shell.js`     | Viewport fitter (responsive scaling) and Back-to-Launcher helper      |
+| File                 | Purpose                                                                  |
+| -------------------- | ------------------------------------------------------------------------ |
+| `bci-input.js`       | Universal click colors, virtual cursor tracker, cursor drawing helper    |
+| `bci-settings.js`    | Global + per-game settings stored in localStorage                        |
+| `bci-analytics.js`   | Standard analytics schema so every game's data is cross-compatible       |
+| `bci-shell.js`       | Viewport fitter (responsive scaling) and Back-to-Launcher helper         |
+| `bci-walkthrough.js` | First-time intro overlay + replayable "?" help button (per game or mode) |
 
 ## How to Use in a Game
 
@@ -20,6 +21,7 @@ In the game's `index.html`, load these files before your own game script:
 <script src="../../shared/bci-settings.js"></script>
 <script src="../../shared/bci-analytics.js"></script>
 <script src="../../shared/bci-shell.js"></script>
+<script src="../../shared/bci-walkthrough.js"></script>
 <script src="game.js"></script>
 ```
 
@@ -80,6 +82,37 @@ BCI.goToLauncher(); // defaults to '../../index.html'
 const home = BCI.createHomeButton(); // { showLabel?, label?, onClick?, path? }
 document.getElementById('top-bar').appendChild(home);
 ```
+
+### Walkthrough
+
+```js
+// Shows a short intro the first time this id is seen. Re-opening
+// the same id later is a no-op unless { force: true } is passed.
+BCI.showWalkthrough('hoops/ft', [
+  {
+    title: 'Free Throw',
+    body: 'Wait for the ball at the rim, then click the matching color.',
+    click: 'left',
+  },
+  {
+    title: 'Controls',
+    body: 'Three clicks. Match the rim color when the ball arrives.',
+    clicks: ['left', 'middle', 'right'],
+  },
+]);
+
+// "?" help button — replays the walkthrough on demand. Pass a
+// function so the right walkthrough is chosen for the current mode.
+const help = BCI.createHelpButton(() => ({ id: currentWalkthroughId, steps: currentSteps }));
+document.getElementById('top-bar').appendChild(help);
+
+// Other helpers:
+BCI.hasSeenWalkthrough(id);
+BCI.markWalkthroughSeen(id);
+BCI.resetWalkthroughs(); // clears all "seen" flags (debug)
+```
+
+Step shape: `{ title, body, click?, clicks? }`. `body` may be a string or an array of strings (paragraphs). `click` highlights one color prominently; `clicks` shows a row of all listed colors.
 
 ## Rules for Adding to This Folder
 

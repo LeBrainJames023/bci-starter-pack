@@ -905,6 +905,7 @@
           </div>
         </div>
         <div class="header-right">
+          <span class="help-slot" id="help-slot"></span>
           <button id="btn-settings" class="settings-btn" title="Settings">&#9881;</button>
         </div>
       </header>
@@ -1144,6 +1145,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
 
     <script>
       const GAME_ID = 'webgrid';
@@ -1270,10 +1272,42 @@
         if (e.target === analyticsModal) analyticsModal.classList.remove('active');
       });
 
+      /* ── Walkthrough ──────────────────────────────────────────
+         Practice and Game share the same color-match mechanic, so a
+         single walkthrough id covers both. Auto-shows the first time
+         either mode starts; the "?" header button replays it. */
+      const WEBGRID_WT_ID = 'webgrid/howto';
+      const WEBGRID_WT_STEPS = [
+        {
+          title: 'WebGrid',
+          body: 'Move your cursor onto the colored cell that lights up. The grid moves fast — speed and aim both matter.',
+        },
+        {
+          title: 'Match the Color',
+          body: 'Each cell wears one of three colors. Click the matching click-color to score the cell.',
+          clicks: ['left', 'middle', 'right'],
+        },
+        {
+          title: 'BPS',
+          body: 'Your score is Bits Per Second — speed × accuracy. Wrong color or wrong cell counts against you.',
+        },
+      ];
+
+      function startGameWithWalkthrough(mode) {
+        BCI.showWalkthrough(WEBGRID_WT_ID, WEBGRID_WT_STEPS, {
+          onClose: () => startGame(mode),
+        });
+      }
+
       /* ── Menu actions ────────────────────────────────────────── */
-      document.getElementById('btn-practice').onclick = () => startGame('practice');
-      document.getElementById('btn-game').onclick = () => startGame('game');
+      document.getElementById('btn-practice').onclick = () => startGameWithWalkthrough('practice');
+      document.getElementById('btn-game').onclick = () => startGameWithWalkthrough('game');
       document.getElementById('splash-home').appendChild(BCI.createHomeButton());
+
+      /* "?" Help button — replays the walkthrough on demand. */
+      document
+        .getElementById('help-slot')
+        .appendChild(BCI.createHelpButton(() => ({ id: WEBGRID_WT_ID, steps: WEBGRID_WT_STEPS })));
 
       /* ── Menu motif (single cell + ghost cursor on a loop) ──── */
       const motifCell = document.getElementById('motif-cell');

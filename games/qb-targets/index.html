@@ -537,6 +537,7 @@
             </div>
           </div>
           <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
             <button class="icon-btn" id="btn-analytics">Stats</button>
             <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
@@ -664,6 +665,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
     <script>
       'use strict';
 
@@ -1716,9 +1718,37 @@
         if (e.target === analyticsOverlay) closeAnalytics();
       });
 
+      /* ── Walkthrough ──────────────────────────────────────────
+         Single-mode game; one walkthrough id. Auto-shows on first
+         visit; the "?" header button replays it. */
+      const QB_WT_ID = 'qb-targets/howto';
+      const QB_WT_STEPS = [
+        {
+          title: 'QB Targets',
+          body: "Move your cursor to aim. Vertical position picks the receiver's chest height; left/right picks the side of the field.",
+        },
+        {
+          title: 'Match the Window',
+          body: 'Each open receiver wears a colored window. Click the matching click-color to throw a completion. Wrong color = incompletion. No receiver in your window = sack.',
+          clicks: ['left', 'middle', 'right'],
+        },
+        {
+          title: '15 Plays',
+          body: 'Windows shrink as the round goes on, and one receiver always runs deep. Build a completion streak.',
+        },
+      ];
+
+      document
+        .getElementById('help-slot')
+        .appendChild(BCI.createHelpButton(() => ({ id: QB_WT_ID, steps: QB_WT_STEPS })));
+
       /* ── Boot ─────────────────────────────────────────────────── */
-      startNewRound();
-      requestAnimationFrame(loop);
+      BCI.showWalkthrough(QB_WT_ID, QB_WT_STEPS, {
+        onClose: () => {
+          startNewRound();
+          requestAnimationFrame(loop);
+        },
+      });
     </script>
   </body>
 </html>

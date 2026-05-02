@@ -1352,6 +1352,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
 
     <script>
       /* ─────────────────────────────────────────────────────────────
@@ -2271,11 +2272,48 @@
         updatePreview();
       }
 
+      /* ── Walkthrough ──────────────────────────────────────────
+         Practice and Game share the same core mechanic, so a single
+         walkthrough id covers both. Auto-shows the first time either
+         mode is started; the "?" header button replays it any time. */
+      const HACKEY_WT_ID = 'hackey-sac/howto';
+      const HACKEY_WT_STEPS = [
+        {
+          title: 'Hackey Sac',
+          body: 'Move your cursor onto the falling ball — that is your foot. Keep it under whatever color drops next.',
+        },
+        {
+          title: 'Match the Color',
+          body: 'Each ball wears one of three colors. Click the matching click-color to kick it back up.',
+          clicks: ['left', 'middle', 'right'],
+        },
+        {
+          title: "Don't Let It Drop",
+          body: 'Build a streak. Wrong click or a missed ball ends the streak. Practice mode is freeform; Game mode ramps the speed.',
+        },
+      ];
+
+      function startModeWithWalkthrough(mode) {
+        BCI.showWalkthrough(HACKEY_WT_ID, HACKEY_WT_STEPS, {
+          onClose: () => startMode(mode),
+        });
+      }
+
       document
         .getElementById('btn-practice-menu')
-        .addEventListener('click', () => startMode('practice'));
-      document.getElementById('btn-game-menu').addEventListener('click', () => startMode('game'));
+        .addEventListener('click', () => startModeWithWalkthrough('practice'));
+      document
+        .getElementById('btn-game-menu')
+        .addEventListener('click', () => startModeWithWalkthrough('game'));
       document.getElementById('splash-home').appendChild(BCI.createHomeButton());
+
+      /* "?" Help button — one in each gameplay sidebar, sitting just
+         before that sidebar's Settings button. Replays the walkthrough. */
+      function makeHelpBtn() {
+        return BCI.createHelpButton(() => ({ id: HACKEY_WT_ID, steps: HACKEY_WT_STEPS }));
+      }
+      document.getElementById('btn-adv').insertAdjacentElement('beforebegin', makeHelpBtn());
+      document.getElementById('btn-adv-g').insertAdjacentElement('beforebegin', makeHelpBtn());
 
       document.getElementById('btn-back').addEventListener('click', () => {
         saveSessionToPersistent();
