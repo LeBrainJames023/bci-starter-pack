@@ -33,6 +33,16 @@ Nothing in this file gets built until the current feature is complete.
 - Ball trajectory affected by which click is used
 - Analytics: blocks vs goals, reaction to shot color, cursor travel distance
 
+**Goalie mode v1 ships first** with a single Penalty Shootout mode (see `games/goalie-striker/GAME_PLAN.md` for locked v1 spec). Striker mode and the items below are deferred to v1.5+.
+
+**Striker mode (v1.5).** First-person view from behind the kicker looking at the goal. Goal divided into 6 colored zones (top-left/mid/right, bottom-left/mid/right). Cursor aims at a zone, click the matching color to shoot. AI keeper present — initially static for v1.5, then learns player tendencies over rounds in v2. Same color/side conventions as Goalie mode so the read transfers between modes.
+
+**Goalie hard mode — true 6-zone grid (v2).** Replaces the "side + color" read with a true 6-zone grid where the cursor must land in one of six specific positions on the goal frame and color is independent of zone. More precision, closer to real keeping, harder for BCI cursor. Unlocks after the player demonstrates competence in the v1 Side+Color mode.
+
+**Penalty Shootout dual mode (v2+).** Alternating Goalie + Striker rounds, sudden death after 5. Requires Striker mode to ship first.
+
+**Curved shots (v2+).** Late-curving balls that change side mid-flight, forcing a re-read. Adds a new dimension on top of the side+color baseline.
+
 ### BCI Batter / Pitcher (Baseball)
 
 - Batter: color-coded pitch types, click matching intent at the right moment
