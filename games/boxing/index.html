@@ -268,6 +268,10 @@
       const COUNTER_RING_START_RADIUS = 120;
       const COUNTER_FEEDBACK_MS = 400;
 
+      // Damage values per the GAME_PLAN
+      const COMBO_DAMAGE_PER_HIT = 10;
+      const COUNTER_DAMAGE_PER_HIT = 12;
+
       const game = {
         phase: PHASE.IDLE,
         phaseStartedAt: 0,
@@ -287,10 +291,22 @@
         // Counter phase state — same lifecycle as combo
         counterPunches: [],
         counter: { dodged: 0, hit: 0 },
+        // Round-level totals — accumulated across all exchanges, shown on
+        // the round-end card.
+        roundTotals: {
+          comboHitsTotal: 0,
+          comboMissedTotal: 0,
+          dodgesTotal: 0,
+          hitsTakenTotal: 0,
+          combosCount: 0,
+          countersCount: 0,
+        },
+        // Round result — null until the round ends. Set on KO or decision.
+        roundResult: null,
       };
 
-      // Live analytics session — saved at round end (checkpoint 7 wires the view)
-      const session = BCI.createSession();
+      // Live analytics session — saved at round end. Reset by resetRound().
+      let session = BCI.createSession();
 
       function rollInitiator() {
         return Math.random() < 0.5 ? 'player' : 'opponent';
@@ -319,6 +335,49 @@
         ];
       }
 
+      function applyComboDamage() {
+        const damage = game.combo.hits * COMBO_DAMAGE_PER_HIT;
+        if (damage > 0) {
+          game.opponentHP = Math.max(0, game.opponentHP - damage);
+        }
+        game.roundTotals.comboHitsTotal += game.combo.hits;
+        game.roundTotals.comboMissedTotal += game.combo.closedCount;
+        game.roundTotals.combosCount += 1;
+      }
+
+      function applyCounterDamage() {
+        const damage = game.counter.hit * COUNTER_DAMAGE_PER_HIT;
+        if (damage > 0) {
+          game.playerHP = Math.max(0, game.playerHP - damage);
+        }
+        game.roundTotals.dodgesTotal += game.counter.dodged;
+        game.roundTotals.hitsTakenTotal += game.counter.hit;
+        game.roundTotals.countersCount += 1;
+      }
+
+      function checkKO(now) {
+        if (game.opponentHP <= 0) {
+          game.roundResult = { winner: 'player', reason: 'ko' };
+          enterPhase(PHASE.ROUND_END, now);
+          return true;
+        }
+        if (game.playerHP <= 0) {
+          game.roundResult = { winner: 'opponent', reason: 'ko' };
+          enterPhase(PHASE.ROUND_END, now);
+          return true;
+        }
+        return false;
+      }
+
+      function resolveDecision(now) {
+        let winner;
+        if (game.playerHP > game.opponentHP) winner = 'player';
+        else if (game.opponentHP > game.playerHP) winner = 'opponent';
+        else winner = 'draw';
+        game.roundResult = { winner, reason: 'decision' };
+        enterPhase(PHASE.ROUND_END, now);
+      }
+
       function enterPhase(phase, now) {
         game.phase = phase;
         game.phaseStartedAt = now;
@@ -332,6 +391,21 @@
           spawnComboWindows(now);
         } else if (phase === PHASE.COUNTER) {
           spawnCounterPunches(now);
+        } else if (phase === PHASE.POST_COMBO) {
+          applyComboDamage();
+        } else if (phase === PHASE.POST_COUNTER) {
+          applyCounterDamage();
+        } else if (phase === PHASE.ROUND_END) {
+          BCI.saveSession(GAME_ID, session, {
+            mode: 'standard',
+            result: game.roundResult,
+            finalPlayerHP: game.playerHP,
+            finalOpponentHP: game.opponentHP,
+            comboHitsTotal: game.roundTotals.comboHitsTotal,
+            dodgesTotal: game.roundTotals.dodgesTotal,
+            combosCount: game.roundTotals.combosCount,
+            countersCount: game.roundTotals.countersCount,
+          });
         }
       }
 
@@ -342,6 +416,28 @@
           const next = game.exchangeQueue.shift();
           enterPhase(next, now);
         }
+      }
+
+      function resetRound(now) {
+        game.playerHP = 100;
+        game.opponentHP = 100;
+        game.roundEndsAt = now + ROUND_DURATION_MS;
+        game.roundResult = null;
+        game.exchangeNumber = 0;
+        game.comboWindows = [];
+        game.combo = { hits: 0, closedCount: 0 };
+        game.counterPunches = [];
+        game.counter = { dodged: 0, hit: 0 };
+        game.roundTotals = {
+          comboHitsTotal: 0,
+          comboMissedTotal: 0,
+          dodgesTotal: 0,
+          hitsTakenTotal: 0,
+          combosCount: 0,
+          countersCount: 0,
+        };
+        session = BCI.createSession();
+        enterPhase(PHASE.IDLE, now);
       }
 
       // Bootstrap the first IDLE phase (rolls initiator, builds queue)
@@ -1380,25 +1476,118 @@
         ctx.restore();
       }
 
-      function drawRoundEndPlaceholder(ctx) {
+      // Round-end button geometry — single source of truth so render and
+      // hit-test agree. Centered around H * 0.74.
+      const ROUND_END_BTN_W = 170;
+      const ROUND_END_BTN_H = 52;
+      const ROUND_END_BTN_Y = Math.round(H * 0.72);
+      const ROUND_END_BTN_GAP = 24;
+      const ROUND_END_PLAY_X = Math.round(W / 2 - ROUND_END_BTN_W - ROUND_END_BTN_GAP / 2);
+      const ROUND_END_HOME_X = Math.round(W / 2 + ROUND_END_BTN_GAP / 2);
+
+      function getRoundEndButtonAtCursor() {
+        if (game.phase !== PHASE.ROUND_END) return null;
+        const y = ROUND_END_BTN_Y;
+        const w = ROUND_END_BTN_W;
+        const h = ROUND_END_BTN_H;
+        if (
+          cursor.x >= ROUND_END_PLAY_X &&
+          cursor.x <= ROUND_END_PLAY_X + w &&
+          cursor.y >= y &&
+          cursor.y <= y + h
+        ) {
+          return 'play';
+        }
+        if (
+          cursor.x >= ROUND_END_HOME_X &&
+          cursor.x <= ROUND_END_HOME_X + w &&
+          cursor.y >= y &&
+          cursor.y <= y + h
+        ) {
+          return 'home';
+        }
+        return null;
+      }
+
+      function drawRoundEndButton(ctx, x, y, label, isHover) {
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#e8e4d9';
-        ctx.font = 'bold 48px "Courier New", monospace';
+        ctx.fillStyle = isHover ? 'rgba(68, 136, 255, 0.30)' : 'rgba(28, 36, 48, 0.92)';
+        ctx.fillRect(x, y, ROUND_END_BTN_W, ROUND_END_BTN_H);
+        ctx.strokeStyle = isHover ? getCSS('--click-blue') : '#3a4150';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 0.5, y + 0.5, ROUND_END_BTN_W - 1, ROUND_END_BTN_H - 1);
+        ctx.fillStyle = isHover ? '#e8e4d9' : '#c0c8d0';
+        ctx.font = 'bold 14px "Courier New", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('ROUND END', W / 2, H * 0.45);
-        ctx.font = '12px "Courier New", monospace';
+        ctx.fillText(label, x + ROUND_END_BTN_W / 2, y + ROUND_END_BTN_H / 2);
+        ctx.restore();
+      }
+
+      function drawRoundEndOverlay(ctx) {
+        const result = game.roundResult;
+        if (!result) return;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+        ctx.fillRect(0, 0, W, H);
+
+        // Title + subtitle styled by outcome
+        let title;
+        let subtitle;
+        let color;
+        if (result.winner === 'player') {
+          title = 'VICTORY';
+          subtitle = result.reason === 'ko' ? 'By Knockout' : 'By Decision';
+          color = '#5fbf6e';
+        } else if (result.winner === 'opponent') {
+          title = 'DEFEAT';
+          subtitle = result.reason === 'ko' ? 'Knocked Out' : 'Lost on Cards';
+          color = '#d44b4b';
+        } else {
+          title = 'DRAW';
+          subtitle = 'Even on the Cards';
+          color = '#e8e4d9';
+        }
+
+        ctx.fillStyle = color;
+        ctx.font = 'bold 78px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(title, W / 2, H * 0.28);
+
+        ctx.font = '18px "Courier New", monospace';
+        ctx.fillStyle = '#c0c8d0';
+        ctx.fillText(subtitle, W / 2, H * 0.36);
+
+        // Stats block
+        ctx.font = '13px "Courier New", monospace';
         ctx.fillStyle = '#9aa4b1';
-        ctx.fillText('Full round-end overlay ships in checkpoint 5', W / 2, H * 0.55);
+        const totals = game.roundTotals;
+        const lines = [
+          `Punches landed:  ${totals.comboHitsTotal}    Dodges made:  ${totals.dodgesTotal}`,
+          `Combos thrown:  ${totals.combosCount}    Counters faced:  ${totals.countersCount}`,
+          `Player HP:  ${game.playerHP}    Opponent HP:  ${game.opponentHP}`,
+        ];
+        let y = H * 0.46;
+        for (const line of lines) {
+          ctx.fillText(line, W / 2, y);
+          y += 22;
+        }
+
+        // Buttons + cursor
+        const hover = getRoundEndButtonAtCursor();
+        drawRoundEndButton(ctx, ROUND_END_PLAY_X, ROUND_END_BTN_Y, 'PLAY AGAIN', hover === 'play');
+        drawRoundEndButton(ctx, ROUND_END_HOME_X, ROUND_END_BTN_Y, 'HOME', hover === 'home');
+
+        BCI.drawCursorDot(ctx, cursor.x, cursor.y, { arm: 9 });
         ctx.restore();
       }
 
       function update(now) {
-        // Round timer expiration takes priority over phase transitions.
+        // Round timer expiration → decision result if no KO already happened
         if (now >= game.roundEndsAt && game.phase !== PHASE.ROUND_END) {
-          enterPhase(PHASE.ROUND_END, now);
+          resolveDecision(now);
           return;
         }
         if (game.phase === PHASE.ROUND_END) return;
@@ -1460,7 +1649,12 @@
             advanceExchange(now);
           }
         } else if (now >= game.phaseEndsAt) {
-          // Active exchange phase — advance when the timer expires.
+          // Active exchange phase — advance when the timer expires. Check KO
+          // at the end of POST_COMBO / POST_COUNTER so the player sees the HP
+          // tick down before the round-end overlay drops.
+          if (game.phase === PHASE.POST_COMBO || game.phase === PHASE.POST_COUNTER) {
+            if (checkKO(now)) return;
+          }
           advanceExchange(now);
         }
       }
@@ -1527,7 +1721,7 @@
         drawHUD(ctx, msLeft);
 
         if (game.phase === PHASE.ROUND_END) {
-          drawRoundEndPlaceholder(ctx);
+          drawRoundEndOverlay(ctx);
         }
       }
 
@@ -1558,6 +1752,15 @@
         }
         if (game.phase === PHASE.COUNTER) {
           handleCounterClick(click, now);
+          return;
+        }
+        if (game.phase === PHASE.ROUND_END) {
+          const btn = getRoundEndButtonAtCursor();
+          if (btn === 'play') {
+            resetRound(now);
+          } else if (btn === 'home') {
+            BCI.goToLauncher();
+          }
         }
       });
 
