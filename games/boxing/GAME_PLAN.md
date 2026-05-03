@@ -108,6 +108,11 @@ v1.5 territory (parked for a follow-up session):
 - HP bar damage tick animation instead of instant snap
 - Sound design pass: bell, glove thuds, slow-mo whoosh, crowd reactions
 
+The full v1.5+ idea backlog (opponent personalities + LLM trash talk hook,
+body-part damage strategy, perfect-combo rewards, KO slo-mo replay,
+knockdown system, damage states, career mode, and more) lives in
+`FUTURE_FEATURES.md` under the Boxing section.
+
 ## Build History
 
 All 9 checkpoints shipped 2026-05-02:
@@ -122,6 +127,14 @@ All 9 checkpoints shipped 2026-05-02:
 8. Visual polish pass (real fighterClock slow-mo, hit shake, KO flash, crowd density)
 
 A 1.5 visual fix-up landed between checkpoints 1 and 2: tighter opponent silhouette (single-path torso with rolled shoulders), forearms properly attached with depth shading, player gloves reshaped with thumb / knuckle / cuff / brand stripe detail.
+
+A post-MVP feel-tune (2026-05-03) followed first-real-play feedback:
+defaults were unfair on offense (1-2 of 4 hits per combo). Combo base
+radius bumped 42→52, hold ratio raised 30%→60% (per the BCI timing
+windows rule), duration extended 3800→4200ms, and the faint outer guide
+ring dropped — the two concentric circles read as static during the
+hold phase, hiding the actual window from the player. Counter tuning
+left alone since defense was already feeling fair.
 
 ## Known Issues
 

@@ -176,13 +176,61 @@ Backlog from the v1 build session — held until the arcade-wide polish sweep so
 - Similar dual-role structure to Goalie / Striker
 - Analytics: shot accuracy, save rate, reaction to puck speed
 
-### Boxing
+### Boxing — v1.5+ Backlog
 
-- Move cursor to dodge incoming punches
-- Colored targets appear on opponent — click the matching intent to strike
-- Round-based with rest between rounds
-- Offense + defense mechanics in one game
-- Analytics: dodge accuracy, strike accuracy per color, reaction time under pressure
+v1 is Live. Already-parked v1.5 items live in `games/boxing/GAME_PLAN.md`:
+variable combo length, multiple opponents, multi-round + corner rest, HP
+tick animation, sound design, block + parry. Below are the ideas captured
+during the post-MVP feel-test session — ranked by impact.
+
+**Highest-impact additions**
+
+- **Opponent personalities.** Three or four named opponents with distinct
+  fight profiles: brawler (fast simple combos), counter-puncher (rare
+  initiations, longer counter sequences), boxer (head-feints — red flash
+  with no follow-through, punishes pre-emptive flinching), slugger (slow
+  but +50% damage). Without this every fight is identical.
+- **LLM-driven opponent dialogue (Claude Agent SDK hook).** Once
+  personalities exist, route between-exchange trash talk through a
+  Claude call. Each opponent's persona becomes a system prompt; the
+  agent has access to round state (HP, combos landed, etc.) and reacts
+  in character. Natural fit for the multi-agent personality experiment
+  the user is interested in eventually.
+- **Body-part damage strategy.** Head shots shorten the opponent's tell
+  window (telegraph becomes more obvious). Body shots slow their attack
+  speed. Ribs drain stamina. Right now a hit is a hit; this rewards
+  target choice without changing the click loop.
+- **Perfect-combo reward.** 4/4 in a combo auto-staggers the opponent's
+  next counter — 3 incoming punches instead of 4, or slower closing
+  rings. Skill payoff for clean offense.
+
+**Drama + game-feel polish**
+
+- **KO slo-mo replay.** The round-ending punch plays back in slow
+  motion with a camera zoom on the contact moment. Cheap to build,
+  outsized memorability.
+- **Knockdown system.** At 25 HP and 5 HP, instead of straight-up
+  losing the player goes down and has a brief rapid-click minigame to
+  beat the count. Adds drama without breaking the loop.
+- **Damage states on opponent.** As HP drops the opponent visibly
+  changes — head tilt, sweat, cut/swelling at low HP. Right now they
+  look identical at 100 HP and 5 HP.
+- **Crowd reactions tied to play.** Crowd noise builds with combo
+  streaks, goes quiet on near-KOs, explodes on the finish. Crowd
+  silhouettes already exist; just need the audio layer.
+
+**Progression hook**
+
+- **Career mode skeleton.** Rookie → Contender → Champion belts. Each
+  tier adds an opponent. Wins persist in localStorage; you re-fight
+  the champion to keep the belt. Gives a reason to come back.
+
+**Combat depth (parked — likely dilutive, revisit later)**
+
+- Stamina meter that drains on missed punches
+- Punch-sequence combos (specific click orders trigger named attacks)
+- Weight classes / character creator
+- Difficulty presets (Beginner / Pro / Champion) bundling all settings
 
 ### Archery
 

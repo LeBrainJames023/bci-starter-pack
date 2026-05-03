@@ -637,8 +637,9 @@
       // of its lifetime then shrinks linearly to zero. Settings can override
       // base radius and duration in checkpoint 6.
       const COMBO_WINDOW_COUNT = 4;
-      const COMBO_WINDOW_DURATION_MS = 3800;
-      const COMBO_BASE_RADIUS = 42;
+      const COMBO_WINDOW_DURATION_MS = 4200;
+      const COMBO_BASE_RADIUS = 52;
+      const COMBO_HOLD_RATIO = 0.6; // window stays at full size for first 60% of life
       const COMBO_HIT_FEEDBACK_MS = 400;
 
       // Counter phase tunables (Guitar Hero style closing rings).
@@ -655,8 +656,8 @@
 
       // Boxing-specific setting maps. Effective values override these via the
       // settings panel; the constants above are the fallback "Normal" defaults.
-      const WINDOW_SIZE_MAP = { small: 32, medium: 42, large: 52 };
-      const WINDOW_DURATION_MAP = { faster: 3000, normal: 3800, slower: 4600 };
+      const WINDOW_SIZE_MAP = { small: 42, medium: 52, large: 64 };
+      const WINDOW_DURATION_MAP = { faster: 3400, normal: 4200, slower: 5000 };
       const COUNTER_SPEED_MAP = { faster: 1000, normal: 1300, slower: 1600 };
 
       function getBoxingSetting(key, fallback) {
@@ -1043,7 +1044,7 @@
       function computeWindowRadius(window, now) {
         const elapsed = now - window.spawnedAt;
         if (elapsed >= window.durationMs) return 0;
-        const holdMs = window.durationMs * 0.3;
+        const holdMs = window.durationMs * COMBO_HOLD_RATIO;
         if (elapsed < holdMs) return window.baseRadius;
         const shrinkMs = window.durationMs - holdMs;
         const shrinkProgress = (elapsed - holdMs) / shrinkMs;
@@ -1189,20 +1190,16 @@
           if (r <= 0) continue;
 
           ctx.save();
-          // Outer ring at base radius — shows the maximum hit zone
-          ctx.strokeStyle = `${color}55`;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(anchor.x, anchor.y, w.baseRadius, 0, Math.PI * 2);
-          ctx.stroke();
-          // Inner shrinking hit zone fill
-          ctx.fillStyle = `${color}30`;
+          // Single hit zone: filled circle + bright outline at the current
+          // (shrinking) radius. No faint outer guide ring — earlier playtest
+          // showed the two concentric circles read as static during the hold
+          // phase, hiding the actual window from the player.
+          ctx.fillStyle = `${color}3a`;
           ctx.beginPath();
           ctx.arc(anchor.x, anchor.y, r, 0, Math.PI * 2);
           ctx.fill();
-          // Bright ring at the current hit-zone edge
           ctx.strokeStyle = color;
-          ctx.lineWidth = 2.5;
+          ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.arc(anchor.x, anchor.y, r, 0, Math.PI * 2);
           ctx.stroke();
