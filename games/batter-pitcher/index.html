@@ -450,6 +450,100 @@
       .results-headline .accent-good {
         color: var(--good);
       }
+
+      /* ── Settings panel ─────────────────────────────────────── */
+      .settings-card {
+        min-width: 480px;
+        gap: 14px;
+      }
+      .settings-row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .settings-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .settings-value {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+        border: none;
+      }
+      .settings-help {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+      .settings-buttons {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+      .settings-btn {
+        flex: 1;
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .settings-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-orange);
+      }
+      .settings-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .settings-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
     </style>
   </head>
   <body>
@@ -484,7 +578,7 @@
           <div class="header-right">
             <span class="help-slot" id="help-slot"></span>
             <button class="icon-btn" id="btn-analytics" disabled>Stats</button>
-            <button class="icon-btn" id="btn-settings" disabled>Settings</button>
+            <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
         </header>
 
@@ -572,6 +666,40 @@
                   Change Length
                 </button>
                 <button class="results-btn results-btn--ghost" id="result-home">Home</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="overlay" id="settings-overlay">
+            <div class="overlay-card settings-card">
+              <div class="overlay-title">Settings</div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Cursor Sensitivity</span>
+                  <span class="settings-value" id="set-sens-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-sens" min="25" max="200" step="5" value="100" />
+                <div class="settings-help">
+                  How fast the on-screen cursor moves with your input.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Pitch Speed</span>
+                  <span class="settings-value" id="set-speed-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-speed" min="50" max="160" step="5" value="100" />
+                <div class="settings-help">
+                  Lower = slower pitches, more time to read color and react. 100% is the
+                  default (fastball ≈ 2s, changeup ≈ 2.8s).
+                </div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="set-reset">
+                  Reset Defaults
+                </button>
+                <button class="settings-btn settings-btn--ghost" id="set-close">Close</button>
               </div>
             </div>
           </div>
@@ -742,6 +870,12 @@
 
       const tunables = { ...DEFAULTS };
 
+      function loadTunablesFromSettings() {
+        const g = BCI.getGameSettings(GAME_ID);
+        if (typeof g.pitchSpeedMul === 'number') tunables.pitchSpeedMul = g.pitchSpeedMul;
+      }
+      loadTunablesFromSettings();
+
       /* ── Virtual cursor ───────────────────────────────────────── */
       const settings = BCI.getEffectiveSettings(GAME_ID);
       const virtualCursor = BCI.createVirtualCursor(canvas, {
@@ -814,6 +948,39 @@
       /* Analytics session — created at round start, persisted at round end. */
       let analyticsSession = null;
       let pitchStartedAt = 0;
+
+      /* Pause-on-modal — when settings/stats overlay is open, freeze
+         all in-flight timers so a long settings tweak doesn't blow
+         past the next pitch. Time is restored on close. */
+      let paused = false;
+      let pauseStartedAt = 0;
+
+      function pauseGame() {
+        if (paused) return;
+        if (
+          gameState !== STATE.GET_READY &&
+          gameState !== STATE.PRE_PITCH &&
+          gameState !== STATE.PITCH_FLIGHT &&
+          gameState !== STATE.RESOLVING
+        )
+          return;
+        paused = true;
+        pauseStartedAt = performance.now();
+      }
+
+      function unpauseGame() {
+        if (!paused) return;
+        const delta = performance.now() - pauseStartedAt;
+        paused = false;
+        stateEnteredAt += delta;
+        pitchStartedAt += delta;
+        if (activePitch) {
+          if (activePitch.releaseMs) activePitch.releaseMs += delta;
+          if (activePitch.arrivalMs) activePitch.arrivalMs += delta;
+        }
+        if (pitchFlashUntil > 0) pitchFlashUntil += delta;
+        if (postContactBall && postContactBall.startMs) postContactBall.startMs += delta;
+      }
 
       function getCSSVar(name) {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -1054,6 +1221,7 @@
       /* ── Click handler — swing detection ──────────────────────── */
       canvas.addEventListener('mousedown', (e) => {
         if (gameState !== STATE.PITCH_FLIGHT) return;
+        if (paused) return;
         e.preventDefault();
         const colorName = clickIdToColorName(e.button);
         const clickId = e.button;
@@ -1884,7 +2052,7 @@
 
       /* ── Loop ────────────────────────────────────────────────── */
       function loop() {
-        if (gameState !== STATE.MENU) {
+        if (gameState !== STATE.MENU && !paused) {
           update();
         }
         render();
@@ -1940,6 +2108,55 @@
       });
       document.getElementById('result-home').addEventListener('click', () => {
         BCI.goToLauncher();
+      });
+
+      /* ── Settings panel ───────────────────────────────────────── */
+      const settingsOverlay = document.getElementById('settings-overlay');
+      const setSens = document.getElementById('set-sens');
+      const setSensVal = document.getElementById('set-sens-val');
+      const setSpeed = document.getElementById('set-speed');
+      const setSpeedVal = document.getElementById('set-speed-val');
+
+      function syncSettingsUIFromState() {
+        const sens = virtualCursor.getSensitivity();
+        setSens.value = Math.round(sens * 100);
+        setSensVal.textContent = sens.toFixed(2) + '×';
+        setSpeed.value = Math.round(tunables.pitchSpeedMul * 100);
+        setSpeedVal.textContent = tunables.pitchSpeedMul.toFixed(2) + '×';
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', () => {
+        syncSettingsUIFromState();
+        pauseGame();
+        settingsOverlay.classList.add('is-visible');
+      });
+
+      document.getElementById('set-close').addEventListener('click', () => {
+        settingsOverlay.classList.remove('is-visible');
+        unpauseGame();
+      });
+
+      document.getElementById('set-reset').addEventListener('click', () => {
+        // Restore tunables and global cursor sensitivity to defaults
+        tunables.pitchSpeedMul = DEFAULTS.pitchSpeedMul;
+        virtualCursor.setSensitivity(DEFAULTS.cursorSensitivity);
+        BCI.saveGlobalSettings({ cursorSensitivity: DEFAULTS.cursorSensitivity });
+        BCI.saveGameSettings(GAME_ID, { pitchSpeedMul: DEFAULTS.pitchSpeedMul });
+        syncSettingsUIFromState();
+      });
+
+      setSens.addEventListener('input', () => {
+        const v = parseInt(setSens.value, 10) / 100;
+        virtualCursor.setSensitivity(v);
+        setSensVal.textContent = v.toFixed(2) + '×';
+        BCI.saveGlobalSettings({ cursorSensitivity: v });
+      });
+
+      setSpeed.addEventListener('input', () => {
+        const v = parseInt(setSpeed.value, 10) / 100;
+        tunables.pitchSpeedMul = v;
+        setSpeedVal.textContent = v.toFixed(2) + '×';
+        BCI.saveGameSettings(GAME_ID, { pitchSpeedMul: v });
       });
 
       loop();
