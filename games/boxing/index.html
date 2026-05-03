@@ -455,60 +455,74 @@
         // Opponent vertical anchor — feet roughly at the ring floor line
         const feetY = H * 0.86 + bob.y + cam.y * 0.3;
 
-        // Sizes
-        const torsoW = 230;
+        // Sizes — tighter than the first pass; reads as a boxer rather than a flowerpot.
+        const shoulderW = 200;
+        const waistW = 168;
         const torsoH = 220;
-        const headR = 52;
-        const shoulderW = 280;
+        const headR = 50;
 
-        // Torso top / bottom
-        const torsoBottom = feetY - 60; // a bit above feet to leave room for trunks shadow
+        const torsoBottom = feetY - 60;
         const torsoTop = torsoBottom - torsoH;
+        const shoulderY = torsoTop + 28;
 
         ctx.save();
 
-        // ── Trunks (lower torso silhouette) ──
+        // ── Trunks ──
         ctx.fillStyle = getCSS('--opponent-trunks');
         ctx.beginPath();
-        ctx.moveTo(cx - torsoW / 2 + 10, torsoBottom);
-        ctx.lineTo(cx + torsoW / 2 - 10, torsoBottom);
-        ctx.lineTo(cx + torsoW / 2 - 30, torsoBottom + 90);
-        ctx.lineTo(cx - torsoW / 2 + 30, torsoBottom + 90);
+        ctx.moveTo(cx - waistW / 2 + 4, torsoBottom);
+        ctx.lineTo(cx + waistW / 2 - 4, torsoBottom);
+        ctx.lineTo(cx + waistW / 2 - 22, torsoBottom + 80);
+        ctx.lineTo(cx - waistW / 2 + 22, torsoBottom + 80);
         ctx.closePath();
         ctx.fill();
 
         // Trunks waistband trim
         ctx.fillStyle = getCSS('--opponent-trunks-trim');
-        ctx.fillRect(cx - torsoW / 2 + 10, torsoBottom - 4, torsoW - 20, 8);
+        ctx.fillRect(cx - waistW / 2 + 4, torsoBottom - 4, waistW - 8, 8);
 
-        // ── Torso (skin + tank top suggestion) ──
+        // ── Torso silhouette — single path with rolled shoulders, gentle waist taper ──
         ctx.fillStyle = getCSS('--opponent-skin');
-        // Tapered torso: shoulders wider than waist
         ctx.beginPath();
-        ctx.moveTo(cx - shoulderW / 2, torsoTop + 30);
-        ctx.lineTo(cx + shoulderW / 2, torsoTop + 30);
-        ctx.lineTo(cx + torsoW / 2, torsoBottom);
-        ctx.lineTo(cx - torsoW / 2, torsoBottom);
+        ctx.moveTo(cx - shoulderW / 2, shoulderY);
+        // Roll up over left shoulder to neck
+        ctx.quadraticCurveTo(cx - shoulderW / 2 + 24, torsoTop - 4, cx - 22, torsoTop + 4);
+        // Up the neck to the head base
+        ctx.lineTo(cx - 18, torsoTop - 18);
+        ctx.lineTo(cx + 18, torsoTop - 18);
+        ctx.lineTo(cx + 22, torsoTop + 4);
+        // Roll over right shoulder
+        ctx.quadraticCurveTo(cx + shoulderW / 2 - 24, torsoTop - 4, cx + shoulderW / 2, shoulderY);
+        // Down right side, gentle taper to waist
+        ctx.lineTo(cx + waistW / 2, torsoBottom);
+        // Across waist, back up the left side
+        ctx.lineTo(cx - waistW / 2, torsoBottom);
         ctx.closePath();
         ctx.fill();
 
-        // Subtle chest shading (centerline)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
-        ctx.fillRect(cx - 1, torsoTop + 60, 2, torsoH - 80);
-
-        // ── Shoulders / deltoids ──
-        ctx.fillStyle = getCSS('--opponent-skin');
+        // Pec highlight (subtle)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.beginPath();
-        ctx.arc(cx - shoulderW / 2 + 20, torsoTop + 40, 42, 0, Math.PI * 2);
-        ctx.arc(cx + shoulderW / 2 - 20, torsoTop + 40, 42, 0, Math.PI * 2);
+        ctx.ellipse(cx - 38, torsoTop + 60, 30, 17, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 38, torsoTop + 60, 30, 17, 0, 0, Math.PI * 2);
         ctx.fill();
 
+        // Centerline shadow (chest split)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+        ctx.fillRect(cx - 1, torsoTop + 50, 2, torsoH - 90);
+
+        // Subtle ab/oblique lines
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.fillRect(cx - 28, torsoTop + 130, 56, 1);
+        ctx.fillRect(cx - 28, torsoTop + 158, 56, 1);
+
         // ── Head ──
-        const headY = torsoTop - headR + 14;
-        // Head shadow (under chin)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+        const headY = torsoTop - headR + 4;
+
+        // Chin shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
-        ctx.ellipse(cx, headY + headR - 4, headR * 0.7, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, headY + headR - 6, headR * 0.55, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Head fill
@@ -517,101 +531,232 @@
         ctx.ellipse(cx, headY, headR, headR * 1.08, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Hair (top of head, dark)
+        // Hair
         ctx.fillStyle = '#1c1410';
         ctx.beginPath();
-        ctx.ellipse(cx, headY - headR * 0.45, headR * 0.95, headR * 0.55, 0, Math.PI, Math.PI * 2);
+        ctx.ellipse(cx, headY - headR * 0.42, headR * 0.95, headR * 0.55, 0, Math.PI, Math.PI * 2);
         ctx.fill();
 
-        // Eyes (dim slits)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-        ctx.fillRect(cx - 18, headY - 4, 12, 3);
-        ctx.fillRect(cx + 6, headY - 4, 12, 3);
+        // Brow shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(cx - 22, headY - 11, 16, 5);
+        ctx.fillRect(cx + 6, headY - 11, 16, 5);
 
-        // Mouthguard hint (a slight white slash)
-        ctx.fillStyle = 'rgba(220, 220, 220, 0.6)';
-        ctx.fillRect(cx - 8, headY + 18, 16, 3);
+        // Eyes
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+        ctx.fillRect(cx - 20, headY - 4, 14, 4);
+        ctx.fillRect(cx + 6, headY - 4, 14, 4);
 
-        // ── Guard: forearms + gloves up at chest height ──
+        // Nose hint
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.20)';
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx, headY + 2);
+        ctx.lineTo(cx - 3, headY + 14);
+        ctx.lineTo(cx + 3, headY + 14);
+        ctx.stroke();
+
+        // Mouthguard hint
+        ctx.fillStyle = 'rgba(220, 220, 220, 0.55)';
+        ctx.fillRect(cx - 9, headY + 22, 18, 3);
+
+        // ── Forearms + gloves (chest-height guard) ──
+        // Forearms drawn after the torso so the inner edges read as in front of
+        // the body, with shading to differentiate them from the chest skin.
         const gloveY = torsoTop + 100;
         const gloveR = 38;
+        const lGloveX = cx - 70;
+        const rGloveX = cx + 70;
 
-        // Forearms (skin tones)
         ctx.fillStyle = getCSS('--opponent-skin');
-        // Left forearm
+        // Left forearm — outer shoulder edge → glove wrist
         ctx.beginPath();
-        ctx.moveTo(cx - shoulderW / 2 + 20, torsoTop + 60);
-        ctx.lineTo(cx - 60, gloveY);
-        ctx.lineTo(cx - 60 + 30, gloveY + 8);
-        ctx.lineTo(cx - shoulderW / 2 + 50, torsoTop + 70);
+        ctx.moveTo(cx - shoulderW / 2 + 6, shoulderY + 12);
+        ctx.lineTo(cx - shoulderW / 2 + 36, shoulderY + 22);
+        ctx.lineTo(lGloveX + 22, gloveY + 6);
+        ctx.lineTo(lGloveX - 8, gloveY + 6);
         ctx.closePath();
         ctx.fill();
         // Right forearm
         ctx.beginPath();
-        ctx.moveTo(cx + shoulderW / 2 - 20, torsoTop + 60);
-        ctx.lineTo(cx + 60, gloveY);
-        ctx.lineTo(cx + 60 - 30, gloveY + 8);
-        ctx.lineTo(cx + shoulderW / 2 - 50, torsoTop + 70);
+        ctx.moveTo(cx + shoulderW / 2 - 6, shoulderY + 12);
+        ctx.lineTo(cx + shoulderW / 2 - 36, shoulderY + 22);
+        ctx.lineTo(rGloveX - 22, gloveY + 6);
+        ctx.lineTo(rGloveX + 8, gloveY + 6);
         ctx.closePath();
         ctx.fill();
 
-        // Gloves (left + right, raised in guard)
-        drawGlove(ctx, cx - 60, gloveY, gloveR, getCSS('--opponent-glove'), '#0a0d18');
-        drawGlove(ctx, cx + 60, gloveY, gloveR, getCSS('--opponent-glove'), '#0a0d18');
+        // Forearm inner-edge shading — gives them depth against the torso
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.beginPath();
+        ctx.moveTo(cx - shoulderW / 2 + 18, shoulderY + 18);
+        ctx.lineTo(cx - shoulderW / 2 + 36, shoulderY + 22);
+        ctx.lineTo(lGloveX + 22, gloveY + 6);
+        ctx.lineTo(lGloveX + 6, gloveY + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + shoulderW / 2 - 18, shoulderY + 18);
+        ctx.lineTo(cx + shoulderW / 2 - 36, shoulderY + 22);
+        ctx.lineTo(rGloveX - 22, gloveY + 6);
+        ctx.lineTo(rGloveX - 6, gloveY + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gloves
+        drawGlove(ctx, lGloveX, gloveY, gloveR, getCSS('--opponent-glove'), '#0a0d18');
+        drawGlove(ctx, rGloveX, gloveY, gloveR, getCSS('--opponent-glove'), '#0a0d18');
 
         ctx.restore();
       }
 
       function drawGlove(ctx, x, y, r, fill, dark) {
-        // A boxing glove: rounded body + thumb nub + wrist cuff
+        // Used for the opponent's smaller guard gloves. Player POV gloves at
+        // the bottom of the screen use drawPlayerGlove() for tighter detail.
         ctx.save();
-        // Glove body
+        // Body — slightly taller than wide for a glove silhouette (not a sphere)
         ctx.fillStyle = fill;
         ctx.beginPath();
-        ctx.ellipse(x, y, r * 1.05, r, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y, r * 0.95, r * 1.05, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Thumb (small nub on the inside)
+        // Thumb — chunky bump on the inner side
         ctx.beginPath();
-        ctx.ellipse(x - r * 0.55, y - r * 0.1, r * 0.32, r * 0.45, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(x - r * 0.6, y - r * 0.18, r * 0.34, r * 0.5, -0.35, 0, Math.PI * 2);
         ctx.fill();
 
-        // Highlight crease
+        // Knuckle line — short dark band across the punching surface
         ctx.strokeStyle = dark;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.ellipse(x, y, r * 0.85, r * 0.78, 0, Math.PI * 0.05, Math.PI * 0.95);
+        ctx.ellipse(x, y - r * 0.05, r * 0.78, r * 0.85, 0, Math.PI * 0.93, Math.PI * 1.07);
+        ctx.stroke();
+
+        // Subtle white highlight (light from above)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(
+          x + r * 0.1,
+          y - r * 0.18,
+          r * 0.4,
+          r * 0.32,
+          -0.4,
+          Math.PI * 0.2,
+          Math.PI * 0.8
+        );
         ctx.stroke();
 
         // Wrist cuff
         ctx.fillStyle = dark;
-        ctx.fillRect(x - r * 0.7, y + r * 0.7, r * 1.4, r * 0.45);
+        ctx.fillRect(x - r * 0.78, y + r * 0.7, r * 1.56, r * 0.42);
         ctx.fillStyle = fill;
-        ctx.fillRect(x - r * 0.55, y + r * 0.78, r * 1.1, r * 0.12);
+        ctx.fillRect(x - r * 0.65, y + r * 0.78, r * 1.3, r * 0.1);
         ctx.restore();
       }
 
       function drawPlayerGloves(ctx, t, cam) {
-        // Player POV: two red gloves at the bottom corners, partially in frame.
-        // They're attached to the camera bob more heavily than the world.
-        const lx = 90 + cam.x * 1.2;
-        const rx = W - 90 + cam.x * 1.2;
-        const gy = H - 50 + cam.y * 1.0;
-        const r = 70;
+        // Player POV: two red gloves at the bottom corners. Larger and more
+        // detailed than drawGlove since they're seen up close. Tilted slightly
+        // inward like a fighter's gloves resting in stance.
+        const lx = 95 + cam.x * 1.2;
+        const rx = W - 95 + cam.x * 1.2;
+        const gy = H - 55 + cam.y * 1.0;
+        const r = 75;
 
-        // Subtle shadow on the floor under each glove
+        // Floor shadows
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
         ctx.beginPath();
-        ctx.ellipse(lx + 6, gy + r * 0.95, r * 0.95, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(lx + 6, gy + r * 0.95, r * 0.95, 11, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(rx - 6, gy + r * 0.95, r * 0.95, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(rx - 6, gy + r * 0.95, r * 0.95, 11, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        drawGlove(ctx, lx, gy, r, getCSS('--player-glove'), getCSS('--player-glove-dark'));
-        drawGlove(ctx, rx, gy, r, getCSS('--player-glove'), getCSS('--player-glove-dark'));
+        drawPlayerGlove(ctx, lx, gy, r, 'L');
+        drawPlayerGlove(ctx, rx, gy, r, 'R');
+      }
+
+      function drawPlayerGlove(ctx, x, y, r, side) {
+        const tilt = side === 'L' ? 0.12 : -0.12;
+        const fill = getCSS('--player-glove');
+        const dark = getCSS('--player-glove-dark');
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(tilt);
+
+        // Glove body — taller than wide, real boxing-glove silhouette
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 0.92, r * 1.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Top highlight (overhead light)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.12, -r * 0.4, r * 0.55, r * 0.3, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Thumb — visible bump on the inside (toward camera centerline)
+        const thumbX = side === 'L' ? r * 0.55 : -r * 0.55;
+        const thumbY = -r * 0.25;
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.ellipse(thumbX, thumbY, r * 0.32, r * 0.5, side === 'L' ? 0.3 : -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Thumb seam shadow
+        ctx.fillStyle = dark;
+        ctx.beginPath();
+        ctx.ellipse(
+          thumbX * 0.6,
+          thumbY + r * 0.15,
+          r * 0.18,
+          r * 0.06,
+          side === 'L' ? 0.2 : -0.2,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Knuckle line
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.05, r * 0.75, r * 0.88, 0, Math.PI * 0.93, Math.PI * 1.07);
+        ctx.stroke();
+
+        // Finger separation hints (subtle creases at the top)
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.3, -r * 0.62);
+        ctx.lineTo(-r * 0.32, -r * 0.4);
+        ctx.moveTo(r * 0.3, -r * 0.62);
+        ctx.lineTo(r * 0.32, -r * 0.4);
+        ctx.stroke();
+
+        // Wrist cuff — wide band going off-frame
+        ctx.fillStyle = dark;
+        ctx.fillRect(-r * 0.85, r * 0.7, r * 1.7, r * 0.55);
+        // Cuff brand stripe
+        ctx.fillStyle = '#e8d8b8';
+        ctx.fillRect(-r * 0.7, r * 0.78, r * 1.4, r * 0.1);
+        // Wrist wrap suggestion below the cuff
+        ctx.fillStyle = fill;
+        ctx.fillRect(-r * 0.85, r * 0.96, r * 1.7, r * 0.1);
+
+        // Logo dot on the brand stripe
+        ctx.fillStyle = dark;
+        ctx.beginPath();
+        ctx.arc(0, r * 0.83, r * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
       }
 
       /* ─────────────────────────────────────────────────────────
