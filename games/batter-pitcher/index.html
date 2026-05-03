@@ -392,7 +392,7 @@
           <div class="hud">
             <div class="hud-stat">
               <div class="hud-label">Pitch</div>
-              <div class="hud-value" id="hud-pitch">–/–</div>
+              <div class="hud-value" id="hud-pitch">0</div>
             </div>
             <div class="hud-stat">
               <div class="hud-label">Hits</div>
@@ -426,8 +426,8 @@
                 <div class="mode-card mode-card--active">
                   <div class="mode-name">Batter</div>
                   <div class="mode-desc">
-                    Read the pitch color, lock the bat upper or lower, click matching color at
-                    contact.
+                    Read the pitch color, position the bat with your cursor at the target marker,
+                    click matching color at contact.
                     <br /><br />
                     <strong>Blue</strong> = Fastball &middot; <strong>Orange</strong> = Curveball
                     &middot; <strong>Purple</strong> = Changeup
@@ -446,7 +446,8 @@
                 </div>
               </div>
               <div class="menu-help">
-                Checkpoint 1 preview &mdash; field, batter, snap-to-zone bat. No pitches yet.
+                Checkpoint 2.5 &mdash; free-cursor swing, target marker, slower pitches.
+                Round structure (10-pitch cap + end screen) ships in checkpoint 3.
               </div>
             </div>
           </div>
@@ -455,8 +456,7 @@
         <div class="bottom-bar">
           <div class="bb-content">
             <div class="status-msg" id="status-msg">
-              Move the cursor up or down to lock the bat.
-              <span class="accent">Upper &middot; Lower</span>
+              Step in. <span class="accent">Read the pitch color, meet the target marker, click to swing.</span>
             </div>
           </div>
           <div class="home-slot" id="home-slot"></div>
@@ -500,25 +500,50 @@
         purple: '#aa44ff',
       };
 
-      /* Color → pitch mapping (locked v1 spec):
-           Blue   = Fastball  (left click)
-           Orange = Curveball (right click)
-           Purple = Changeup  (middle click)
-         Mouse buttons: 0=left=blue, 1=middle=purple, 2=right=orange. */
       const PITCHES = ['fastball', 'curveball', 'changeup'];
       const PITCH_TO_COLOR = {
         fastball: 'blue',
         curveball: 'orange',
         changeup: 'purple',
       };
-      const COLOR_TO_PITCH = {
-        blue: 'fastball',
-        orange: 'curveball',
-        purple: 'changeup',
+
+      function clickIdToColorName(id) {
+        if (id === 0) return 'blue';
+        if (id === 1) return 'purple';
+        if (id === 2) return 'orange';
+        return null;
+      }
+
+      /* Per-pitch flight times — slowed further in ck2.6 to give BCI
+         users a real chance to read trajectory + react to the contact
+         window cue. */
+      const PITCH_FLIGHT_MS = {
+        fastball: 2000,
+        curveball: 2400,
+        changeup: 2800,
       };
 
-      /* Two strike-zone bands (locked v1 spec). */
-      const BANDS = ['upper', 'lower'];
+      /* Timing windows (ms relative to ball-arrival time). Ck2.7 pivot:
+         GOOD window is now huge (1500ms) so almost any reasonable swing
+         during the pitch's flight registers contact. PERFECT timing is
+         the way to upgrade a Single into a HR, not a gate to make hits
+         possible at all. BCI users need a swing window that matches
+         natural reaction, not a Guitar-Hero-precise gate. */
+      const PERFECT_WINDOW_MS = 250;
+      const GOOD_WINDOW_MS = 1500;
+      const SWING_GRACE_MS = 1600; // slightly past GOOD so late swings still count
+
+      /* Free-cursor proximity tolerances (pixels of vertical distance
+         between cursor at click time and the pitch's landing Y). */
+      const ON_PITCH_PX = 35; // within this = on the pitch (HR/Single possible)
+      const NEAR_PITCH_PX = 70; // within this but outside ON = foul
+      // Beyond NEAR_PITCH_PX = whiff (called as 'wrong height' strike)
+
+      /* Pause durations between game-loop phases. */
+      const GET_READY_MS = 3000; // pre-roll before first pitch
+      const PRE_PITCH_MS = 700;
+      const RESOLVE_MS = 2500; // ck2.5: long enough to read the outcome message
+      const FLASH_MS = 480;
 
       /* ── Field geometry — proper baseball diamond, catcher POV ──
          Sky + crowd at top, outfield wall, then a green field with a
@@ -537,8 +562,6 @@
         wallH: 20,
 
         // Diamond corners in screen-space (perspective from catcher).
-        // 2B is closest to the horizon (small), 1B/3B at the diamond's
-        // widest point, home plate in the foreground.
         diamond2BX: 400,
         diamond2BY: 220,
         diamond1BX: 600,
@@ -548,8 +571,7 @@
         diamond3BX: 200,
         diamond3BY: 360,
 
-        // Pitcher's mound — between 2B and home, sitting on the infield
-        // grass (slightly above center for proper baseball geometry).
+        // Pitcher's mound
         moundX: 400,
         moundY: 300,
         moundRX: 78,
@@ -564,27 +586,34 @@
         plateW: 76,
         plateH: 22,
 
-        // Strike zone — floats above home plate, smaller than v1-prev,
-        // 2 horizontal bands (upper / lower).
+        // Strike zone — pulled DOWN in ck2.5 so its bottom edge sits
+        // right at the top of home plate, anchoring the visual K-zone.
         szCenterX: 400,
-        szCenterY: 370,
+        szCenterY: 423,
         szW: 110,
         szH: 130,
 
-        // Right-handed batter, on screen-LEFT of the plate (catcher's
-        // left = 3B side = where RHB stands). Feet partially below the
-        // bottom of the canvas so the batter feels foreground-close.
-        batterFootX: 305,
-        batterGroundY: H + 10,
-        batterShoulderY: 305, // top of torso
-        batterHeadTopY: 220, // top of helmet (still on-screen)
+        // Right-handed batter, screen-LEFT of plate. Resized in ck2.6:
+        // feet now visible AT the canvas bottom (no longer cropped),
+        // head lower on screen than the pitcher's so the foreground /
+        // mid-distance perspective reads correctly.
+        batterFootX: 335,
+        batterGroundY: 540,
+        batterShoulderY: 330,
+        batterHeadTopY: 280,
+
+        // Batter's box outline (chalk rectangle in the dirt next to the
+        // plate). Repositioned in ck2.6 to surround the visible feet.
+        boxX: 290,
+        boxY: 510,
+        boxW: 80,
+        boxH: 32,
       };
 
       /* ── Tunables ─────────────────────────────────────────────── */
       const DEFAULTS = {
         cursorSensitivity: 1.0,
-        bandSwayPx: 5, // sway amplitude (px) when bat is settling into lock
-        bandHysteresisPx: 5, // px past divider before lock flips bands
+        pitchSpeedMul: 1.0, // settings hook for ck5
       };
 
       const tunables = { ...DEFAULTS };
@@ -594,62 +623,373 @@
       const virtualCursor = BCI.createVirtualCursor(canvas, {
         sensitivity: settings.cursorSensitivity ?? tunables.cursorSensitivity,
         startX: FIELD.szCenterX,
-        startY: FIELD.szCenterY + 20,
+        startY: FIELD.szCenterY,
       });
 
       /* ── Game state ───────────────────────────────────────────── */
       const STATE = {
         MENU: 'menu',
-        IDLE: 'idle', // checkpoint 1: bat-positioning preview, no pitches
+        GET_READY: 'get_ready',
+        PRE_PITCH: 'pre_pitch',
+        PITCH_FLIGHT: 'pitch_flight',
+        RESOLVING: 'resolving',
       };
 
       let gameState = STATE.MENU;
+      let stateEnteredAt = performance.now();
 
-      /* Snap-to-zone bat — only two states: 'upper' or 'lower'. */
-      let lockedBand = 'lower';
-      let lockedAtMs = performance.now();
+      /* Active pitch tracking. */
+      let activePitch = null;
+      /* Shape:
+         {
+           type:        'fastball' | 'curveball' | 'changeup',
+           color:       'blue' | 'orange' | 'purple',
+           flightMs:    number,
+           releaseMs:   number,    // set on PITCH_FLIGHT entry
+           arrivalMs:   number,    // releaseMs + flightMs
+           fromX, fromY,            // release point
+           toX, toY,                // landing point in strike zone
+           r0, r1,                   // radius at release / arrival (perspective)
+           arcAmount                // mid-flight upward arc (curveball only)
+         }
+      */
 
-      function bandBoundaries() {
-        const top = FIELD.szCenterY - FIELD.szH / 2;
-        const mid = FIELD.szCenterY;
-        const bot = FIELD.szCenterY + FIELD.szH / 2;
-        return {
-          upperTop: top,
-          upperBottom: mid,
-          lowerTop: mid,
-          lowerBottom: bot,
-          divider: mid,
-        };
-      }
+      let resolveOutcome = null; // 'hr' | 'single' | 'foul' | 'strike'
+      let resolveInfo = {};
+      let pitchFlashUntil = 0;
+      let pitchFlashKind = null; // 'good' | 'bad'
 
-      function bandAtY(y) {
-        const b = bandBoundaries();
-        return y < b.divider ? 'upper' : 'lower';
-      }
+      /* Trail history for ball motion blur (cleared per pitch). */
+      let ballTrail = [];
 
-      function updateLockedBand() {
-        const b = bandBoundaries();
-        const y = virtualCursor.y;
-        const cur = bandAtY(y);
-        if (cur === lockedBand) return;
-        const margin = tunables.bandHysteresisPx;
-        if (lockedBand === 'upper' && y > b.divider + margin) {
-          lockedBand = 'lower';
-          lockedAtMs = performance.now();
-        } else if (lockedBand === 'lower' && y < b.divider - margin) {
-          lockedBand = 'upper';
-          lockedAtMs = performance.now();
-        }
-      }
+      /* Post-contact ball — short visual pop after the swing resolves so
+         the player SEES the outcome happen (not just text). HR flies up
+         and out, single line-drives forward, foul deflects sideways,
+         strike continues through to the catcher. Lives ~600ms then
+         disappears. Independent of activePitch so it survives the
+         transition to the next pitch. */
+      let postContactBall = null;
+      /* Shape:
+         { startMs, durationMs, fromX, fromY, toX, toY,
+           color, r0, arcAmount, kind } */
 
-      function bandCenterY(band) {
-        const b = bandBoundaries();
-        if (band === 'upper') return (b.upperTop + b.upperBottom) / 2;
-        return (b.lowerTop + b.lowerBottom) / 2;
-      }
+      /* HUD counters. */
+      let pitchesFaced = 0;
+      let hits = 0;
+      let homeRuns = 0;
+      let singles = 0;
+      let fouls = 0;
+      let strikes = 0;
+      let streak = 0;
+      let longestStreak = 0;
 
       function getCSSVar(name) {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+
+      /* ── Pitch generation + resolution ────────────────────────── */
+      function setupNewPitch() {
+        const type = PITCHES[Math.floor(Math.random() * PITCHES.length)];
+        const color = PITCH_TO_COLOR[type];
+        const flightMs = PITCH_FLIGHT_MS[type] / Math.max(0.4, tunables.pitchSpeedMul);
+
+        // Release point — pitcher's throwing hand
+        const releaseX = FIELD.pitcherX + 12;
+        const releaseY = FIELD.pitcherY - FIELD.pitcherH * 0.65;
+
+        // Landing point — random position inside the strike zone (free
+        // cursor mode reads cursor proximity to this exact spot)
+        const szTop = FIELD.szCenterY - FIELD.szH / 2;
+        const szBot = FIELD.szCenterY + FIELD.szH / 2;
+        const inset = 22; // keep landing comfortably inside zone edges
+        const landingY = szTop + inset + Math.random() * (szBot - szTop - inset * 2);
+
+        // Curveball gets a cosmetic mid-flight upward arc (visual flair —
+        // landing point is unchanged, no actual breaking). Fastball &
+        // changeup fly straight.
+        const arcAmount = type === 'curveball' ? 28 : 0;
+
+        activePitch = {
+          type,
+          color,
+          flightMs,
+          releaseMs: 0,
+          arrivalMs: 0,
+          fromX: releaseX,
+          fromY: releaseY,
+          toX: FIELD.szCenterX,
+          toY: landingY,
+          r0: 5,
+          r1: 18,
+          arcAmount,
+        };
+
+        ballTrail = [];
+      }
+
+      function resolveSwing(outcome, info = {}) {
+        resolveOutcome = outcome;
+        resolveInfo = info;
+
+        if (outcome === 'hr') {
+          homeRuns++;
+          hits++;
+          streak++;
+          if (streak > longestStreak) longestStreak = streak;
+          pitchFlashKind = 'good';
+          pitchFlashUntil = performance.now() + FLASH_MS;
+          updateStatus(
+            `<span class="accent-good">HOME RUN!</span> &mdash; ${activePitch.type.toUpperCase()} crushed.`
+          );
+        } else if (outcome === 'single') {
+          singles++;
+          hits++;
+          streak++;
+          if (streak > longestStreak) longestStreak = streak;
+          pitchFlashKind = 'good';
+          pitchFlashUntil = performance.now() + FLASH_MS;
+          updateStatus(
+            `<span class="accent-good">HIT</span> &mdash; clean single off the ${activePitch.type}.`
+          );
+        } else if (outcome === 'foul') {
+          fouls++;
+          streak = 0;
+          pitchFlashKind = 'bad';
+          pitchFlashUntil = performance.now() + FLASH_MS;
+          const why = info.reason || 'just off the pitch';
+          updateStatus(`<span class="accent">FOUL</span> &mdash; ${why}.`);
+        } else if (outcome === 'strike') {
+          strikes++;
+          streak = 0;
+          pitchFlashKind = 'bad';
+          pitchFlashUntil = performance.now() + FLASH_MS;
+          if (info.reason === 'wrong color') {
+            updateStatus(
+              `<span class="accent-bad">STRIKE</span> &mdash; that was a ${activePitch.type} (${activePitch.color.toUpperCase()}).`
+            );
+          } else if (info.reason === 'bad timing') {
+            updateStatus(
+              `<span class="accent-bad">STRIKE</span> &mdash; right pitch, ${info.early ? 'too early' : 'too late'}.`
+            );
+          } else if (info.reason === 'wrong height') {
+            updateStatus(
+              `<span class="accent-bad">STRIKE</span> &mdash; bat way off the pitch height.`
+            );
+          } else {
+            updateStatus(
+              `<span class="accent-bad">STRIKE</span> &mdash; called strike, no swing.`
+            );
+          }
+        }
+
+        // Spin up the post-contact ball pop so the player visually sees
+        // the outcome happen, not just text.
+        setupPostContactBall(outcome);
+
+        gameState = STATE.RESOLVING;
+        stateEnteredAt = performance.now();
+        updateHUD();
+      }
+
+      function setupPostContactBall(outcome) {
+        if (!activePitch) return;
+        const fromX = activePitch.toX;
+        const fromY = activePitch.toY;
+        const color = activePitch.color;
+        const r0 = activePitch.r1;
+
+        let toX, toY, durationMs, arcAmount, kind;
+
+        if (outcome === 'hr') {
+          // Up and OUT — clears the wall to outfield/over the wall
+          const sideBias = (Math.random() - 0.5) * 2;
+          toX = 400 + sideBias * 280;
+          toY = 80 + Math.random() * 40; // at or above the wall line
+          durationMs = 750;
+          arcAmount = 110;
+          kind = 'hr';
+        } else if (outcome === 'single') {
+          // Line drive forward — settles in shallow outfield
+          const sideBias = (Math.random() - 0.5) * 2;
+          toX = 400 + sideBias * 220;
+          toY = 230 + Math.random() * 50;
+          durationMs = 520;
+          arcAmount = 30;
+          kind = 'single';
+        } else if (outcome === 'foul') {
+          // Deflect sideways and back toward the camera area
+          const dir = Math.random() > 0.5 ? 1 : -1;
+          toX = fromX + dir * (220 + Math.random() * 80);
+          toY = fromY - 60 + Math.random() * 30;
+          durationMs = 420;
+          arcAmount = 50;
+          kind = 'foul';
+        } else {
+          // Strike — ball passes through to the catcher (continues
+          // down past the plate). Only really visible for swing-and-miss
+          // / called strike outcomes.
+          toX = fromX + (Math.random() - 0.5) * 30;
+          toY = fromY + 110;
+          durationMs = 280;
+          arcAmount = 0;
+          kind = 'strike';
+        }
+
+        postContactBall = {
+          startMs: performance.now(),
+          durationMs,
+          fromX,
+          fromY,
+          toX,
+          toY,
+          color,
+          r0,
+          arcAmount,
+          kind,
+        };
+      }
+
+      function advanceToNextPitch() {
+        pitchesFaced++;
+        setupNewPitch();
+        postContactBall = null; // clear any lingering pop from prior pitch
+        gameState = STATE.PRE_PITCH;
+        stateEnteredAt = performance.now();
+        resolveOutcome = null;
+        resolveInfo = {};
+        pitchFlashKind = null;
+        updateHUD();
+        updateStatus(
+          `Pitch ${pitchesFaced} incoming &mdash; <span class="accent">pitcher loads up</span>`
+        );
+      }
+
+      /* ── Click handler — swing detection ──────────────────────── */
+      canvas.addEventListener('mousedown', (e) => {
+        if (gameState !== STATE.PITCH_FLIGHT) return;
+        e.preventDefault();
+        const colorName = clickIdToColorName(e.button);
+        if (!colorName || !activePitch) return;
+
+        const now = performance.now();
+        const delta = now - activePitch.arrivalMs;
+        const absDelta = Math.abs(delta);
+
+        const correctColor = colorName === activePitch.color;
+        const yDiff = Math.abs(virtualCursor.y - activePitch.toY);
+
+        if (!correctColor) {
+          resolveSwing('strike', { reason: 'wrong color' });
+          return;
+        }
+
+        // Right color from here. Now timing + cursor proximity decide.
+        if (absDelta > GOOD_WINDOW_MS) {
+          resolveSwing('strike', { reason: 'bad timing', early: delta < 0 });
+          return;
+        }
+
+        if (yDiff > NEAR_PITCH_PX) {
+          // Vertically way off — full whiff
+          resolveSwing('strike', { reason: 'wrong height' });
+          return;
+        }
+
+        if (yDiff > ON_PITCH_PX) {
+          // Just off the pitch height — got a piece of it (foul)
+          resolveSwing('foul', { reason: 'just off the pitch height' });
+          return;
+        }
+
+        // On the pitch vertically — perfect/good timing decides HR vs single
+        if (absDelta <= PERFECT_WINDOW_MS) {
+          resolveSwing('hr');
+        } else {
+          resolveSwing('single');
+        }
+      });
+
+      /* ── HUD + status helpers ─────────────────────────────────── */
+      const statusMsg = document.getElementById('status-msg');
+      const hudPitch = document.getElementById('hud-pitch');
+      const hudHits = document.getElementById('hud-hits');
+      const hudHR = document.getElementById('hud-hr');
+      const hudAVG = document.getElementById('hud-avg');
+
+      function updateHUD() {
+        hudPitch.textContent = pitchesFaced;
+        hudHits.textContent = hits;
+        hudHR.textContent = homeRuns;
+        const avg = pitchesFaced > 0 ? hits / pitchesFaced : 0;
+        let s = avg.toFixed(3);
+        if (s.startsWith('0')) s = s.slice(1);
+        hudAVG.textContent = s;
+      }
+
+      function updateStatus(html) {
+        statusMsg.innerHTML = html;
+      }
+
+      /* ── Per-frame state update ───────────────────────────────── */
+      function update() {
+        const now = performance.now();
+
+        if (gameState === STATE.GET_READY) {
+          if (now - stateEnteredAt >= GET_READY_MS) {
+            advanceToNextPitch();
+          }
+          return;
+        }
+
+        if (gameState === STATE.PRE_PITCH) {
+          if (now - stateEnteredAt >= PRE_PITCH_MS) {
+            activePitch.releaseMs = now;
+            activePitch.arrivalMs = now + activePitch.flightMs;
+            gameState = STATE.PITCH_FLIGHT;
+            stateEnteredAt = now;
+            updateStatus(`Pitch ${pitchesFaced} &mdash; <span class="accent">read it</span>`);
+          }
+          return;
+        }
+
+        if (gameState === STATE.PITCH_FLIGHT) {
+          // Track ball position for trail (fastball only — others stay clean)
+          if (activePitch && activePitch.type === 'fastball') {
+            const t = (now - activePitch.releaseMs) / activePitch.flightMs;
+            if (t >= 0 && t <= 1) {
+              const pos = ballPosAt(t);
+              ballTrail.push({ x: pos.x, y: pos.y, r: pos.r, ts: now });
+              // Keep only recent trail samples
+              while (ballTrail.length > 0 && now - ballTrail[0].ts > 110) {
+                ballTrail.shift();
+              }
+            }
+          }
+
+          if (now > activePitch.arrivalMs + SWING_GRACE_MS) {
+            resolveSwing('strike', { reason: 'no swing' });
+          }
+          return;
+        }
+
+        if (gameState === STATE.RESOLVING) {
+          if (now - stateEnteredAt >= RESOLVE_MS) {
+            advanceToNextPitch();
+          }
+          return;
+        }
+      }
+
+      /* ── Ball trajectory helper ───────────────────────────────── */
+      function ballPosAt(t) {
+        const tt = Math.min(1.05, Math.max(0, t));
+        const linX = activePitch.fromX + tt * (activePitch.toX - activePitch.fromX);
+        const linY = activePitch.fromY + tt * (activePitch.toY - activePitch.fromY);
+        // Cosmetic arc — sin(πt) peaks at t=0.5, zero at endpoints.
+        // Subtract because canvas Y grows downward (so this lifts the arc).
+        const arc = Math.sin(Math.min(1, tt) * Math.PI) * activePitch.arcAmount;
+        const r = activePitch.r0 + Math.min(1, tt) * (activePitch.r1 - activePitch.r0);
+        return { x: linX, y: linY - arc, r };
       }
 
       /* ── Drawing — scene ──────────────────────────────────────── */
@@ -665,7 +1005,6 @@
         ctx.fillStyle = 'rgba(20, 25, 30, 0.85)';
         ctx.fillRect(0, FIELD.crowdY - 10, W, 24);
 
-        // Pseudo-random head bumps
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         const heads = 100;
         for (let i = 0; i < heads; i++) {
@@ -678,7 +1017,6 @@
           ctx.fill();
         }
 
-        // Scoreboard silhouette
         const sbX = W / 2 - 80;
         const sbY = FIELD.crowdY - 32;
         ctx.fillStyle = 'rgba(30, 35, 42, 0.85)';
@@ -697,12 +1035,9 @@
       }
 
       function drawOutfieldGrass() {
-        // Whole field below the wall = green grass. Diamond + home
-        // dirt cutouts get drawn on top of this.
         ctx.fillStyle = getCSSVar('--grass');
         ctx.fillRect(0, FIELD.wallY + FIELD.wallH, W, H - (FIELD.wallY + FIELD.wallH));
 
-        // Two subtle outfield mowing stripes in the back portion
         ctx.fillStyle = getCSSVar('--grass-dark');
         ctx.globalAlpha = 0.35;
         ctx.fillRect(0, 138, W, 22);
@@ -712,13 +1047,12 @@
 
       function drawDiamond() {
         const pts = [
-          { x: FIELD.diamond2BX, y: FIELD.diamond2BY }, // 2B (top)
-          { x: FIELD.diamond1BX, y: FIELD.diamond1BY }, // 1B (right)
-          { x: FIELD.diamondHomeX, y: FIELD.diamondHomeY }, // Home (bottom)
-          { x: FIELD.diamond3BX, y: FIELD.diamond3BY }, // 3B (left)
+          { x: FIELD.diamond2BX, y: FIELD.diamond2BY },
+          { x: FIELD.diamond1BX, y: FIELD.diamond1BY },
+          { x: FIELD.diamondHomeX, y: FIELD.diamondHomeY },
+          { x: FIELD.diamond3BX, y: FIELD.diamond3BY },
         ];
 
-        // Dirt diamond — full shape
         ctx.fillStyle = getCSSVar('--dirt');
         ctx.beginPath();
         ctx.moveTo(pts[0].x, pts[0].y);
@@ -726,8 +1060,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Infield grass — slightly smaller diamond inside, leaving the
-        // basepaths as visible dirt rings.
         const margin = 28;
         const innerPts = [
           { x: pts[0].x, y: pts[0].y + margin },
@@ -742,21 +1074,15 @@
         ctx.closePath();
         ctx.fill();
 
-        // Subtle definition between dirt and grass
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Home plate dirt cutout — wider area around home plate that
-        // bridges from the diamond's home corner down to the bottom.
         ctx.fillStyle = getCSSVar('--dirt');
         ctx.beginPath();
         ctx.ellipse(FIELD.plateX, FIELD.plateY - 8, 175, 60, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Foul lines — chalk lines from home plate diagonally to the
-        // wall corners. (Eyeballed angles; the lines pass through 1B/3B
-        // territory cleanly.)
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -766,7 +1092,6 @@
         ctx.lineTo(22, FIELD.wallY + FIELD.wallH);
         ctx.stroke();
 
-        // Bases — small white squares rotated 45°, sized for perspective.
         function drawBase(x, y, size) {
           ctx.save();
           ctx.translate(x, y);
@@ -778,19 +1103,25 @@
           ctx.strokeRect(-size / 2, -size / 2, size, size);
           ctx.restore();
         }
-        drawBase(pts[0].x, pts[0].y + 6, 11); // 2B (smaller, far)
-        drawBase(pts[1].x - 8, pts[1].y, 13); // 1B
-        drawBase(pts[3].x + 8, pts[3].y, 13); // 3B
+        drawBase(pts[0].x, pts[0].y + 6, 11);
+        drawBase(pts[1].x - 8, pts[1].y, 13);
+        drawBase(pts[3].x + 8, pts[3].y, 13);
+      }
+
+      function drawBattersBox() {
+        // Chalk rectangle in the dirt next to home plate showing the
+        // batter's box. Faint but visible.
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(FIELD.boxX, FIELD.boxY, FIELD.boxW, FIELD.boxH);
       }
 
       function drawMound() {
-        // Mound dirt — flat ellipse on the infield grass
         ctx.fillStyle = getCSSVar('--dirt-dark');
         ctx.beginPath();
         ctx.ellipse(FIELD.moundX, FIELD.moundY, FIELD.moundRX, FIELD.moundRY, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Lighter dirt cap on top of the mound
         ctx.fillStyle = getCSSVar('--dirt');
         ctx.beginPath();
         ctx.ellipse(
@@ -804,7 +1135,6 @@
         );
         ctx.fill();
 
-        // Pitching rubber
         ctx.fillStyle = '#e8e4d9';
         ctx.fillRect(FIELD.moundX - 16, FIELD.moundY - 9, 32, 3);
       }
@@ -814,7 +1144,6 @@
         const y = FIELD.pitcherY;
         const h = FIELD.pitcherH;
 
-        // Torso (jersey) — slight set-position twist
         ctx.fillStyle = getCSSVar('--pitcher-jersey');
         ctx.beginPath();
         ctx.moveTo(x - 11, y - h);
@@ -824,7 +1153,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Pants
         ctx.fillStyle = '#3a4150';
         ctx.beginPath();
         ctx.moveTo(x - 16, y - h * 0.45);
@@ -834,30 +1162,25 @@
         ctx.closePath();
         ctx.fill();
 
-        // Legs
         ctx.fillRect(x - 12, y - 14, 9, 14);
         ctx.fillRect(x + 3, y - 14, 9, 14);
 
-        // Head
         ctx.fillStyle = getCSSVar('--batter-skin');
         ctx.beginPath();
         ctx.arc(x, y - h - 6, 7, 0, Math.PI * 2);
         ctx.fill();
 
-        // Cap
         ctx.fillStyle = getCSSVar('--pitcher-cap');
         ctx.beginPath();
         ctx.arc(x, y - h - 6, 8, Math.PI, 2 * Math.PI);
         ctx.fill();
         ctx.fillRect(x - 9, y - h - 6, 18, 2);
 
-        // Glove arm tucked
         ctx.fillStyle = getCSSVar('--pitcher-cap');
         ctx.beginPath();
         ctx.arc(x - 7, y - h * 0.6, 5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Throwing arm hint
         ctx.fillStyle = getCSSVar('--pitcher-jersey');
         ctx.beginPath();
         ctx.arc(x + 13, y - h * 0.65, 4, 0, Math.PI * 2);
@@ -891,81 +1214,117 @@
         const w = FIELD.szW;
         const h = FIELD.szH;
 
-        // Dark backing — keeps the zone visible against busy field
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+        // Subtle interior backing
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
         ctx.fillRect(x, y, w, h);
 
-        // Outer outline
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.48)';
-        ctx.lineWidth = 1.5;
+        // Brighter outline — TV broadcast K-zone treatment
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+        ctx.lineWidth = 2;
         ctx.strokeRect(x, y, w, h);
 
-        // Single divider line between upper / lower bands
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
-        ctx.setLineDash([6, 5]);
+        // Faint connecting guide lines from the bottom corners of the
+        // zone to the plate edges — anchors the floating box visually.
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
         ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
         ctx.beginPath();
-        ctx.moveTo(x, y + h / 2);
-        ctx.lineTo(x + w, y + h / 2);
+        const plateLeft = FIELD.plateX - FIELD.plateW / 2;
+        const plateRight = FIELD.plateX + FIELD.plateW / 2;
+        const plateTopY = FIELD.plateY - FIELD.plateH;
+        ctx.moveTo(x, y + h);
+        ctx.lineTo(plateLeft, plateTopY);
+        ctx.moveTo(x + w, y + h);
+        ctx.lineTo(plateRight, plateTopY);
         ctx.stroke();
         ctx.setLineDash([]);
-
-        // Band labels (small, on the right edge)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.34)';
-        ctx.font = "9px 'Courier New', monospace";
-        ctx.textAlign = 'left';
-        ctx.fillText('UP', x + w + 6, y + h * 0.27);
-        ctx.fillText('LO', x + w + 6, y + h * 0.77);
       }
 
-      function drawLockedBandHighlight() {
-        const b = bandBoundaries();
+      function drawZoneFlash() {
+        if (performance.now() > pitchFlashUntil) return;
+        const t = Math.max(0, (pitchFlashUntil - performance.now()) / FLASH_MS);
         const x = FIELD.szCenterX - FIELD.szW / 2;
-        const w = FIELD.szW;
-        const yTop = lockedBand === 'upper' ? b.upperTop : b.lowerTop;
-        const yBot = lockedBand === 'upper' ? b.upperBottom : b.lowerBottom;
+        const y = FIELD.szCenterY - FIELD.szH / 2;
+        if (pitchFlashKind === 'good') {
+          ctx.fillStyle = `rgba(95, 191, 110, ${0.42 * t})`;
+        } else {
+          ctx.fillStyle = `rgba(212, 75, 75, ${0.34 * t})`;
+        }
+        ctx.fillRect(x, y, FIELD.szW, FIELD.szH);
+      }
 
-        const sinceLock = performance.now() - lockedAtMs;
-        const flashT = Math.max(0, 1 - sinceLock / 220);
-        const baseAlpha = 0.07;
-        const flashAlpha = 0.18 * flashT;
+      function drawTargetMarker() {
+        // Pulsing target reticle at the pitch's landing point — gives
+        // the player a clear spatial cursor target. In ck2.6 the marker
+        // also signals TIMING: it brightens as ball approaches, and a
+        // bright contact halo flashes during the perfect window so the
+        // "click now" moment is unambiguous.
+        if (!activePitch || gameState !== STATE.PITCH_FLIGHT) return;
+        const x = activePitch.toX;
+        const y = activePitch.toY;
+        const now = performance.now();
 
-        ctx.fillStyle = `rgba(255, 255, 255, ${baseAlpha + flashAlpha})`;
-        ctx.fillRect(x, yTop, w, yBot - yTop);
+        // Proximity ramps from 0 → 1 over the final 600ms before arrival
+        const timeToArrival = activePitch.arrivalMs - now;
+        const absTTA = Math.abs(timeToArrival);
+        const RAMP_MS = 600;
+        const proximity = 1 - Math.min(1, absTTA / RAMP_MS);
+        const inPerfectWindow = absTTA <= PERFECT_WINDOW_MS;
 
-        // Side bracket indicators
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 + 0.35 * flashT})`;
-        ctx.lineWidth = 2;
-        const bx = x - 8;
-        const by1 = yTop + 6;
-        const by2 = yBot - 6;
+        // Ambient breathing pulse so the marker is always "alive"
+        const ambientT = (now % 700) / 700;
+        const ambientPulse = 0.5 + 0.5 * Math.sin(ambientT * Math.PI * 2);
+
+        const r = 13 + ambientPulse * 3 + proximity * 6;
+        const tint = COLOR_HEX[activePitch.color];
+
+        // Outer ring — color-tinted, brightens with proximity
+        ctx.strokeStyle = tint;
+        ctx.lineWidth = 2 + proximity * 2;
+        ctx.globalAlpha = 0.4 + proximity * 0.55;
         ctx.beginPath();
-        ctx.moveTo(bx + 5, by1);
-        ctx.lineTo(bx, by1);
-        ctx.lineTo(bx, by2);
-        ctx.lineTo(bx + 5, by2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.stroke();
-        const rx = x + w + 8;
+        ctx.globalAlpha = 1;
+
+        // Inner crosshair — bright white
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 + proximity * 0.4})`;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(rx - 5, by1);
-        ctx.lineTo(rx, by1);
-        ctx.lineTo(rx, by2);
-        ctx.lineTo(rx - 5, by2);
+        ctx.moveTo(x - 7, y);
+        ctx.lineTo(x + 7, y);
+        ctx.moveTo(x, y - 7);
+        ctx.lineTo(x, y + 7);
         ctx.stroke();
+
+        // CONTACT HALO — flashes during the perfect window. Tells the
+        // player "click NOW for HR." Single-pulse, ramps from in to out.
+        if (inPerfectWindow) {
+          const t = absTTA / PERFECT_WINDOW_MS; // 0 at peak, 1 at edge
+          const haloAlpha = 1 - t;
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.95 * haloAlpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(x, y, r + 12, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Tinted glow underneath the halo
+          ctx.fillStyle = tint;
+          ctx.globalAlpha = 0.22 * haloAlpha;
+          ctx.beginPath();
+          ctx.arc(x, y, r + 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
       }
 
       function drawBatter() {
-        // Right-handed batter on screen-LEFT (catcher's left = 3B side).
-        // Profile / 3-quarter view from behind, head turned to track the
-        // pitcher (upper-right). Feet partially below the canvas so the
-        // batter occupies the foreground convincingly.
         const cx = FIELD.batterFootX;
         const groundY = FIELD.batterGroundY;
         const shoulderY = FIELD.batterShoulderY;
 
-        // Pants — two legs in batting stance
+        // Pants — back leg
         ctx.fillStyle = '#3a4150';
-        // Back leg (further from plate, screen-left of cx)
         ctx.beginPath();
         ctx.moveTo(cx - 16, groundY - 138);
         ctx.lineTo(cx - 2, groundY - 138);
@@ -973,7 +1332,7 @@
         ctx.lineTo(cx - 22, groundY);
         ctx.closePath();
         ctx.fill();
-        // Front leg (closer to plate, screen-right of cx)
+        // Front leg
         ctx.beginPath();
         ctx.moveTo(cx + 4, groundY - 138);
         ctx.lineTo(cx + 18, groundY - 138);
@@ -986,14 +1345,13 @@
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(cx - 22, groundY - 146, 42, 8);
 
-        // Torso — narrower up top (shoulders), widens to belt; slightly
-        // twisted because front shoulder leads toward the pitcher.
+        // Torso — slight twist toward pitcher
         ctx.fillStyle = getCSSVar('--batter-jersey');
         ctx.beginPath();
-        ctx.moveTo(cx - 18, shoulderY); // back shoulder
-        ctx.lineTo(cx + 20, shoulderY - 4); // front shoulder, slightly higher
-        ctx.lineTo(cx + 22, groundY - 146); // front belt
-        ctx.lineTo(cx - 22, groundY - 146); // back belt
+        ctx.moveTo(cx - 18, shoulderY);
+        ctx.lineTo(cx + 20, shoulderY - 4);
+        ctx.lineTo(cx + 22, groundY - 146);
+        ctx.lineTo(cx - 22, groundY - 146);
         ctx.closePath();
         ctx.fill();
 
@@ -1001,7 +1359,7 @@
         ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
         ctx.fillRect(cx - 21, shoulderY + 38, 42, 3);
 
-        // Number on back (jersey #23)
+        // Number on back
         ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.font = "bold 16px 'Courier New', monospace";
         ctx.textAlign = 'center';
@@ -1011,21 +1369,20 @@
         ctx.fillStyle = getCSSVar('--batter-skin');
         ctx.fillRect(cx - 2, shoulderY - 16, 12, 14);
 
-        // Helmet — dome with the brim pointing toward the pitcher
-        // (upper-right), ear flap visible on the back side (screen-left).
+        // Helmet
         const headCX = cx + 2;
-        const headCY = FIELD.batterHeadTopY + 18; // 220 + 18 = 238
+        const headCY = FIELD.batterHeadTopY + 18;
         ctx.fillStyle = getCSSVar('--batter-helmet');
         ctx.beginPath();
         ctx.ellipse(headCX, headCY, 18, 19, 0.08, 0, Math.PI * 2);
         ctx.fill();
 
-        // Ear flap on the back/visible side
+        // Ear flap
         ctx.beginPath();
         ctx.ellipse(headCX - 14, headCY + 2, 7, 9, -0.18, 0, Math.PI * 2);
         ctx.fill();
 
-        // Helmet brim — points toward upper-right (toward pitcher)
+        // Helmet brim toward pitcher
         ctx.beginPath();
         ctx.ellipse(headCX + 16, headCY - 2, 8, 4, 0.18, 0, Math.PI * 2);
         ctx.fill();
@@ -1036,8 +1393,7 @@
         ctx.ellipse(headCX + 4, headCY - 11, 8, 4, 0.05, 0, Math.PI * 2);
         ctx.fill();
 
-        // Face slice — small skin patch where the cheek/jaw turns toward
-        // the pitcher (visible because head is turned that way).
+        // Face slice
         ctx.fillStyle = getCSSVar('--batter-skin');
         ctx.beginPath();
         ctx.arc(headCX + 14, headCY + 4, 4.5, -Math.PI / 2, Math.PI / 2);
@@ -1045,34 +1401,22 @@
       }
 
       function drawBat() {
-        // Hands extend forward from the chest area, holding the bat.
-        // The bat stretches into the strike zone with its tip at the
-        // locked band's vertical center. Small sway settles after lock.
+        // Free-cursor mode (ck2.5): bat tip Y follows cursor Y directly,
+        // clamped to the strike zone bounds for clean visuals. Hands are
+        // anchored at zone-center height; the bat tilts as cursor moves.
         const cx = FIELD.batterFootX;
         const shoulderY = FIELD.batterShoulderY;
 
-        // Hand position — forward (right) of the front shoulder, at
-        // roughly mid-strike-zone height so the bat hangs near horizontal.
-        const handX = cx + 32;
-        const handY = FIELD.szCenterY - 4;
+        const handX = cx + 30;
+        const handY = FIELD.szCenterY;
 
-        const targetTipX = FIELD.szCenterX + FIELD.szW / 2 - 8;
-        const targetTipY = bandCenterY(lockedBand);
+        const szTop = FIELD.szCenterY - FIELD.szH / 2;
+        const szBot = FIELD.szCenterY + FIELD.szH / 2;
 
-        // Sway: cursor influence shrinks once locked
-        const sinceLock = performance.now() - lockedAtMs;
-        const settleT = Math.min(1, sinceLock / 180);
-        const settleEase = 1 - Math.pow(1 - settleT, 3);
-        const cursorOffset = virtualCursor.y - targetTipY;
-        const sway = Math.max(
-          -tunables.bandSwayPx,
-          Math.min(tunables.bandSwayPx, cursorOffset * (1 - settleEase) + cursorOffset * 0.04)
-        );
-        const tipY = targetTipY + sway;
-        const tipX = targetTipX;
+        const tipX = FIELD.szCenterX + FIELD.szW / 2 - 6;
+        const tipY = Math.max(szTop - 10, Math.min(szBot + 10, virtualCursor.y));
 
-        // Forearms — two arm strokes from shoulders to hands. Both arms
-        // extend forward toward the bat handle (lead arm + back arm).
+        // Forearms — two arm strokes from shoulders to hands
         ctx.strokeStyle = getCSSVar('--batter-jersey');
         ctx.lineWidth = 9;
         ctx.lineCap = 'round';
@@ -1084,7 +1428,7 @@
         ctx.stroke();
         ctx.lineCap = 'butt';
 
-        // Bat geometry — knob at hands, tip into strike zone
+        // Bat geometry
         const dx = tipX - handX;
         const dy = tipY - handY;
         const len = Math.hypot(dx, dy);
@@ -1122,7 +1466,7 @@
         ctx.closePath();
         ctx.fill();
 
-        // Barrel highlight (top edge)
+        // Barrel highlight
         ctx.fillStyle = 'rgba(255, 240, 215, 0.45)';
         ctx.beginPath();
         ctx.moveTo(len * 0.55, -4);
@@ -1146,11 +1490,111 @@
         ctx.arc(handX, handY - 1, 6, 0, Math.PI * 2);
         ctx.arc(handX + 4, handY + 5, 6, 0, Math.PI * 2);
         ctx.fill();
-        // Batting glove dot
         ctx.fillStyle = '#1a1a1a';
         ctx.beginPath();
         ctx.arc(handX + 1, handY + 2, 3, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      function drawBallTrail() {
+        // Faded trailing positions behind the fastball — sells speed.
+        if (ballTrail.length === 0) return;
+        const tint = COLOR_HEX[activePitch.color];
+        for (let i = 0; i < ballTrail.length; i++) {
+          const p = ballTrail[i];
+          const ageT = i / Math.max(1, ballTrail.length - 1); // 0=oldest, 1=newest
+          const alpha = 0.10 + ageT * 0.25;
+          const r = p.r * (0.55 + ageT * 0.4);
+          ctx.fillStyle = tint;
+          ctx.globalAlpha = alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawBall() {
+        if (!activePitch || gameState !== STATE.PITCH_FLIGHT) return;
+        const now = performance.now();
+        const t = (now - activePitch.releaseMs) / activePitch.flightMs;
+        const pos = ballPosAt(t);
+
+        // Ball — colored by pitch type
+        ctx.fillStyle = COLOR_HEX[activePitch.color];
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        if (pos.r > 7) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, pos.r - 2, -Math.PI * 0.7, -Math.PI * 0.2);
+          ctx.stroke();
+        }
+      }
+
+      function drawPostContactBall() {
+        if (!postContactBall) return;
+        const now = performance.now();
+        const t = (now - postContactBall.startMs) / postContactBall.durationMs;
+        if (t < 0 || t > 1) return;
+
+        // Linear path + cosmetic upward arc
+        const linX = postContactBall.fromX + t * (postContactBall.toX - postContactBall.fromX);
+        const linY = postContactBall.fromY + t * (postContactBall.toY - postContactBall.fromY);
+        const arc = Math.sin(t * Math.PI) * postContactBall.arcAmount;
+        const x = linX;
+        const y = linY - arc;
+
+        // Ball size — shrinks for HR/Single (going away from camera),
+        // stays roughly constant for foul, slightly grows for strike
+        // (continuing toward catcher / camera).
+        let r = postContactBall.r0;
+        if (postContactBall.kind === 'hr' || postContactBall.kind === 'single') {
+          r = postContactBall.r0 * (1 - t * 0.65);
+        } else if (postContactBall.kind === 'strike') {
+          r = postContactBall.r0 * (1 + t * 0.25);
+        } else {
+          r = postContactBall.r0 * (1 - t * 0.3);
+        }
+        r = Math.max(2, r);
+
+        // Slight motion-blur trail behind the ball — sells the speed
+        // off the bat for HRs and singles.
+        if (postContactBall.kind === 'hr' || postContactBall.kind === 'single') {
+          const tint = COLOR_HEX[postContactBall.color];
+          for (let i = 1; i <= 3; i++) {
+            const tt = Math.max(0, t - i * 0.045);
+            const tlinX = postContactBall.fromX + tt * (postContactBall.toX - postContactBall.fromX);
+            const tlinY = postContactBall.fromY + tt * (postContactBall.toY - postContactBall.fromY);
+            const tarc = Math.sin(tt * Math.PI) * postContactBall.arcAmount;
+            const tr = r * (1 - i * 0.18);
+            ctx.fillStyle = tint;
+            ctx.globalAlpha = 0.18 - i * 0.04;
+            ctx.beginPath();
+            ctx.arc(tlinX, tlinY - tarc, Math.max(2, tr), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        // Main ball — slight fade-out toward end of pop
+        const fade = 1 - Math.max(0, (t - 0.7)) / 0.3;
+        ctx.globalAlpha = Math.max(0.15, fade);
+        ctx.fillStyle = COLOR_HEX[postContactBall.color];
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 * fade})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
       }
 
       function drawCursor() {
@@ -1158,6 +1602,32 @@
           color: 'rgba(255, 255, 255, 0.9)',
           arm: 8,
         });
+      }
+
+      function drawGetReadyOverlay() {
+        if (gameState !== STATE.GET_READY) return;
+        const elapsed = performance.now() - stateEnteredAt;
+        const remaining = Math.max(0, GET_READY_MS - elapsed);
+
+        // Dim backing
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillRect(0, 0, W, H);
+
+        // GET READY title
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.font = "bold 40px 'Courier New', monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText('GET READY', W / 2, H / 2 - 10);
+
+        // Countdown number (3, 2, 1)
+        const seconds = Math.max(1, Math.ceil(remaining / 1000));
+        ctx.font = "bold 84px 'Courier New', monospace";
+        ctx.fillText(seconds, W / 2, H / 2 + 80);
+
+        // Subtitle hint
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.font = "12px 'Courier New', monospace";
+        ctx.fillText('First pitch incoming…', W / 2, H / 2 + 120);
       }
 
       /* ── Render ──────────────────────────────────────────────── */
@@ -1172,21 +1642,29 @@
         drawDiamond();
         drawMound();
         drawPitcher();
+        drawBattersBox();
         drawHomePlate();
         drawStrikeZone();
-        drawLockedBandHighlight();
+        drawZoneFlash();
+        drawTargetMarker();
         drawBatter();
         drawBat();
+        drawBallTrail();
+        drawBall();
+        drawPostContactBall();
 
-        if (gameState === STATE.IDLE) {
+        if (gameState !== STATE.MENU && gameState !== STATE.GET_READY) {
           drawCursor();
         }
+
+        // Overlay (drawn last, on top of everything)
+        drawGetReadyOverlay();
       }
 
       /* ── Loop ────────────────────────────────────────────────── */
       function loop() {
-        if (gameState === STATE.IDLE) {
-          updateLockedBand();
+        if (gameState !== STATE.MENU) {
+          update();
         }
         render();
         requestAnimationFrame(loop);
@@ -1194,17 +1672,29 @@
 
       /* ── Menu wiring ─────────────────────────────────────────── */
       const menuOverlay = document.getElementById('menu-overlay');
-      const statusMsg = document.getElementById('status-msg');
+
+      function resetGameStats() {
+        pitchesFaced = 0;
+        hits = 0;
+        homeRuns = 0;
+        singles = 0;
+        fouls = 0;
+        strikes = 0;
+        streak = 0;
+        longestStreak = 0;
+        updateHUD();
+      }
 
       document.querySelectorAll('[data-action="start-batter"]').forEach((btn) => {
         btn.addEventListener('click', () => {
           menuOverlay.classList.remove('is-visible');
-          gameState = STATE.IDLE;
-          lockedBand = bandAtY(virtualCursor.y);
-          lockedAtMs = performance.now();
-          statusMsg.innerHTML =
-            'Move the cursor up or down to lock the bat. ' +
-            '<span class="accent">Pitches arrive in checkpoint 2.</span>';
+          resetGameStats();
+          // Enter the GET_READY pre-roll instead of jumping into a pitch
+          gameState = STATE.GET_READY;
+          stateEnteredAt = performance.now();
+          updateStatus(
+            'Get ready &mdash; <span class="accent">first pitch in three seconds.</span>'
+          );
         });
       });
 
