@@ -258,7 +258,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 4</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 5</div>
             </div>
           </div>
           <div class="hud">
@@ -288,8 +288,8 @@
         <div class="bottom-bar">
           <div class="bb-content">
             <div class="status-msg" id="status-msg">
-              <span class="accent">Match the color to return.</span> Wrong color or no swing and the
-              ball goes into the net. AI return loop lands in checkpoint 5.
+              <span class="accent">Match the color to return.</span> Build a rally — the longer the
+              streak, the higher your Best.
             </div>
           </div>
           <div class="home-slot" id="home-slot"></div>
@@ -371,11 +371,15 @@
       let activeBall = null;
       let lastOutcome = null; // 'return' | 'net-wrong' | 'net-timeout' | null
       let racketSwingT = 0; // 1 → 0 fade after a swing fires
+      let rallyCount = 0;
+      let bestRally = 0;
+      let rallyAlive = false; // true between AI's first send and the first miss
 
       const BALL_FLIGHT_MS = 2200;
       const RETURN_FLIGHT_MS = 1500;
       const NET_FLIGHT_MS = 600;
-      const IDLE_MS = 1200;
+      const IDLE_MS = 1200; // pause before first ball / after a miss
+      const AI_PREP_MS = 450; // brief beat between AI catching and re-sending mid-rally
       const POST_MS = 700;
 
       function startNextBall(now) {
@@ -481,16 +485,32 @@
 
       function tickRallyState(now) {
         if (phase === PHASE.IDLE) {
-          if (now - phaseStart >= IDLE_MS) startNextBall(now);
+          const dur = rallyAlive ? AI_PREP_MS : IDLE_MS;
+          if (now - phaseStart >= dur) startNextBall(now);
         } else if (phase === PHASE.INCOMING) {
           if (now - phaseStart >= BALL_FLIGHT_MS) startNetted(now, 'timeout');
         } else if (phase === PHASE.RETURNING) {
           if (now - phaseStart >= RETURN_FLIGHT_MS) {
-            phase = PHASE.POST;
+            // AI just caught a clean return — bump the rally counter and
+            // bounce straight back into IDLE so the AI re-sends quickly.
+            rallyCount += 1;
+            if (rallyCount > bestRally) bestRally = rallyCount;
+            rallyAlive = true;
+            updateHUD();
+            setStatus('rally', { count: rallyCount });
+            activeBall = null;
+            phase = PHASE.IDLE;
             phaseStart = now;
           }
         } else if (phase === PHASE.NETTED) {
           if (now - phaseStart >= NET_FLIGHT_MS) {
+            // Rally ends. If the player had something going, surface it.
+            if (rallyCount > 0) {
+              setStatus('miss-end-rally', { count: rallyCount, best: bestRally });
+            }
+            rallyCount = 0;
+            rallyAlive = false;
+            updateHUD();
             phase = PHASE.POST;
             phaseStart = now;
           }
@@ -519,20 +539,38 @@
 
       canvas.addEventListener('mousedown', (e) => handleClick(e.button));
 
-      /* ── Status message helper ───────────────────────────────── */
+      /* ── Status message + HUD helpers ────────────────────────── */
       const STATUS_EL = document.getElementById('status-msg');
+      const HUD_RALLY = document.getElementById('hud-rally');
+      const HUD_BEST = document.getElementById('hud-best');
+
       const STATUS_TEXT = {
         clean:
-          '<span class="accent" style="color: var(--good)">Clean return.</span> Keep the rally going — AI loop lands in checkpoint 5.',
+          '<span class="accent" style="color: var(--good)">Clean return.</span> AI is sending the next ball.',
+        rally:
+          '<span class="accent" style="color: var(--good)">Rally {count}.</span> Keep it alive — match the next color.',
         'net-wrong':
           '<span class="accent" style="color: var(--bad)">Wrong color — into the net.</span> Match blue / orange / purple to the ball.',
         'net-timeout':
           '<span class="accent" style="color: var(--bad)">Whiffed — into the net.</span> Click a color before the halo closes.',
+        'miss-end-rally':
+          '<span class="accent" style="color: var(--bad)">Rally ended at {count}.</span> Best so far: {best}.',
         idle: '<span class="accent">Match the color to return.</span> Wrong color or no swing and the ball goes into the net.',
       };
-      function setStatus(key) {
-        STATUS_EL.innerHTML = STATUS_TEXT[key] || STATUS_TEXT.idle;
+
+      function setStatus(key, params = {}) {
+        let text = STATUS_TEXT[key] || STATUS_TEXT.idle;
+        for (const k in params) {
+          text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), params[k]);
+        }
+        STATUS_EL.innerHTML = text;
       }
+
+      function updateHUD() {
+        HUD_RALLY.textContent = String(rallyCount);
+        HUD_BEST.textContent = String(bestRally);
+      }
+      updateHUD();
 
       /* ── Court geometry — behind-player POV ────────────────────
          Vanishing point sits high on the back wall. The court is a
