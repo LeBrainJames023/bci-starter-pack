@@ -98,6 +98,67 @@ Backlog from the v1 ship session — held until the arcade-wide polish sweep so 
 - Pitcher: control pitch type/speed by timing which click you use
 - Analytics: hit accuracy per pitch type, reaction to pitch color, streak tracking
 
+**Batter mode v1 ships first** with three pitch types (fastball / curveball / changeup), snap-to-zone bat positioning, and color-match-on-timing swing logic (see `games/batter-pitcher/GAME_PLAN.md` for the locked v1 spec). Pitcher mode and the items below are deferred to v1.5+.
+
+**Pitcher mode (v1.5).** Full second mode — choose pitch type by clicking the matching color as the ball leaves your hand. Includes AI batters with hot/cold zones to attack. Same color/timing conventions as Batter mode so the read transfers between modes.
+
+**Power swing mechanic (v1.5).** A true held-click power swing layer on top of the base color-match. Held out of v1 because all three clicks are consumed by pitch-type ID — needs a clean fourth-input solution (long-press overlay, pre-pitch stance toggle, etc.). Don't add until base v1 feel is proven.
+
+**Breaking pitches (v1.5).** Curveballs actually break mid-flight (start in one zone, end in another); changeups telegraph a fastball release then arrive late. v1 keeps pitches on fixed trajectories so the snap-zone + color + timing trio gets isolated and tuned first.
+
+**Plate discipline — balls vs strikes (v2).** Some pitches arrive outside the strike zone — swinging at a ball wastes a swing, ump call = ball, four balls = walk. Adds a real decision-making layer (when NOT to swing) on top of pure reflex. Doubles the mental load, so v2.
+
+**2-strike battle mode (v2).** At 2 strikes the timing window narrows but fouls don't count as strikes — you can battle the at-bat. Real baseball nuance; flag for playtest before committing.
+
+**Home Run Derby mode (v2+).** Pure power, no pitching, distance-of-HR scoring. Natural sibling to the Hoops 9-Shot Drill — a pure-output mode after the base game proves out.
+
+**Fielding mode (long-term).** Third mode where cursor moves the fielder under fly balls. Lowest priority — base modes ship first.
+
+#### Batter/Pitcher — v1.5 polish
+
+Backlog from the v1 build session — held until the arcade-wide polish sweep so we don't deep-polish a single game while other MVPs are still pending.
+
+**Batter & bat.**
+
+- Bat-on-ball contact animation — actual swing arc visible, ball deflects realistically off contact point, foul tips fly back
+- Batting stance variation — left-handed vs right-handed perspective for variety, or cursor-as-stance lean for inside/outside pitches
+- Bat selection / light meta-progression — heavy bat (more HR power, slower window) vs light bat (quicker reaction, weaker contact); earned over time
+
+**Pitcher & windup.**
+
+- Pitch tells / windup variation — different pitch types get subtly different windups (glove-load, leg-kick height); advanced players read windups to anticipate color before release
+- Pitcher silhouette polish — defined throwing motion, follow-through after release, occasional mound-prep idle
+
+**Ball & trajectory.**
+
+- Pitch trail visual — faint colored streak fading behind the ball as it travels, makes color-reading easier and looks great (mirrors goalie spin-trail backlog)
+- Exaggerated arc differences per pitch type — fastballs flat, curves with visible drop, changeups with a slow float
+
+**Scene & atmosphere.**
+
+- Catcher silhouette — low squat in front of the batter for depth and perspective, gives the scene "yes this is baseball" presence
+- Umpire personality — animated strike-three "yer out!" gesture, HR signal point-to-the-fence, foul-ball cross (lots of charm for little code)
+- Stadium variety + day/night variants — different ballpark silhouettes unlock at HR milestones, night-game lighting (cross-pollinates with goalie night-mode backlog)
+- Crowd silhouette swells/pulses on hits, color flash on streak milestones
+
+**HUD & feedback.**
+
+- Prominent streak indicator at 3+ hits (pulse, color shift) — same pattern as Goalie streak
+- Last-pitch outcome stays visible briefly during the next pitch (small ✓ / ✗ icon with hit type)
+- Tutorial-style hints on misses ("That was a curveball — you needed ORANGE")
+- Real-time AVG/SLG updating during the round, not just at end
+
+**Career / season (long-term).**
+
+- String at-bats into games, games into a season
+- Long-term BA, HR count, slugging percentage tracked across sessions
+- Needs all prior polish items first
+
+**Cross-cutting (whole-pack, not batter-specific).**
+
+- Sound system events for batter — bat crack on contact, ball pop in catcher's mitt, crowd swell on HR, ump strike call (folds into the shared schema flagged in Goalie/Striker backlog)
+- Hit-zone heatmap analytics — where on the strike zone you connect vs whiff, broken out by pitch type (cross-pollinates with goalie heatmap backlog)
+
 ### Golf
 
 - Putt-putt style through to full driving range
