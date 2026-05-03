@@ -2,7 +2,7 @@
 
 ## Status
 
-v1 spec locked 2026-05-01. Not yet built.
+v1 Live — 2026-05-02. All 9 build checkpoints shipped end-to-end.
 
 ## v1 MVP — One-Liner
 
@@ -95,19 +95,33 @@ Carried over from initial plan, augmented with what came out of the v1 design:
 
 ## Currently Building
 
-v1 MVP — single-file `games/boxing/index.html`, vanilla HTML/canvas/JS, wires all four shared modules.
+Nothing active. v1 is Live and the launcher card has been flipped.
 
-## Up Next — Build Order
+## Up Next
 
-1. Static layout: opponent silhouette centered, ring/crowd background, two health bars, round timer
-2. Idle bob loop on both fighters
-3. Initiation logic (random per exchange, opponent tell)
-4. Combo phase: slow-mo trigger, 4 windows opening on opponent body, color-match resolution
-5. Counter phase: Guitar Hero closing rings, dodge resolution
-6. Damage model + KO check + round-end overlay
-7. Settings panel (per-game overrides)
-8. Analytics view
-9. Visual polish pass — last
+v1.5 territory (parked for a follow-up session):
+
+- Variable combo length (3 / 4 / 5 punches with risk-reward) instead of fixed 4
+- Multiple opponents with different combo speeds and tells
+- Multi-round matches with corner rest between rounds
+- Real time-multiplier on the round timer during slow-mo (currently just visual)
+- HP bar damage tick animation instead of instant snap
+- Sound design pass: bell, glove thuds, slow-mo whoosh, crowd reactions
+
+## Build History
+
+All 9 checkpoints shipped 2026-05-02:
+
+1. Scene + HUD foundation, idle bob
+2. Initiation logic (random per exchange, opponent tell)
+3. Combo phase (slow-mo, 4 windows, color match)
+4. Counter phase (Guitar Hero closing rings, dodge resolution)
+5. Damage model + KO check + round-end overlay
+6. Settings panel (per-game overrides)
+7. Analytics view
+8. Visual polish pass (real fighterClock slow-mo, hit shake, KO flash, crowd density)
+
+A 1.5 visual fix-up landed between checkpoints 1 and 2: tighter opponent silhouette (single-path torso with rolled shoulders), forearms properly attached with depth shading, player gloves reshaped with thumb / knuckle / cuff / brand stripe detail.
 
 ## Known Issues
 
