@@ -1,0 +1,1214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Batter / Pitcher — BCI Arcade</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Baseball field palette */
+        --field-frame: #0a1410;
+        --sky-top: #6a93b6;
+        --sky-bottom: #b8cfde;
+        --crowd: #2a2f38;
+        --wall: #1f3a26;
+        --wall-line: #f4d35e;
+        --grass: #3a8c44;
+        --grass-dark: #2a6f33;
+        --grass-line: #ffffff;
+        --dirt: #b58358;
+        --dirt-dark: #8a5f3f;
+        --plate: #f5f5f5;
+        --batter-jersey: #1a3a8a;
+        --batter-helmet: #0f0f0f;
+        --batter-skin: #c89b75;
+        --pitcher-jersey: #efe9d9;
+        --pitcher-cap: #1a3a8a;
+        --bat-light: #c69968;
+        --bat-dark: #6e4422;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        min-width: 56px;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+      .icon-btn[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── Canvas + field frame ────────────────────────────────── */
+      .field-frame {
+        position: relative;
+        flex: 1;
+        background: var(--field-frame);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+        cursor: none;
+      }
+
+      /* ── Bottom bar ──────────────────────────────────────────── */
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .status-msg .accent-good {
+        color: var(--good);
+      }
+      .status-msg .accent-bad {
+        color: var(--bad);
+      }
+      .home-slot {
+        display: flex;
+        align-items: center;
+      }
+
+      /* ── Overlay base ────────────────────────────────────────── */
+      .overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.85);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 6;
+      }
+      .overlay.is-visible {
+        display: flex;
+      }
+      .overlay-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 26px 32px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+        min-width: 440px;
+        max-width: 620px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .overlay-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .overlay-sub {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: -8px;
+      }
+
+      /* ── Mode-select menu ────────────────────────────────────── */
+      .menu-card {
+        min-width: 580px;
+      }
+      .modes-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        width: 100%;
+      }
+      .mode-card {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 16px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 200px;
+      }
+      .mode-card--active {
+        border-color: var(--click-blue);
+      }
+      .mode-card--disabled {
+        opacity: 0.55;
+      }
+      .mode-name {
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+      }
+      .mode-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        flex: 1;
+      }
+      .mode-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .mode-actions .mode-btn {
+        flex: 1;
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .mode-actions .mode-btn:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--click-blue);
+      }
+      .mode-status {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--click-orange);
+        text-align: center;
+        padding: 9px 12px;
+        border: 1px dashed var(--border-strong);
+        border-radius: 6px;
+      }
+      .menu-help {
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--text-dim);
+        line-height: 1.55;
+        text-align: center;
+        max-width: 480px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button class="back-btn" id="btn-back">&larr; Back</button>
+            <div class="title-block">
+              <div class="game-title">Batter / Pitcher</div>
+              <div class="game-subtitle">v1 — Batter Mode</div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="hud-stat">
+              <div class="hud-label">Pitch</div>
+              <div class="hud-value" id="hud-pitch">–/–</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Hits</div>
+              <div class="hud-value" id="hud-hits">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">HR</div>
+              <div class="hud-value" id="hud-hr">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">AVG</div>
+              <div class="hud-value" id="hud-avg">.000</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
+            <button class="icon-btn" id="btn-analytics" disabled>Stats</button>
+            <button class="icon-btn" id="btn-settings" disabled>Settings</button>
+          </div>
+        </header>
+
+        <div class="field-frame">
+          <canvas id="canvas" width="800" height="540"></canvas>
+
+          <!-- Mode-select menu (shown on load) -->
+          <div class="overlay is-visible" id="menu-overlay">
+            <div class="overlay-card menu-card">
+              <div class="overlay-title">Batter / Pitcher</div>
+              <div class="overlay-sub">Pick a mode to step in</div>
+              <div class="modes-grid">
+                <div class="mode-card mode-card--active">
+                  <div class="mode-name">Batter</div>
+                  <div class="mode-desc">
+                    Read the pitch color, lock the bat upper or lower, click matching color at
+                    contact.
+                    <br /><br />
+                    <strong>Blue</strong> = Fastball &middot; <strong>Orange</strong> = Curveball
+                    &middot; <strong>Purple</strong> = Changeup
+                  </div>
+                  <div class="mode-actions">
+                    <button class="mode-btn" data-action="start-batter">Step In</button>
+                  </div>
+                </div>
+                <div class="mode-card mode-card--disabled">
+                  <div class="mode-name">Pitcher</div>
+                  <div class="mode-desc">
+                    Choose your pitch and locate it. Click the matching color as the ball leaves
+                    your hand.
+                  </div>
+                  <div class="mode-status">Coming Soon &middot; v1.5</div>
+                </div>
+              </div>
+              <div class="menu-help">
+                Checkpoint 1 preview &mdash; field, batter, snap-to-zone bat. No pitches yet.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">
+              Move the cursor up or down to lock the bat.
+              <span class="accent">Upper &middot; Lower</span>
+            </div>
+          </div>
+          <div class="home-slot" id="home-slot"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
+    <script>
+      'use strict';
+
+      const GAME_ID = 'batter-pitcher';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      /* Suppress the right-click context menu so the orange (right) click
+         is usable inside the canvas. */
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      /* Header buttons */
+      document.getElementById('btn-back').addEventListener('click', () => BCI.goToLauncher());
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      /* Viewport fitter */
+      const wrapper = document.getElementById('game-wrapper');
+      const fitter = BCI.createViewportFitter(wrapper);
+      fitter.fit();
+      requestAnimationFrame(() => fitter.fit());
+
+      /* ── Color setup ──────────────────────────────────────────── */
+      const COLOR_HEX = {
+        blue: '#4488ff',
+        orange: '#ff8833',
+        purple: '#aa44ff',
+      };
+
+      /* Color → pitch mapping (locked v1 spec):
+           Blue   = Fastball  (left click)
+           Orange = Curveball (right click)
+           Purple = Changeup  (middle click)
+         Mouse buttons: 0=left=blue, 1=middle=purple, 2=right=orange. */
+      const PITCHES = ['fastball', 'curveball', 'changeup'];
+      const PITCH_TO_COLOR = {
+        fastball: 'blue',
+        curveball: 'orange',
+        changeup: 'purple',
+      };
+      const COLOR_TO_PITCH = {
+        blue: 'fastball',
+        orange: 'curveball',
+        purple: 'changeup',
+      };
+
+      /* Two strike-zone bands (locked v1 spec). */
+      const BANDS = ['upper', 'lower'];
+
+      /* ── Field geometry — proper baseball diamond, catcher POV ──
+         Sky + crowd at top, outfield wall, then a green field with a
+         dirt diamond cut into it for the basepaths and infield. The
+         pitcher's mound sits in the infield grass. Home plate is in
+         the foreground with a wider dirt cutout (the home circle).
+         The right-handed batter stands in the LEFT batter's box from
+         our POV (catcher's left = third-base side). */
+      const FIELD = {
+        skyTopY: 0,
+        skyBottomY: 95,
+        crowdY: 86,
+
+        // Outfield wall band
+        wallY: 110,
+        wallH: 20,
+
+        // Diamond corners in screen-space (perspective from catcher).
+        // 2B is closest to the horizon (small), 1B/3B at the diamond's
+        // widest point, home plate in the foreground.
+        diamond2BX: 400,
+        diamond2BY: 220,
+        diamond1BX: 600,
+        diamond1BY: 360,
+        diamondHomeX: 400,
+        diamondHomeY: 470,
+        diamond3BX: 200,
+        diamond3BY: 360,
+
+        // Pitcher's mound — between 2B and home, sitting on the infield
+        // grass (slightly above center for proper baseball geometry).
+        moundX: 400,
+        moundY: 300,
+        moundRX: 78,
+        moundRY: 19,
+        pitcherX: 400,
+        pitcherY: 292,
+        pitcherH: 70,
+
+        // Home plate in foreground
+        plateX: 400,
+        plateY: H - 30,
+        plateW: 76,
+        plateH: 22,
+
+        // Strike zone — floats above home plate, smaller than v1-prev,
+        // 2 horizontal bands (upper / lower).
+        szCenterX: 400,
+        szCenterY: 370,
+        szW: 110,
+        szH: 130,
+
+        // Right-handed batter, on screen-LEFT of the plate (catcher's
+        // left = 3B side = where RHB stands). Feet partially below the
+        // bottom of the canvas so the batter feels foreground-close.
+        batterFootX: 305,
+        batterGroundY: H + 10,
+        batterShoulderY: 305, // top of torso
+        batterHeadTopY: 220, // top of helmet (still on-screen)
+      };
+
+      /* ── Tunables ─────────────────────────────────────────────── */
+      const DEFAULTS = {
+        cursorSensitivity: 1.0,
+        bandSwayPx: 5, // sway amplitude (px) when bat is settling into lock
+        bandHysteresisPx: 5, // px past divider before lock flips bands
+      };
+
+      const tunables = { ...DEFAULTS };
+
+      /* ── Virtual cursor ───────────────────────────────────────── */
+      const settings = BCI.getEffectiveSettings(GAME_ID);
+      const virtualCursor = BCI.createVirtualCursor(canvas, {
+        sensitivity: settings.cursorSensitivity ?? tunables.cursorSensitivity,
+        startX: FIELD.szCenterX,
+        startY: FIELD.szCenterY + 20,
+      });
+
+      /* ── Game state ───────────────────────────────────────────── */
+      const STATE = {
+        MENU: 'menu',
+        IDLE: 'idle', // checkpoint 1: bat-positioning preview, no pitches
+      };
+
+      let gameState = STATE.MENU;
+
+      /* Snap-to-zone bat — only two states: 'upper' or 'lower'. */
+      let lockedBand = 'lower';
+      let lockedAtMs = performance.now();
+
+      function bandBoundaries() {
+        const top = FIELD.szCenterY - FIELD.szH / 2;
+        const mid = FIELD.szCenterY;
+        const bot = FIELD.szCenterY + FIELD.szH / 2;
+        return {
+          upperTop: top,
+          upperBottom: mid,
+          lowerTop: mid,
+          lowerBottom: bot,
+          divider: mid,
+        };
+      }
+
+      function bandAtY(y) {
+        const b = bandBoundaries();
+        return y < b.divider ? 'upper' : 'lower';
+      }
+
+      function updateLockedBand() {
+        const b = bandBoundaries();
+        const y = virtualCursor.y;
+        const cur = bandAtY(y);
+        if (cur === lockedBand) return;
+        const margin = tunables.bandHysteresisPx;
+        if (lockedBand === 'upper' && y > b.divider + margin) {
+          lockedBand = 'lower';
+          lockedAtMs = performance.now();
+        } else if (lockedBand === 'lower' && y < b.divider - margin) {
+          lockedBand = 'upper';
+          lockedAtMs = performance.now();
+        }
+      }
+
+      function bandCenterY(band) {
+        const b = bandBoundaries();
+        if (band === 'upper') return (b.upperTop + b.upperBottom) / 2;
+        return (b.lowerTop + b.lowerBottom) / 2;
+      }
+
+      function getCSSVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+
+      /* ── Drawing — scene ──────────────────────────────────────── */
+      function drawSky() {
+        const grad = ctx.createLinearGradient(0, 0, 0, FIELD.skyBottomY);
+        grad.addColorStop(0, getCSSVar('--sky-top'));
+        grad.addColorStop(1, getCSSVar('--sky-bottom'));
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, FIELD.skyBottomY);
+      }
+
+      function drawCrowd() {
+        ctx.fillStyle = 'rgba(20, 25, 30, 0.85)';
+        ctx.fillRect(0, FIELD.crowdY - 10, W, 24);
+
+        // Pseudo-random head bumps
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        const heads = 100;
+        for (let i = 0; i < heads; i++) {
+          const t = (i + 0.5) / heads;
+          const jitter = Math.sin(i * 12.9898) * 0.5;
+          const x = t * W + jitter * 6;
+          const y = FIELD.crowdY + Math.sin(i * 7.13) * 1.6;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Scoreboard silhouette
+        const sbX = W / 2 - 80;
+        const sbY = FIELD.crowdY - 32;
+        ctx.fillStyle = 'rgba(30, 35, 42, 0.85)';
+        ctx.fillRect(sbX, sbY, 160, 22);
+        ctx.fillStyle = 'rgba(255, 217, 90, 0.55)';
+        for (let i = 0; i < 6; i++) {
+          ctx.fillRect(sbX + 12 + i * 24, sbY + 7, 14, 8);
+        }
+      }
+
+      function drawWall() {
+        ctx.fillStyle = getCSSVar('--wall');
+        ctx.fillRect(0, FIELD.wallY, W, FIELD.wallH);
+        ctx.fillStyle = getCSSVar('--wall-line');
+        ctx.fillRect(0, FIELD.wallY, W, 2);
+      }
+
+      function drawOutfieldGrass() {
+        // Whole field below the wall = green grass. Diamond + home
+        // dirt cutouts get drawn on top of this.
+        ctx.fillStyle = getCSSVar('--grass');
+        ctx.fillRect(0, FIELD.wallY + FIELD.wallH, W, H - (FIELD.wallY + FIELD.wallH));
+
+        // Two subtle outfield mowing stripes in the back portion
+        ctx.fillStyle = getCSSVar('--grass-dark');
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(0, 138, W, 22);
+        ctx.fillRect(0, 178, W, 22);
+        ctx.globalAlpha = 1;
+      }
+
+      function drawDiamond() {
+        const pts = [
+          { x: FIELD.diamond2BX, y: FIELD.diamond2BY }, // 2B (top)
+          { x: FIELD.diamond1BX, y: FIELD.diamond1BY }, // 1B (right)
+          { x: FIELD.diamondHomeX, y: FIELD.diamondHomeY }, // Home (bottom)
+          { x: FIELD.diamond3BX, y: FIELD.diamond3BY }, // 3B (left)
+        ];
+
+        // Dirt diamond — full shape
+        ctx.fillStyle = getCSSVar('--dirt');
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Infield grass — slightly smaller diamond inside, leaving the
+        // basepaths as visible dirt rings.
+        const margin = 28;
+        const innerPts = [
+          { x: pts[0].x, y: pts[0].y + margin },
+          { x: pts[1].x - margin * 1.4, y: pts[1].y },
+          { x: pts[2].x, y: pts[2].y - margin },
+          { x: pts[3].x + margin * 1.4, y: pts[3].y },
+        ];
+        ctx.fillStyle = getCSSVar('--grass');
+        ctx.beginPath();
+        ctx.moveTo(innerPts[0].x, innerPts[0].y);
+        for (let i = 1; i < innerPts.length; i++) ctx.lineTo(innerPts[i].x, innerPts[i].y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle definition between dirt and grass
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Home plate dirt cutout — wider area around home plate that
+        // bridges from the diamond's home corner down to the bottom.
+        ctx.fillStyle = getCSSVar('--dirt');
+        ctx.beginPath();
+        ctx.ellipse(FIELD.plateX, FIELD.plateY - 8, 175, 60, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Foul lines — chalk lines from home plate diagonally to the
+        // wall corners. (Eyeballed angles; the lines pass through 1B/3B
+        // territory cleanly.)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pts[2].x + 14, pts[2].y - 6);
+        ctx.lineTo(W - 22, FIELD.wallY + FIELD.wallH);
+        ctx.moveTo(pts[2].x - 14, pts[2].y - 6);
+        ctx.lineTo(22, FIELD.wallY + FIELD.wallH);
+        ctx.stroke();
+
+        // Bases — small white squares rotated 45°, sized for perspective.
+        function drawBase(x, y, size) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(Math.PI / 4);
+          ctx.fillStyle = '#fafafa';
+          ctx.fillRect(-size / 2, -size / 2, size, size);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-size / 2, -size / 2, size, size);
+          ctx.restore();
+        }
+        drawBase(pts[0].x, pts[0].y + 6, 11); // 2B (smaller, far)
+        drawBase(pts[1].x - 8, pts[1].y, 13); // 1B
+        drawBase(pts[3].x + 8, pts[3].y, 13); // 3B
+      }
+
+      function drawMound() {
+        // Mound dirt — flat ellipse on the infield grass
+        ctx.fillStyle = getCSSVar('--dirt-dark');
+        ctx.beginPath();
+        ctx.ellipse(FIELD.moundX, FIELD.moundY, FIELD.moundRX, FIELD.moundRY, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Lighter dirt cap on top of the mound
+        ctx.fillStyle = getCSSVar('--dirt');
+        ctx.beginPath();
+        ctx.ellipse(
+          FIELD.moundX,
+          FIELD.moundY - 4,
+          FIELD.moundRX - 14,
+          FIELD.moundRY - 6,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Pitching rubber
+        ctx.fillStyle = '#e8e4d9';
+        ctx.fillRect(FIELD.moundX - 16, FIELD.moundY - 9, 32, 3);
+      }
+
+      function drawPitcher() {
+        const x = FIELD.pitcherX;
+        const y = FIELD.pitcherY;
+        const h = FIELD.pitcherH;
+
+        // Torso (jersey) — slight set-position twist
+        ctx.fillStyle = getCSSVar('--pitcher-jersey');
+        ctx.beginPath();
+        ctx.moveTo(x - 11, y - h);
+        ctx.lineTo(x + 11, y - h);
+        ctx.lineTo(x + 16, y - h * 0.45);
+        ctx.lineTo(x - 16, y - h * 0.45);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pants
+        ctx.fillStyle = '#3a4150';
+        ctx.beginPath();
+        ctx.moveTo(x - 16, y - h * 0.45);
+        ctx.lineTo(x + 16, y - h * 0.45);
+        ctx.lineTo(x + 13, y - 5);
+        ctx.lineTo(x - 13, y - 5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Legs
+        ctx.fillRect(x - 12, y - 14, 9, 14);
+        ctx.fillRect(x + 3, y - 14, 9, 14);
+
+        // Head
+        ctx.fillStyle = getCSSVar('--batter-skin');
+        ctx.beginPath();
+        ctx.arc(x, y - h - 6, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cap
+        ctx.fillStyle = getCSSVar('--pitcher-cap');
+        ctx.beginPath();
+        ctx.arc(x, y - h - 6, 8, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillRect(x - 9, y - h - 6, 18, 2);
+
+        // Glove arm tucked
+        ctx.fillStyle = getCSSVar('--pitcher-cap');
+        ctx.beginPath();
+        ctx.arc(x - 7, y - h * 0.6, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Throwing arm hint
+        ctx.fillStyle = getCSSVar('--pitcher-jersey');
+        ctx.beginPath();
+        ctx.arc(x + 13, y - h * 0.65, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawHomePlate() {
+        const x = FIELD.plateX;
+        const y = FIELD.plateY;
+        const w = FIELD.plateW;
+        const h = FIELD.plateH;
+
+        ctx.fillStyle = getCSSVar('--plate');
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2, y - h);
+        ctx.lineTo(x + w / 2, y - h);
+        ctx.lineTo(x + w / 2 - 8, y - h / 2);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x - w / 2 + 8, y - h / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      function drawStrikeZone() {
+        const x = FIELD.szCenterX - FIELD.szW / 2;
+        const y = FIELD.szCenterY - FIELD.szH / 2;
+        const w = FIELD.szW;
+        const h = FIELD.szH;
+
+        // Dark backing — keeps the zone visible against busy field
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+        ctx.fillRect(x, y, w, h);
+
+        // Outer outline
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.48)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, y, w, h);
+
+        // Single divider line between upper / lower bands
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+        ctx.setLineDash([6, 5]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + h / 2);
+        ctx.lineTo(x + w, y + h / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Band labels (small, on the right edge)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.34)';
+        ctx.font = "9px 'Courier New', monospace";
+        ctx.textAlign = 'left';
+        ctx.fillText('UP', x + w + 6, y + h * 0.27);
+        ctx.fillText('LO', x + w + 6, y + h * 0.77);
+      }
+
+      function drawLockedBandHighlight() {
+        const b = bandBoundaries();
+        const x = FIELD.szCenterX - FIELD.szW / 2;
+        const w = FIELD.szW;
+        const yTop = lockedBand === 'upper' ? b.upperTop : b.lowerTop;
+        const yBot = lockedBand === 'upper' ? b.upperBottom : b.lowerBottom;
+
+        const sinceLock = performance.now() - lockedAtMs;
+        const flashT = Math.max(0, 1 - sinceLock / 220);
+        const baseAlpha = 0.07;
+        const flashAlpha = 0.18 * flashT;
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${baseAlpha + flashAlpha})`;
+        ctx.fillRect(x, yTop, w, yBot - yTop);
+
+        // Side bracket indicators
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 + 0.35 * flashT})`;
+        ctx.lineWidth = 2;
+        const bx = x - 8;
+        const by1 = yTop + 6;
+        const by2 = yBot - 6;
+        ctx.beginPath();
+        ctx.moveTo(bx + 5, by1);
+        ctx.lineTo(bx, by1);
+        ctx.lineTo(bx, by2);
+        ctx.lineTo(bx + 5, by2);
+        ctx.stroke();
+        const rx = x + w + 8;
+        ctx.beginPath();
+        ctx.moveTo(rx - 5, by1);
+        ctx.lineTo(rx, by1);
+        ctx.lineTo(rx, by2);
+        ctx.lineTo(rx - 5, by2);
+        ctx.stroke();
+      }
+
+      function drawBatter() {
+        // Right-handed batter on screen-LEFT (catcher's left = 3B side).
+        // Profile / 3-quarter view from behind, head turned to track the
+        // pitcher (upper-right). Feet partially below the canvas so the
+        // batter occupies the foreground convincingly.
+        const cx = FIELD.batterFootX;
+        const groundY = FIELD.batterGroundY;
+        const shoulderY = FIELD.batterShoulderY;
+
+        // Pants — two legs in batting stance
+        ctx.fillStyle = '#3a4150';
+        // Back leg (further from plate, screen-left of cx)
+        ctx.beginPath();
+        ctx.moveTo(cx - 16, groundY - 138);
+        ctx.lineTo(cx - 2, groundY - 138);
+        ctx.lineTo(cx - 6, groundY);
+        ctx.lineTo(cx - 22, groundY);
+        ctx.closePath();
+        ctx.fill();
+        // Front leg (closer to plate, screen-right of cx)
+        ctx.beginPath();
+        ctx.moveTo(cx + 4, groundY - 138);
+        ctx.lineTo(cx + 18, groundY - 138);
+        ctx.lineTo(cx + 24, groundY);
+        ctx.lineTo(cx + 8, groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Belt
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(cx - 22, groundY - 146, 42, 8);
+
+        // Torso — narrower up top (shoulders), widens to belt; slightly
+        // twisted because front shoulder leads toward the pitcher.
+        ctx.fillStyle = getCSSVar('--batter-jersey');
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, shoulderY); // back shoulder
+        ctx.lineTo(cx + 20, shoulderY - 4); // front shoulder, slightly higher
+        ctx.lineTo(cx + 22, groundY - 146); // front belt
+        ctx.lineTo(cx - 22, groundY - 146); // back belt
+        ctx.closePath();
+        ctx.fill();
+
+        // Jersey accent stripe
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.fillRect(cx - 21, shoulderY + 38, 42, 3);
+
+        // Number on back (jersey #23)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.font = "bold 16px 'Courier New', monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText('23', cx - 4, shoulderY + 30);
+
+        // Neck
+        ctx.fillStyle = getCSSVar('--batter-skin');
+        ctx.fillRect(cx - 2, shoulderY - 16, 12, 14);
+
+        // Helmet — dome with the brim pointing toward the pitcher
+        // (upper-right), ear flap visible on the back side (screen-left).
+        const headCX = cx + 2;
+        const headCY = FIELD.batterHeadTopY + 18; // 220 + 18 = 238
+        ctx.fillStyle = getCSSVar('--batter-helmet');
+        ctx.beginPath();
+        ctx.ellipse(headCX, headCY, 18, 19, 0.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ear flap on the back/visible side
+        ctx.beginPath();
+        ctx.ellipse(headCX - 14, headCY + 2, 7, 9, -0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Helmet brim — points toward upper-right (toward pitcher)
+        ctx.beginPath();
+        ctx.ellipse(headCX + 16, headCY - 2, 8, 4, 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Helmet sheen
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.beginPath();
+        ctx.ellipse(headCX + 4, headCY - 11, 8, 4, 0.05, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Face slice — small skin patch where the cheek/jaw turns toward
+        // the pitcher (visible because head is turned that way).
+        ctx.fillStyle = getCSSVar('--batter-skin');
+        ctx.beginPath();
+        ctx.arc(headCX + 14, headCY + 4, 4.5, -Math.PI / 2, Math.PI / 2);
+        ctx.fill();
+      }
+
+      function drawBat() {
+        // Hands extend forward from the chest area, holding the bat.
+        // The bat stretches into the strike zone with its tip at the
+        // locked band's vertical center. Small sway settles after lock.
+        const cx = FIELD.batterFootX;
+        const shoulderY = FIELD.batterShoulderY;
+
+        // Hand position — forward (right) of the front shoulder, at
+        // roughly mid-strike-zone height so the bat hangs near horizontal.
+        const handX = cx + 32;
+        const handY = FIELD.szCenterY - 4;
+
+        const targetTipX = FIELD.szCenterX + FIELD.szW / 2 - 8;
+        const targetTipY = bandCenterY(lockedBand);
+
+        // Sway: cursor influence shrinks once locked
+        const sinceLock = performance.now() - lockedAtMs;
+        const settleT = Math.min(1, sinceLock / 180);
+        const settleEase = 1 - Math.pow(1 - settleT, 3);
+        const cursorOffset = virtualCursor.y - targetTipY;
+        const sway = Math.max(
+          -tunables.bandSwayPx,
+          Math.min(tunables.bandSwayPx, cursorOffset * (1 - settleEase) + cursorOffset * 0.04)
+        );
+        const tipY = targetTipY + sway;
+        const tipX = targetTipX;
+
+        // Forearms — two arm strokes from shoulders to hands. Both arms
+        // extend forward toward the bat handle (lead arm + back arm).
+        ctx.strokeStyle = getCSSVar('--batter-jersey');
+        ctx.lineWidth = 9;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, shoulderY + 4);
+        ctx.lineTo(handX - 4, handY + 2);
+        ctx.moveTo(cx + 16, shoulderY);
+        ctx.lineTo(handX + 4, handY - 2);
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+
+        // Bat geometry — knob at hands, tip into strike zone
+        const dx = tipX - handX;
+        const dy = tipY - handY;
+        const len = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(angle);
+
+        // Bat shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.beginPath();
+        ctx.moveTo(0, 5);
+        ctx.lineTo(len * 0.4, 6);
+        ctx.lineTo(len, 9);
+        ctx.lineTo(len, 11);
+        ctx.lineTo(len * 0.4, 8);
+        ctx.lineTo(0, 7);
+        ctx.closePath();
+        ctx.fill();
+
+        // Knob
+        ctx.fillStyle = getCSSVar('--bat-dark');
+        ctx.fillRect(-5, -4, 6, 8);
+
+        // Handle + tapered barrel
+        ctx.fillStyle = getCSSVar('--bat-light');
+        ctx.beginPath();
+        ctx.moveTo(0, -3);
+        ctx.lineTo(len * 0.55, -4);
+        ctx.lineTo(len, -7);
+        ctx.lineTo(len, 7);
+        ctx.lineTo(len * 0.55, 4);
+        ctx.lineTo(0, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Barrel highlight (top edge)
+        ctx.fillStyle = 'rgba(255, 240, 215, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(len * 0.55, -4);
+        ctx.lineTo(len, -7);
+        ctx.lineTo(len, -5);
+        ctx.lineTo(len * 0.55, -2.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Barrel tip cap
+        ctx.fillStyle = getCSSVar('--bat-dark');
+        ctx.beginPath();
+        ctx.arc(len, 0, 7, -Math.PI / 2, Math.PI / 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Hands over the knob
+        ctx.fillStyle = getCSSVar('--batter-skin');
+        ctx.beginPath();
+        ctx.arc(handX, handY - 1, 6, 0, Math.PI * 2);
+        ctx.arc(handX + 4, handY + 5, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Batting glove dot
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.arc(handX + 1, handY + 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawCursor() {
+        BCI.drawCursorDot(ctx, virtualCursor.x, virtualCursor.y, {
+          color: 'rgba(255, 255, 255, 0.9)',
+          arm: 8,
+        });
+      }
+
+      /* ── Render ──────────────────────────────────────────────── */
+      function render() {
+        ctx.fillStyle = getCSSVar('--field-frame');
+        ctx.fillRect(0, 0, W, H);
+
+        drawSky();
+        drawCrowd();
+        drawWall();
+        drawOutfieldGrass();
+        drawDiamond();
+        drawMound();
+        drawPitcher();
+        drawHomePlate();
+        drawStrikeZone();
+        drawLockedBandHighlight();
+        drawBatter();
+        drawBat();
+
+        if (gameState === STATE.IDLE) {
+          drawCursor();
+        }
+      }
+
+      /* ── Loop ────────────────────────────────────────────────── */
+      function loop() {
+        if (gameState === STATE.IDLE) {
+          updateLockedBand();
+        }
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      /* ── Menu wiring ─────────────────────────────────────────── */
+      const menuOverlay = document.getElementById('menu-overlay');
+      const statusMsg = document.getElementById('status-msg');
+
+      document.querySelectorAll('[data-action="start-batter"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          menuOverlay.classList.remove('is-visible');
+          gameState = STATE.IDLE;
+          lockedBand = bandAtY(virtualCursor.y);
+          lockedAtMs = performance.now();
+          statusMsg.innerHTML =
+            'Move the cursor up or down to lock the bat. ' +
+            '<span class="accent">Pitches arrive in checkpoint 2.</span>';
+        });
+      });
+
+      loop();
+    </script>
+  </body>
+</html>
