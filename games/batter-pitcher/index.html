@@ -2180,7 +2180,46 @@
         updateHUD();
       }
 
+      /* Walkthrough — shown first time a player opens Batter mode.
+         Cursor-first per the BCI walkthrough rule (the floating cursor
+         is the spatial input, click colors come second). */
+      const WT_ID = 'batter-pitcher/batter';
+      const WT_STEPS = [
+        {
+          title: 'Position the Bat',
+          body:
+            'The floating cursor moves the bat up and down inside the strike zone. ' +
+            'Aim with your cursor — the bat barrel follows.',
+        },
+        {
+          title: 'Read the Pitch Color',
+          body: [
+            'Three pitch types, each color-coded.',
+            'Blue = Fastball · Orange = Curveball · Purple = Changeup.',
+            'You see the color the moment the ball leaves the pitcher.',
+          ],
+          clicks: ['left', 'right', 'middle'],
+        },
+        {
+          title: 'Swing at the Target Marker',
+          body:
+            'A pulsing marker shows where the pitch will land. Move your bat to ' +
+            'meet it, then click the matching color when the marker flashes a ' +
+            'bright halo. Perfect timing = home run, good timing = single.',
+        },
+      ];
+
       function startRound(pitches) {
+        // Walkthrough first (no-op if already seen). Once it closes,
+        // actually start the round.
+        BCI.showWalkthrough(WT_ID, WT_STEPS, {
+          onClose: () => {
+            doStartRound(pitches);
+          },
+        });
+      }
+
+      function doStartRound(pitches) {
         totalPitches = pitches;
         menuOverlay.classList.remove('is-visible');
         resultsOverlay.classList.remove('is-visible');
@@ -2194,6 +2233,11 @@
             '<span class="accent">first pitch in three seconds.</span>'
         );
       }
+
+      /* Help "?" button — replays the walkthrough on demand. */
+      document.getElementById('help-slot').appendChild(
+        BCI.createHelpButton(() => ({ id: WT_ID, steps: WT_STEPS }))
+      );
 
       document.querySelectorAll('[data-action="start-batter"]').forEach((btn) => {
         btn.addEventListener('click', () => {
