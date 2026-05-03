@@ -225,18 +225,97 @@
          ───────────────────────────────────────────────────────── */
       const ROUND_DURATION_MS = 90_000;
 
-      const STATE = {
+      const PHASE = {
         IDLE: 'idle',
-        // Reserved for future checkpoints:
-        //   PRE_INIT, COMBO, COUNTER, RECOVERY, ROUND_END
+        PRE_INIT: 'pre_init',
+        COMBO: 'combo',
+        POST_COMBO: 'post_combo',
+        COUNTER: 'counter',
+        POST_COUNTER: 'post_counter',
+        RECOVERY: 'recovery',
+        ROUND_END: 'round_end',
       };
 
+      // Phase durations in ms. COMBO and COUNTER are placeholders here that
+      // get replaced by their internal mechanics in checkpoints 3 + 4.
+      const PHASE_DURATION = {
+        [PHASE.IDLE]: 6000,
+        [PHASE.PRE_INIT]: 700,
+        [PHASE.COMBO]: 4500,
+        [PHASE.POST_COMBO]: 700,
+        [PHASE.COUNTER]: 4500,
+        [PHASE.POST_COUNTER]: 700,
+        [PHASE.RECOVERY]: 1500,
+        [PHASE.ROUND_END]: Infinity,
+      };
+
+      const OPPONENT_TELL_DELAY_MS = 2400;
+      const OPPONENT_TELL_DURATION_MS = 900;
+
       const game = {
-        state: STATE.IDLE,
+        phase: PHASE.IDLE,
+        phaseStartedAt: 0,
+        phaseEndsAt: 0,
         roundEndsAt: performance.now() + ROUND_DURATION_MS,
         playerHP: 100,
         opponentHP: 100,
+        // Per-exchange state — rolled fresh on every IDLE entry
+        initiator: null,
+        exchangeQueue: [],
+        exchangeNumber: 0,
+        opponentTellStartedAt: null,
       };
+
+      function rollInitiator() {
+        return Math.random() < 0.5 ? 'player' : 'opponent';
+      }
+
+      function buildExchangeSequence(initiator) {
+        // Initiator throws first. The other side defends. Then it flips and the
+        // exchange wraps with a recovery beat before going back to IDLE.
+        if (initiator === 'player') {
+          return [
+            PHASE.PRE_INIT,
+            PHASE.COMBO,
+            PHASE.POST_COMBO,
+            PHASE.COUNTER,
+            PHASE.POST_COUNTER,
+            PHASE.RECOVERY,
+          ];
+        }
+        return [
+          PHASE.PRE_INIT,
+          PHASE.COUNTER,
+          PHASE.POST_COUNTER,
+          PHASE.COMBO,
+          PHASE.POST_COMBO,
+          PHASE.RECOVERY,
+        ];
+      }
+
+      function enterPhase(phase, now) {
+        game.phase = phase;
+        game.phaseStartedAt = now;
+        game.phaseEndsAt = now + PHASE_DURATION[phase];
+        if (phase === PHASE.IDLE) {
+          game.initiator = rollInitiator();
+          game.exchangeQueue = buildExchangeSequence(game.initiator);
+          game.opponentTellStartedAt = null;
+          game.exchangeNumber += 1;
+        }
+      }
+
+      function advanceExchange(now) {
+        if (game.exchangeQueue.length === 0) {
+          enterPhase(PHASE.IDLE, now);
+        } else {
+          const next = game.exchangeQueue.shift();
+          enterPhase(next, now);
+        }
+      }
+
+      // Bootstrap the first IDLE phase (rolls initiator, builds queue)
+      enterPhase(PHASE.IDLE, performance.now());
 
       /* ─────────────────────────────────────────────────────────
          Helpers
@@ -449,7 +528,7 @@
         ctx.restore();
       }
 
-      function drawOpponent(ctx, t, cam) {
+      function drawOpponent(ctx, t, cam, tellAmount = 0) {
         const bob = getOpponentBob(t);
         const cx = W / 2 + bob.x + cam.x * 0.3;
         // Opponent vertical anchor — feet roughly at the ring floor line
@@ -515,6 +594,21 @@
         ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
         ctx.fillRect(cx - 28, torsoTop + 130, 56, 1);
         ctx.fillRect(cx - 28, torsoTop + 158, 56, 1);
+
+        // ── Wind-up tell glow (shoulders pulse red when opponent is loading up) ──
+        if (tellAmount > 0) {
+          const pulse = Math.sin(tellAmount * Math.PI); // 0 → 1 → 0 across the tell
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          for (const sx of [cx - shoulderW / 2 + 20, cx + shoulderW / 2 - 20]) {
+            const grad = ctx.createRadialGradient(sx, shoulderY + 10, 6, sx, shoulderY + 10, 80);
+            grad.addColorStop(0, `rgba(220, 60, 60, ${pulse * 0.65})`);
+            grad.addColorStop(1, 'rgba(220, 60, 60, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(sx - 80, shoulderY - 70, 160, 160);
+          }
+          ctx.restore();
+        }
 
         // ── Head ──
         const headY = torsoTop - headR + 4;
@@ -859,11 +953,143 @@
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       }
 
+      function getSlowMoIntensity(now) {
+        // 0 = no slow-mo, 1 = full slow-mo. Used to fade the vignette in/out.
+        switch (game.phase) {
+          case PHASE.PRE_INIT: {
+            const progress = (now - game.phaseStartedAt) / PHASE_DURATION[PHASE.PRE_INIT];
+            return clamp(progress, 0, 1);
+          }
+          case PHASE.COMBO:
+          case PHASE.POST_COMBO:
+          case PHASE.COUNTER:
+          case PHASE.POST_COUNTER:
+            return 1;
+          case PHASE.RECOVERY: {
+            const progress = (now - game.phaseStartedAt) / PHASE_DURATION[PHASE.RECOVERY];
+            return clamp(1 - progress, 0, 1);
+          }
+          default:
+            return 0;
+        }
+      }
+
+      function drawSlowMoVignette(ctx, intensity) {
+        if (intensity <= 0) return;
+        ctx.save();
+        // Edge vignette
+        const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.25, W / 2, H / 2, W * 0.7);
+        grad.addColorStop(0, 'rgba(0, 0, 20, 0)');
+        grad.addColorStop(1, `rgba(0, 0, 20, ${intensity * 0.55})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+        // Cool-blue tint
+        ctx.fillStyle = `rgba(50, 80, 130, ${intensity * 0.06})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+
+      function drawPhaseOverlay(ctx, phase, now) {
+        let text = '';
+        let color = '#e8e4d9';
+        if (phase === PHASE.COMBO) {
+          text = 'ATTACK';
+          color = getCSS('--click-orange');
+        } else if (phase === PHASE.COUNTER) {
+          text = 'DEFEND';
+          color = getCSS('--click-blue');
+        } else return;
+
+        const msInPhase = PHASE_DURATION[phase];
+        const msIntoPhase = now - game.phaseStartedAt;
+        const fadeIn = clamp(msIntoPhase / 250, 0, 1);
+        const fadeOut = clamp((msInPhase - msIntoPhase) / 250, 0, 1);
+        const alpha = Math.min(fadeIn, fadeOut) * 0.78;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = color;
+        ctx.font = 'bold 72px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, W / 2, H * 0.32);
+        ctx.fillRect(W / 2 - 120, H * 0.32 + 50, 240, 3);
+        ctx.restore();
+      }
+
+      function drawIdlePrompt(ctx) {
+        let text;
+        if (game.opponentTellStartedAt !== null) {
+          text = 'INCOMING — DEFEND';
+        } else if (game.initiator === 'player') {
+          text = 'YOUR TURN — CLICK TO ATTACK';
+        } else {
+          text = 'OPPONENT WINDING UP...';
+        }
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(232, 228, 217, 0.85)';
+        ctx.font = 'bold 13px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, W / 2, H - 26);
+        ctx.restore();
+      }
+
+      function drawRoundEndPlaceholder(ctx) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#e8e4d9';
+        ctx.font = 'bold 48px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ROUND END', W / 2, H * 0.45);
+        ctx.font = '12px "Courier New", monospace';
+        ctx.fillStyle = '#9aa4b1';
+        ctx.fillText('Full round-end overlay ships in checkpoint 5', W / 2, H * 0.55);
+        ctx.restore();
+      }
+
       function update(now) {
-        // Clamp the round timer; later checkpoints will pause it during modals
-        // and end the round when it expires.
-        if (game.state === STATE.IDLE) {
-          // No state transitions yet — initiation logic lands in checkpoint 2
+        // Round timer expiration takes priority over phase transitions.
+        if (now >= game.roundEndsAt && game.phase !== PHASE.ROUND_END) {
+          enterPhase(PHASE.ROUND_END, now);
+          return;
+        }
+        if (game.phase === PHASE.ROUND_END) return;
+
+        if (game.phase === PHASE.IDLE) {
+          if (game.initiator === 'opponent') {
+            // Opponent winds up after a delay, then the exchange begins.
+            if (
+              game.opponentTellStartedAt === null &&
+              now - game.phaseStartedAt >= OPPONENT_TELL_DELAY_MS
+            ) {
+              game.opponentTellStartedAt = now;
+            }
+            if (
+              game.opponentTellStartedAt !== null &&
+              now - game.opponentTellStartedAt >= OPPONENT_TELL_DURATION_MS
+            ) {
+              advanceExchange(now);
+            }
+          } else if (game.initiator === 'player') {
+            // Player has the initiative — they click to start. Idling past the
+            // max IDLE window hands the initiative to the opponent so the round
+            // can't stall out.
+            if (now - game.phaseStartedAt >= PHASE_DURATION[PHASE.IDLE]) {
+              game.initiator = 'opponent';
+              game.exchangeQueue = buildExchangeSequence('opponent');
+              game.opponentTellStartedAt = now;
+              game.phaseEndsAt = now + OPPONENT_TELL_DURATION_MS;
+            }
+          }
+        } else if (now >= game.phaseEndsAt) {
+          // Active exchange phase — advance when the timer expires. Real combo
+          // and counter mechanics in checkpoints 3 & 4 will end their phases
+          // early when the player resolves all 4 inputs.
+          advanceExchange(now);
         }
       }
 
@@ -878,11 +1104,36 @@
         drawCornerPosts(ctx, cam);
         drawRingRopes(ctx, cam);
         drawCanvasFloor(ctx, cam);
-        drawOpponent(ctx, now, cam);
+
+        // Opponent tell amount — visible only during IDLE while opponent is winding up
+        let tellAmount = 0;
+        if (game.phase === PHASE.IDLE && game.opponentTellStartedAt !== null) {
+          tellAmount = clamp((now - game.opponentTellStartedAt) / OPPONENT_TELL_DURATION_MS, 0, 1);
+        }
+
+        drawOpponent(ctx, now, cam, tellAmount);
         drawPlayerGloves(ctx, now, cam);
+
+        // Slow-mo overlay during exchange phases
+        const slowMoIntensity = getSlowMoIntensity(now);
+        drawSlowMoVignette(ctx, slowMoIntensity);
+
+        // Phase text overlay (ATTACK / DEFEND)
+        if (game.phase === PHASE.COMBO || game.phase === PHASE.COUNTER) {
+          drawPhaseOverlay(ctx, game.phase, now);
+        }
+
+        // Idle prompt — bottom-center status text
+        if (game.phase === PHASE.IDLE) {
+          drawIdlePrompt(ctx);
+        }
 
         const msLeft = game.roundEndsAt - now;
         drawHUD(ctx, msLeft);
+
+        if (game.phase === PHASE.ROUND_END) {
+          drawRoundEndPlaceholder(ctx);
+        }
       }
 
       function loop(now) {
@@ -890,6 +1141,22 @@
         render(now);
         requestAnimationFrame(loop);
       }
+
+      /* ─────────────────────────────────────────────────────────
+         Click handling — player initiation, combo aim, dodge clicks
+         Combo aim and dodge clicks land in checkpoints 3 + 4.
+         ───────────────────────────────────────────────────────── */
+      canvas.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const click = BCI.CLICK_BY_BUTTON[e.button];
+        if (!click) return;
+        const now = performance.now();
+
+        if (game.phase === PHASE.IDLE && game.initiator === 'player') {
+          // Player initiates — pop PRE_INIT off the queue and begin
+          advanceExchange(now);
+        }
+      });
 
       requestAnimationFrame(loop);
 
