@@ -109,6 +109,7 @@ First step must teach the floating cursor / point-and-click action before introd
 
 ## Long-Term Vision
 
+- **Camera tilt v2** — drop the camera height a touch and pull it slightly more behind the shooter so the player's pads, arms, stick, and shooting motion read with depth instead of as a top-down silhouette. Still mostly overhead — think NHL '94 / classic arcade-hockey 3/4 view, not a true third-person chase cam. Two constraints to respect: (1) the 5-zone read must stay obviously the gaps around the goalie — too much tilt compresses the top corners and breaks the read, (2) the rink line perspective (faceoff circles, goal/blue lines) needs a stronger taper to match the new angle. Will likely require revisiting `RINK` geometry and adding a perspective scale factor.
 - **Goalie mode (v1.5)** — hockey-side counterpart. Pucks come at the goal from various rink positions; cursor + color read to save. Same finger→zone progression so the read transfers between modes.
 - **Penalty Shot mode (v1.5+)** — skate-in breakaway from center ice, goalie comes out to challenge, deke + shoot on a single chance. This is where movement and "make your own move" live.
 - **Goalie difficulty slider (v2)** — Easy / Medium / Hard for Slap Shot. Controls how active and how predictive the goalie is. Hard mode pattern-detects the player's recent aim history and shifts to cover the favored zone.
