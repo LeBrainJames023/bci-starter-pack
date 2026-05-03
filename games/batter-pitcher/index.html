@@ -376,6 +376,80 @@
         text-align: center;
         max-width: 480px;
       }
+
+      /* ── Round-end results ──────────────────────────────────── */
+      .results-grid {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .results-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+        min-width: 76px;
+      }
+      .results-stat-label {
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .results-stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .results-stat-value--good {
+        color: var(--good);
+      }
+      .results-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .results-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .results-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-blue);
+      }
+      .results-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .results-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .results-headline {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        text-align: center;
+      }
+      .results-headline .accent-good {
+        color: var(--good);
+      }
     </style>
   </head>
   <body>
@@ -392,7 +466,7 @@
           <div class="hud">
             <div class="hud-stat">
               <div class="hud-label">Pitch</div>
-              <div class="hud-value" id="hud-pitch">0</div>
+              <div class="hud-value" id="hud-pitch">–/–</div>
             </div>
             <div class="hud-stat">
               <div class="hud-label">Hits</div>
@@ -433,7 +507,12 @@
                     &middot; <strong>Purple</strong> = Changeup
                   </div>
                   <div class="mode-actions">
-                    <button class="mode-btn" data-action="start-batter">Step In</button>
+                    <button class="mode-btn" data-action="start-batter" data-pitches="10">
+                      10 Pitches
+                    </button>
+                    <button class="mode-btn" data-action="start-batter" data-pitches="20">
+                      20 Pitches
+                    </button>
                   </div>
                 </div>
                 <div class="mode-card mode-card--disabled">
@@ -446,8 +525,53 @@
                 </div>
               </div>
               <div class="menu-help">
-                Checkpoint 2.5 &mdash; free-cursor swing, target marker, slower pitches.
-                Round structure (10-pitch cap + end screen) ships in checkpoint 3.
+                Pick a length and step into the box. Read color, position the bat, click matching
+                color when the target marker flashes.
+              </div>
+            </div>
+          </div>
+
+          <!-- Round-end results -->
+          <div class="overlay" id="results-overlay">
+            <div class="overlay-card">
+              <div class="overlay-title">At-Bats Complete</div>
+              <div class="results-headline" id="results-headline">Nice work.</div>
+              <div class="results-grid">
+                <div class="results-stat">
+                  <div class="results-stat-label">HR</div>
+                  <div class="results-stat-value" id="result-hr">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Hits</div>
+                  <div class="results-stat-value" id="result-hits">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Fouls</div>
+                  <div class="results-stat-value" id="result-fouls">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">K</div>
+                  <div class="results-stat-value" id="result-strikes">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">AVG</div>
+                  <div class="results-stat-value" id="result-avg">.000</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">SLG</div>
+                  <div class="results-stat-value" id="result-slg">.000</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Streak</div>
+                  <div class="results-stat-value" id="result-streak">0</div>
+                </div>
+              </div>
+              <div class="results-buttons">
+                <button class="results-btn" id="result-replay">Play Again</button>
+                <button class="results-btn results-btn--ghost" id="result-menu">
+                  Change Length
+                </button>
+                <button class="results-btn results-btn--ghost" id="result-home">Home</button>
               </div>
             </div>
           </div>
@@ -633,6 +757,7 @@
         PRE_PITCH: 'pre_pitch',
         PITCH_FLIGHT: 'pitch_flight',
         RESOLVING: 'resolving',
+        ROUND_END: 'round_end',
       };
 
       let gameState = STATE.MENU;
@@ -673,6 +798,9 @@
          { startMs, durationMs, fromX, fromY, toX, toY,
            color, r0, arcAmount, kind } */
 
+      /* Round configuration. */
+      let totalPitches = 10;
+
       /* HUD counters. */
       let pitchesFaced = 0;
       let hits = 0;
@@ -682,6 +810,10 @@
       let strikes = 0;
       let streak = 0;
       let longestStreak = 0;
+
+      /* Analytics session — created at round start, persisted at round end. */
+      let analyticsSession = null;
+      let pitchStartedAt = 0;
 
       function getCSSVar(name) {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -850,6 +982,10 @@
       }
 
       function advanceToNextPitch() {
+        if (pitchesFaced >= totalPitches) {
+          endRound();
+          return;
+        }
         pitchesFaced++;
         setupNewPitch();
         postContactBall = null; // clear any lingering pop from prior pitch
@@ -860,8 +996,59 @@
         pitchFlashKind = null;
         updateHUD();
         updateStatus(
-          `Pitch ${pitchesFaced} incoming &mdash; <span class="accent">pitcher loads up</span>`
+          `Pitch ${pitchesFaced}/${totalPitches} incoming &mdash; ` +
+            `<span class="accent">pitcher loads up</span>`
         );
+      }
+
+      function endRound() {
+        gameState = STATE.ROUND_END;
+        stateEnteredAt = performance.now();
+
+        // Persist analytics for this round
+        if (analyticsSession) {
+          BCI.saveSession(GAME_ID, analyticsSession, {
+            mode: 'batter',
+            pitches: pitchesFaced,
+            hits,
+            homeRuns,
+            singles,
+            fouls,
+            strikes,
+            avg: currentAvg(),
+            slg: currentSlg(),
+            longestStreak,
+          });
+          analyticsSession = null;
+        }
+
+        // Populate the results overlay
+        document.getElementById('result-hr').textContent = homeRuns;
+        document.getElementById('result-hits').textContent = hits;
+        document.getElementById('result-fouls').textContent = fouls;
+        document.getElementById('result-strikes').textContent = strikes;
+        document.getElementById('result-avg').textContent = formatAvg(currentAvg());
+        document.getElementById('result-slg').textContent = formatAvg(currentSlg());
+        document.getElementById('result-streak').textContent = longestStreak;
+
+        // Headline copy varies by performance — small reward for good rounds
+        const headlineEl = document.getElementById('results-headline');
+        if (homeRuns >= Math.max(2, Math.floor(totalPitches / 4))) {
+          headlineEl.innerHTML =
+            `<span class="accent-good">${homeRuns} HOME RUNS</span> — ` +
+            'crushing the baseball.';
+        } else if (hits >= Math.max(3, Math.floor(totalPitches / 3))) {
+          headlineEl.innerHTML =
+            `<span class="accent-good">${hits} HITS</span> — solid contact all round.`;
+        } else if (hits > 0) {
+          headlineEl.innerHTML = `Got on base ${hits} time${hits === 1 ? '' : 's'}.`;
+        } else {
+          headlineEl.innerHTML = 'Tough at-bats. Step back in.';
+        }
+
+        // Show the overlay
+        document.getElementById('results-overlay').classList.add('is-visible');
+        updateStatus('Round complete &mdash; pick what comes next.');
       }
 
       /* ── Click handler — swing detection ──────────────────────── */
@@ -869,6 +1056,7 @@
         if (gameState !== STATE.PITCH_FLIGHT) return;
         e.preventDefault();
         const colorName = clickIdToColorName(e.button);
+        const clickId = e.button;
         if (!colorName || !activePitch) return;
 
         const now = performance.now();
@@ -878,30 +1066,43 @@
         const correctColor = colorName === activePitch.color;
         const yDiff = Math.abs(virtualCursor.y - activePitch.toY);
 
+        // Reaction time = ms from release → click. Recorded for every
+        // swing, regardless of outcome (so analytics can show how fast
+        // the player is REACTING, not just whether they hit).
+        const reactionMs = now - pitchStartedAt;
+        if (analyticsSession) {
+          BCI.recordReaction(analyticsSession, clickId, reactionMs);
+        }
+
         if (!correctColor) {
+          if (analyticsSession) BCI.recordAttempt(analyticsSession, clickId, false);
           resolveSwing('strike', { reason: 'wrong color' });
           return;
         }
 
         // Right color from here. Now timing + cursor proximity decide.
         if (absDelta > GOOD_WINDOW_MS) {
+          if (analyticsSession) BCI.recordAttempt(analyticsSession, clickId, false);
           resolveSwing('strike', { reason: 'bad timing', early: delta < 0 });
           return;
         }
 
         if (yDiff > NEAR_PITCH_PX) {
-          // Vertically way off — full whiff
+          if (analyticsSession) BCI.recordAttempt(analyticsSession, clickId, false);
           resolveSwing('strike', { reason: 'wrong height' });
           return;
         }
 
         if (yDiff > ON_PITCH_PX) {
-          // Just off the pitch height — got a piece of it (foul)
+          // Foul — made contact but off the pitch height. Counted as
+          // a non-correct attempt for color stats (didn't fully connect).
+          if (analyticsSession) BCI.recordAttempt(analyticsSession, clickId, false);
           resolveSwing('foul', { reason: 'just off the pitch height' });
           return;
         }
 
         // On the pitch vertically — perfect/good timing decides HR vs single
+        if (analyticsSession) BCI.recordAttempt(analyticsSession, clickId, true);
         if (absDelta <= PERFECT_WINDOW_MS) {
           resolveSwing('hr');
         } else {
@@ -917,13 +1118,29 @@
       const hudAVG = document.getElementById('hud-avg');
 
       function updateHUD() {
-        hudPitch.textContent = pitchesFaced;
+        hudPitch.textContent = `${pitchesFaced}/${totalPitches}`;
         hudHits.textContent = hits;
         hudHR.textContent = homeRuns;
-        const avg = pitchesFaced > 0 ? hits / pitchesFaced : 0;
-        let s = avg.toFixed(3);
+        hudAVG.textContent = formatAvg(currentAvg());
+      }
+
+      function currentAvg() {
+        return pitchesFaced > 0 ? hits / pitchesFaced : 0;
+      }
+
+      function currentSlg() {
+        // Total bases per at-bat. HR=4, Single=1, Foul/Strike=0.
+        if (pitchesFaced === 0) return 0;
+        const totalBases = homeRuns * 4 + singles;
+        return totalBases / pitchesFaced;
+      }
+
+      function formatAvg(v) {
+        // Baseball-style: .345 (no leading zero, three decimal places).
+        let s = v.toFixed(3);
         if (s.startsWith('0')) s = s.slice(1);
-        hudAVG.textContent = s;
+        if (s.startsWith('-0')) s = '-' + s.slice(2); // shouldn't happen but safe
+        return s;
       }
 
       function updateStatus(html) {
@@ -945,9 +1162,13 @@
           if (now - stateEnteredAt >= PRE_PITCH_MS) {
             activePitch.releaseMs = now;
             activePitch.arrivalMs = now + activePitch.flightMs;
+            pitchStartedAt = now;
             gameState = STATE.PITCH_FLIGHT;
             stateEnteredAt = now;
-            updateStatus(`Pitch ${pitchesFaced} &mdash; <span class="accent">read it</span>`);
+            updateStatus(
+              `Pitch ${pitchesFaced}/${totalPitches} &mdash; ` +
+                `<span class="accent">read it</span>`
+            );
           }
           return;
         }
@@ -1672,6 +1893,7 @@
 
       /* ── Menu wiring ─────────────────────────────────────────── */
       const menuOverlay = document.getElementById('menu-overlay');
+      const resultsOverlay = document.getElementById('results-overlay');
 
       function resetGameStats() {
         pitchesFaced = 0;
@@ -1685,17 +1907,39 @@
         updateHUD();
       }
 
+      function startRound(pitches) {
+        totalPitches = pitches;
+        menuOverlay.classList.remove('is-visible');
+        resultsOverlay.classList.remove('is-visible');
+        resetGameStats();
+        analyticsSession = BCI.createSession();
+        // Enter the GET_READY pre-roll instead of jumping into a pitch
+        gameState = STATE.GET_READY;
+        stateEnteredAt = performance.now();
+        updateStatus(
+          `${totalPitches}-pitch round &mdash; ` +
+            '<span class="accent">first pitch in three seconds.</span>'
+        );
+      }
+
       document.querySelectorAll('[data-action="start-batter"]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          menuOverlay.classList.remove('is-visible');
-          resetGameStats();
-          // Enter the GET_READY pre-roll instead of jumping into a pitch
-          gameState = STATE.GET_READY;
-          stateEnteredAt = performance.now();
-          updateStatus(
-            'Get ready &mdash; <span class="accent">first pitch in three seconds.</span>'
-          );
+          const pitches = parseInt(btn.dataset.pitches, 10) || 10;
+          startRound(pitches);
         });
+      });
+
+      // Round-end overlay buttons
+      document.getElementById('result-replay').addEventListener('click', () => {
+        startRound(totalPitches);
+      });
+      document.getElementById('result-menu').addEventListener('click', () => {
+        resultsOverlay.classList.remove('is-visible');
+        menuOverlay.classList.add('is-visible');
+        gameState = STATE.MENU;
+      });
+      document.getElementById('result-home').addEventListener('click', () => {
+        BCI.goToLauncher();
       });
 
       loop();
