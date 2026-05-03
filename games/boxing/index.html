@@ -348,6 +348,78 @@
         color: var(--click-orange);
         border-color: var(--click-orange);
       }
+
+      /* ── Stats modal ─────────────────────────────────────────── */
+      .stat-finger-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .stat-finger-row:last-child {
+        border-bottom: none;
+      }
+      .stat-finger-name {
+        flex: 1;
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+      .stat-finger-detail {
+        font-size: 10px;
+        color: var(--text-dim);
+        width: 80px;
+        text-align: right;
+      }
+      .stat-finger-pct {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+        min-width: 44px;
+        text-align: right;
+      }
+      .stat-history-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 11px;
+        gap: 10px;
+      }
+      .stat-history-row:last-child {
+        border-bottom: none;
+      }
+      .stat-history-date {
+        color: var(--text-dim);
+        min-width: 110px;
+      }
+      .stat-history-result {
+        font-weight: bold;
+        min-width: 78px;
+        font-size: 10px;
+        letter-spacing: 1.5px;
+      }
+      .stat-history-result--win {
+        color: #5fbf6e;
+      }
+      .stat-history-result--loss {
+        color: #d44b4b;
+      }
+      .stat-history-result--draw {
+        color: var(--text-muted);
+      }
+      .stat-history-stats {
+        color: var(--text-muted);
+        flex: 1;
+        text-align: right;
+      }
+      .stat-empty {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-align: center;
+        padding: 16px 0;
+      }
     </style>
   </head>
   <body>
@@ -459,6 +531,32 @@
             >Boxing-only. Saves automatically. Game pauses while open.</span
           >
           <button class="settings-reset" id="set-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Stats modal ────────────────────────────────────────── -->
+    <div id="stats-modal" class="modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">Boxing Stats</div>
+          <button class="modal-close" id="stats-close" aria-label="Close">&#10005;</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">All-Time Click Accuracy</div>
+          <div class="settings-desc">Across every combo and counter you've fought.</div>
+          <div id="stats-fingers"></div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Last 10 Rounds</div>
+          <div id="stats-history"></div>
+        </div>
+
+        <div class="settings-footer">
+          <span class="settings-note">Stored locally in your browser.</span>
+          <button class="settings-reset" id="stats-reset">Reset Stats</button>
         </div>
       </div>
     </div>
@@ -2220,8 +2318,113 @@
         cursor.setSensitivity(getBoxingSetting('cursorSensitivity', 1.0));
       });
 
-      // Stats button — placeholder, full analytics view ships in checkpoint 7
-      document.getElementById('btn-stats').addEventListener('click', () => {});
+      /* ─────────────────────────────────────────────────────────
+         Stats modal — per-color all-time accuracy + last 10 rounds
+         ───────────────────────────────────────────────────────── */
+      const statsModal = document.getElementById('stats-modal');
+      const statsFingersEl = document.getElementById('stats-fingers');
+      const statsHistoryEl = document.getElementById('stats-history');
+
+      function escapeHtml(s) {
+        return String(s).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;',
+            })[c]
+        );
+      }
+
+      function renderFingerStats() {
+        const allTime = BCI.getAllTimeStats(GAME_ID);
+        const totalAttempts = [0, 1, 2].reduce((a, id) => a + allTime.fingers[id].attempts, 0);
+        if (totalAttempts === 0) {
+          statsFingersEl.innerHTML =
+            '<div class="stat-empty">No clicks logged yet. Fight a round to start filling this in.</div>';
+          return;
+        }
+        const html = [0, 1, 2]
+          .map((id) => {
+            const f = allTime.fingers[id];
+            const click = BCI.CLICKS[id];
+            const pct = f.attempts > 0 ? Math.round((f.correct / f.attempts) * 100) : 0;
+            return `
+              <div class="stat-finger-row">
+                <div class="click-dot" style="background: ${click.color}"></div>
+                <span class="stat-finger-name">${escapeHtml(click.name)} (${escapeHtml(click.label)})</span>
+                <span class="stat-finger-detail">${f.correct} / ${f.attempts}</span>
+                <span class="stat-finger-pct">${pct}%</span>
+              </div>
+            `;
+          })
+          .join('');
+        statsFingersEl.innerHTML = html;
+      }
+
+      function renderHistory() {
+        const history = BCI.getSessionHistory(GAME_ID);
+        if (history.length === 0) {
+          statsHistoryEl.innerHTML =
+            '<div class="stat-empty">No rounds yet — fight one to see your history.</div>';
+          return;
+        }
+        const html = history
+          .map((h) => {
+            let label = 'DRAW';
+            let cls = 'draw';
+            if (h.result) {
+              if (h.result.winner === 'player') {
+                label = h.result.reason === 'ko' ? 'WIN — KO' : 'WIN — DEC';
+                cls = 'win';
+              } else if (h.result.winner === 'opponent') {
+                label = h.result.reason === 'ko' ? 'LOSS — KO' : 'LOSS — DEC';
+                cls = 'loss';
+              }
+            }
+            const hits = h.comboHitsTotal ?? 0;
+            const dodges = h.dodgesTotal ?? 0;
+            return `
+              <div class="stat-history-row">
+                <span class="stat-history-date">${escapeHtml(h.dateStr ?? '')}</span>
+                <span class="stat-history-result stat-history-result--${cls}">${label}</span>
+                <span class="stat-history-stats">${hits} hits · ${dodges} dodges</span>
+              </div>
+            `;
+          })
+          .join('');
+        statsHistoryEl.innerHTML = html;
+      }
+
+      function loadStatsIntoUI() {
+        renderFingerStats();
+        renderHistory();
+      }
+
+      function openStats() {
+        loadStatsIntoUI();
+        pauseGame();
+        statsModal.style.display = 'flex';
+      }
+
+      function closeStats() {
+        statsModal.style.display = 'none';
+        unpauseGame();
+      }
+
+      document.getElementById('btn-stats').addEventListener('click', openStats);
+      document.getElementById('stats-close').addEventListener('click', closeStats);
+      statsModal.addEventListener('mousedown', (e) => {
+        if (e.target === statsModal) closeStats();
+      });
+
+      document.getElementById('stats-reset').addEventListener('click', () => {
+        BCI.clearAnalytics(GAME_ID);
+        loadStatsIntoUI();
+      });
     </script>
   </body>
 </html>
