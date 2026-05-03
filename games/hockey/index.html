@@ -1,0 +1,2173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hockey — BCI Arcade</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --bg-badge-dim: #1f2630;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Hockey rink palette */
+        --rink-frame: #08111c;
+        --ice: #f0f6fb;
+        --ice-shade: #d6e3ec;
+        --ice-line-red: #d22b2b;
+        --ice-line-blue: #2767c2;
+        --ice-line-faint: #b6c8d4;
+        --crease: #6ba9e0;
+        --post-red: #d22b2b;
+        --post-red-shade: #8c1818;
+        --net-mesh: rgba(255, 255, 255, 0.55);
+        --goal-light: #ff5050;
+        --goal-light-on: #ffd23f;
+        --crowd: #20262f;
+        --shooter-jersey: #1d2a3d;
+        --shooter-jersey-trim: #c9202a;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        min-width: 56px;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+      .hud-value--clock {
+        font-variant-numeric: tabular-nums;
+      }
+      .hud-value--clock.is-low {
+        color: var(--bad);
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+
+      .rink-frame {
+        position: relative;
+        flex: 1;
+        background: var(--rink-frame);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      canvas {
+        display: block;
+        cursor: none;
+      }
+
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .status-msg .accent-good {
+        color: var(--good);
+      }
+      .status-msg .accent-bad {
+        color: var(--bad);
+      }
+      .home-slot {
+        display: flex;
+        align-items: center;
+      }
+
+      /* ── Overlays ────────────────────────────────────────────── */
+      .overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.85);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 6;
+      }
+      .overlay.is-visible {
+        display: flex;
+      }
+      .overlay-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 26px 32px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+        min-width: 440px;
+        max-width: 640px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      }
+      .overlay-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .overlay-sub {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: -8px;
+      }
+
+      /* ── Mode-select menu ────────────────────────────────────── */
+      .menu-card {
+        min-width: 620px;
+      }
+      .modes-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+      .mode-card {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px 14px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        min-height: 200px;
+      }
+      .mode-card--active {
+        border-color: var(--click-blue);
+      }
+      .mode-card--disabled {
+        opacity: 0.55;
+      }
+      .mode-name {
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+      }
+      .mode-desc {
+        font-size: 10px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        flex: 1;
+      }
+      .mode-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .mode-actions .mode-btn {
+        flex: 1;
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 9px 8px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .mode-actions .mode-btn:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--click-blue);
+      }
+      .mode-status {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--click-orange);
+        text-align: center;
+        padding: 8px 10px;
+        border: 1px dashed var(--border-strong);
+        border-radius: 6px;
+      }
+      .menu-help {
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--text-dim);
+        line-height: 1.55;
+        text-align: center;
+        max-width: 520px;
+      }
+
+      /* ── Round-end results ───────────────────────────────────── */
+      .results-grid {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .results-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+        min-width: 84px;
+      }
+      .results-stat-label {
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .results-stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .results-buttons {
+        display: flex;
+        gap: 12px;
+      }
+      .results-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .results-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-blue);
+      }
+      .results-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .results-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      /* ── Settings panel ──────────────────────────────────────── */
+      .settings-card {
+        min-width: 480px;
+        gap: 14px;
+      }
+      .settings-row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .settings-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .settings-value {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-orange);
+        cursor: pointer;
+        border: none;
+      }
+      .settings-help {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+      .settings-buttons {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+      .settings-btn {
+        flex: 1;
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s;
+      }
+      .settings-btn:hover {
+        background: var(--bg-card);
+        border-color: var(--click-orange);
+      }
+      .settings-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .settings-btn--ghost:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+
+      /* ── Analytics panel ─────────────────────────────────────── */
+      .analytics-card {
+        min-width: 580px;
+      }
+      .analytics-section {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .analytics-h {
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .analytics-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .analytics-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 80px 80px;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+        padding: 4px 0;
+      }
+      .analytics-row .a-date {
+        color: var(--text-dim);
+      }
+      .analytics-row .a-stat {
+        text-align: right;
+      }
+      .analytics-row .a-stat-strong {
+        text-align: right;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .analytics-empty {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-align: center;
+        padding: 16px;
+      }
+      .alltime-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+      .alltime-cell {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .alltime-cell-name {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .alltime-cell-stat {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .alltime-cell-sub {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .zones-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        width: 100%;
+      }
+      .sides-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button class="back-btn" id="btn-back">&larr; Back</button>
+            <div class="title-block">
+              <div class="game-title">Hockey</div>
+              <div class="game-subtitle">v1 — Slap Shot</div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="hud-stat">
+              <div class="hud-label">Shot</div>
+              <div class="hud-value" id="hud-shot">–/–</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Goals</div>
+              <div class="hud-value" id="hud-goals">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Streak</div>
+              <div class="hud-value" id="hud-streak">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Clock</div>
+              <div class="hud-value hud-value--clock" id="hud-clock">–</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
+            <button class="icon-btn" id="btn-analytics">Stats</button>
+            <button class="icon-btn" id="btn-settings">Settings</button>
+          </div>
+        </header>
+
+        <div class="rink-frame">
+          <canvas id="canvas" width="800" height="540"></canvas>
+
+          <!-- Mode-select menu -->
+          <div class="overlay is-visible" id="menu-overlay">
+            <div class="overlay-card menu-card">
+              <div class="overlay-title">Slap Shot</div>
+              <div class="overlay-sub">Pick a mode &middot; pick a length</div>
+              <div class="modes-grid">
+                <div class="mode-card mode-card--active">
+                  <div class="mode-name">Slap Shot</div>
+                  <div class="mode-desc">
+                    A zone lights up — shoot before the clock runs out. Cursor side picks
+                    left/right; click color picks the height. Blue = top, Purple = bottom, Orange =
+                    five-hole.
+                  </div>
+                  <div class="mode-actions">
+                    <button class="mode-btn" data-shots="10">10 Shots</button>
+                    <button class="mode-btn" data-shots="20">20 Shots</button>
+                  </div>
+                </div>
+                <div class="mode-card mode-card--disabled">
+                  <div class="mode-name">Goalie</div>
+                  <div class="mode-desc">
+                    Guard the net. Read incoming pucks by side and color, save before they cross the
+                    line.
+                  </div>
+                  <div class="mode-status">Coming Soon &middot; v1.5</div>
+                </div>
+                <div class="mode-card mode-card--disabled">
+                  <div class="mode-name">Penalty Shot</div>
+                  <div class="mode-desc">
+                    Skate in alone from center ice. Deke the keeper, pick your moment, finish.
+                  </div>
+                  <div class="mode-status">Coming Soon &middot; v1.5+</div>
+                </div>
+              </div>
+              <div class="menu-help">
+                Six-second shot clock per shot in v1. Use Settings to tune the clock or the
+                side-band tolerance if needed.
+              </div>
+            </div>
+          </div>
+
+          <!-- Round-end results -->
+          <div class="overlay" id="results-overlay">
+            <div class="overlay-card">
+              <div class="overlay-title">Round Complete</div>
+              <div class="results-grid">
+                <div class="results-stat">
+                  <div class="results-stat-label">Goals</div>
+                  <div class="results-stat-value" id="result-goals">0/0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Pct</div>
+                  <div class="results-stat-value" id="result-pct">0%</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Streak</div>
+                  <div class="results-stat-value" id="result-streak">0</div>
+                </div>
+                <div class="results-stat">
+                  <div class="results-stat-label">Saves</div>
+                  <div class="results-stat-value" id="result-saves">0</div>
+                </div>
+              </div>
+              <div class="results-buttons">
+                <button class="results-btn" id="result-replay">Play Again</button>
+                <button class="results-btn results-btn--ghost" id="result-menu">
+                  Change Length
+                </button>
+                <button class="results-btn results-btn--ghost" id="result-home">Home</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="overlay" id="settings-overlay">
+            <div class="overlay-card settings-card">
+              <div class="overlay-title">Settings</div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Cursor Sensitivity</span>
+                  <span class="settings-value" id="set-sens-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-sens" min="25" max="200" step="5" value="100" />
+                <div class="settings-help">
+                  How fast the on-screen cursor moves with your input.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Shot Clock</span>
+                  <span class="settings-value" id="set-clock-val">6.0 s</span>
+                </div>
+                <input type="range" id="set-clock" min="30" max="100" step="5" value="60" />
+                <div class="settings-help">
+                  Seconds per shot. Lower = harder, higher = more time to read.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Side-Band Tolerance</span>
+                  <span class="settings-value" id="set-band-val">30 px</span>
+                </div>
+                <input type="range" id="set-band" min="0" max="120" step="5" value="30" />
+                <div class="settings-help">
+                  Dead zone around the midline so cursor jitter near center doesn't punish.
+                </div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn" id="set-replay">Replay Round</button>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="set-reset">
+                  Reset Defaults
+                </button>
+                <button class="settings-btn settings-btn--ghost" id="set-close">Close</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="overlay" id="analytics-overlay">
+            <div class="overlay-card analytics-card">
+              <div class="overlay-title">Stats</div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-color goal rate</div>
+                <div class="alltime-grid" id="alltime-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-zone goal rate</div>
+                <div class="zones-grid" id="zones-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-side goal rate</div>
+                <div class="sides-grid" id="sides-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">Recent rounds</div>
+                <div class="analytics-rows" id="history-rows"></div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="analytics-close">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">
+              Read the zone. <span class="accent">Right side, right color, before the clock.</span>
+            </div>
+          </div>
+          <div class="home-slot" id="home-slot"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
+    <script>
+      'use strict';
+
+      const GAME_ID = 'hockey';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      document.getElementById('btn-back').addEventListener('click', () => BCI.goToLauncher());
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      const wrapper = document.getElementById('game-wrapper');
+      const fitter = BCI.createViewportFitter(wrapper);
+      fitter.fit();
+      requestAnimationFrame(() => fitter.fit());
+
+      /* ── Color setup ──────────────────────────────────────────── */
+      const COLOR_HEX = {
+        blue: '#4488ff',
+        orange: '#ff8833',
+        purple: '#aa44ff',
+      };
+
+      /* Zone IDs: TL, TR, FH, BL, BR (5 zones, hockey-iconic five-hole)
+         Mapping per locked spec:
+           Blue   (left,   index)  = top corners; cursor side picks L/R
+           Orange (right,  middle) = five-hole;   any cursor side
+           Purple (middle, ring)   = bottom corners; cursor side picks L/R
+         Mouse button id → color comes from bci-input.js (0=blue, 1=purple, 2=orange). */
+      const ZONES = ['TL', 'TR', 'FH', 'BL', 'BR'];
+      const ZONE_COLOR = { TL: 'blue', TR: 'blue', FH: 'orange', BL: 'purple', BR: 'purple' };
+      const ZONE_SIDE = { TL: 'left', TR: 'right', FH: null, BL: 'left', BR: 'right' };
+      const ZONE_LABEL = {
+        TL: 'top-left',
+        TR: 'top-right',
+        FH: 'five-hole',
+        BL: 'bottom-left',
+        BR: 'bottom-right',
+      };
+
+      function clickIdToColorName(id) {
+        if (id === 0) return 'blue';
+        if (id === 1) return 'purple';
+        if (id === 2) return 'orange';
+        return null;
+      }
+
+      /* ── Rink geometry (behind-shooter 3/4 top-down) ───────────
+         Camera sits behind the shooter looking up the ice toward the
+         goal. Shooter silhouette anchors the lower foreground. The
+         goal frame, goalie silhouette, and 5 zones live in the upper
+         third. Rink markings (red/blue lines, faceoff circles, blue
+         crease) taper toward the goal to fake the perspective tilt. */
+      const RINK = {
+        // Vertical anchors
+        crowdY: 38,
+        boardsTopY: 60,
+        goalLineY: 138, // back of goal line (ice paint)
+        creaseFrontY: 200, // front edge of the half-circle crease
+        blueLineY: 522, // offensive blue line — behind shooter (lower foreground)
+        boardsBottomY: H,
+
+        // Goal (mid-distance, behind the goalie, in upper-third)
+        goalCenterX: W / 2,
+        goalLeftX: 320, // inside left post (also = arrivalLeftX)
+        goalRightX: W - 320, // inside right post (also = arrivalRightX)
+        goalTopY: 88, // crossbar inside (also = arrivalTopY)
+        goalBottomY: 200, // ground / inside-bottom (also = arrivalBottomY)
+        postW: 5,
+
+        // Crease (blue half-circle)
+        creaseRadiusX: 110,
+        creaseRadiusY: 60,
+
+        // Faceoff circles (offensive zone, flanking the slot)
+        leftCircleX: 170,
+        rightCircleX: W - 170,
+        circleY: 290,
+        circleR: 56,
+
+        // Shooter / slot
+        shooterX: W / 2,
+        shooterY: 470,
+
+        // Cursor / midline
+        midlineX: W / 2,
+      };
+
+      /* Zone center on the goal arrival plane (used for puck target,
+         outline draw, target glow). For TL/TR: half-way from inside
+         post to midline, upper third. BL/BR: same X, lower third.
+         FH: dead center, between the goalie pads (lower-middle). */
+      function zoneCenter(zone) {
+        const left = RINK.goalLeftX;
+        const right = RINK.goalRightX;
+        const top = RINK.goalTopY;
+        const bot = RINK.goalBottomY;
+        const mid = (left + right) / 2;
+        const xLeft = (left + mid) / 2;
+        const xRight = (mid + right) / 2;
+        const range = bot - top;
+        const yTop = top + range * 0.22;
+        const yBot = top + range * 0.78;
+        const yFH = top + range * 0.72;
+        if (zone === 'TL') return { x: xLeft, y: yTop };
+        if (zone === 'TR') return { x: xRight, y: yTop };
+        if (zone === 'BL') return { x: xLeft, y: yBot };
+        if (zone === 'BR') return { x: xRight, y: yBot };
+        return { x: mid, y: yFH }; // FH
+      }
+
+      /* ── Tunables ─────────────────────────────────────────────── */
+      const DEFAULTS = {
+        shotClockMs: 6000,
+        sideBandPx: 30,
+      };
+      const tunables = { ...DEFAULTS };
+
+      function loadTunablesFromSettings() {
+        const g = BCI.getGameSettings(GAME_ID);
+        if (typeof g.shotClockMs === 'number') tunables.shotClockMs = g.shotClockMs;
+        if (typeof g.sideBandPx === 'number') tunables.sideBandPx = g.sideBandPx;
+      }
+      loadTunablesFromSettings();
+
+      /* ── Virtual cursor ───────────────────────────────────────── */
+      const settings = BCI.getEffectiveSettings(GAME_ID);
+      const virtualCursor = BCI.createVirtualCursor(canvas, {
+        sensitivity: settings.cursorSensitivity,
+        startX: W / 2,
+        startY: RINK.shooterY - 80,
+      });
+
+      /* ── Game state ───────────────────────────────────────────── */
+      const STATE = {
+        MENU: 'menu',
+        PRE_SHOT: 'pre_shot',
+        SHOT_PROMPT: 'shot_prompt',
+        RESOLVING: 'resolving',
+        ROUND_END: 'round_end',
+      };
+
+      const PRE_SHOT_MS = 600; // brief beat before clock starts
+      const RESOLVE_MS = 950; // puck flies + outcome reads
+      const FLASH_MS = 500;
+
+      let gameState = STATE.MENU;
+      let stateEnteredAt = 0;
+
+      let totalShots = 10;
+      let currentShot = 0;
+      let goals = 0;
+      let saves = 0;
+      let streak = 0;
+      let longestStreak = 0;
+
+      /* The active shot: which zone is lit up, when the prompt started,
+         and the puck animation state during RESOLVING. */
+      let activeShot = null;
+      // activeShot = { zone, color, side, promptStartMs, fromX, fromY, toX, toY }
+
+      let resolveOutcome = null; // 'goal' | 'save_wrong_side' | 'save_wrong_color' | 'save_no_react'
+      let resolveClickedZone = null; // for "where the puck went" on a save
+      let goalLightUntil = 0;
+      let saveFlashUntil = 0;
+
+      let analyticsSession = null;
+      let shotStartedAt = 0;
+
+      let zoneStats = {};
+      let sideStats = { left: { attempts: 0, scored: 0 }, right: { attempts: 0, scored: 0 } };
+      function resetCustomStats() {
+        zoneStats = {
+          TL: { attempts: 0, scored: 0 },
+          TR: { attempts: 0, scored: 0 },
+          FH: { attempts: 0, scored: 0 },
+          BL: { attempts: 0, scored: 0 },
+          BR: { attempts: 0, scored: 0 },
+        };
+        sideStats = {
+          left: { attempts: 0, scored: 0 },
+          right: { attempts: 0, scored: 0 },
+        };
+      }
+      resetCustomStats();
+
+      /* Pause for modal overlays (matches QB Targets / Goalie pattern) */
+      let paused = false;
+      let pauseStartedAt = 0;
+      function pauseGame() {
+        if (paused) return;
+        if (
+          gameState !== STATE.PRE_SHOT &&
+          gameState !== STATE.SHOT_PROMPT &&
+          gameState !== STATE.RESOLVING
+        )
+          return;
+        paused = true;
+        pauseStartedAt = performance.now();
+      }
+      function unpauseGame() {
+        if (!paused) return;
+        const delta = performance.now() - pauseStartedAt;
+        paused = false;
+        stateEnteredAt += delta;
+        shotStartedAt += delta;
+        if (activeShot && activeShot.promptStartMs) activeShot.promptStartMs += delta;
+        if (activeShot && activeShot.resolveStartMs) activeShot.resolveStartMs += delta;
+        if (goalLightUntil > 0) goalLightUntil += delta;
+        if (saveFlashUntil > 0) saveFlashUntil += delta;
+      }
+
+      /* ── Shot generation ──────────────────────────────────────── */
+      function setupNewShot() {
+        const zone = ZONES[Math.floor(Math.random() * ZONES.length)];
+        const color = ZONE_COLOR[zone];
+        const side = ZONE_SIDE[zone];
+        const target = zoneCenter(zone);
+        activeShot = {
+          zone,
+          color,
+          side,
+          promptStartMs: 0,
+          resolveStartMs: 0,
+          fromX: RINK.shooterX,
+          fromY: RINK.shooterY - 12,
+          toX: target.x,
+          toY: target.y,
+        };
+      }
+
+      /* ── Click handling ───────────────────────────────────────── */
+      canvas.addEventListener('mousedown', (e) => {
+        if (gameState !== STATE.SHOT_PROMPT) return;
+        e.preventDefault();
+        const colorName = clickIdToColorName(e.button);
+        const clickId = e.button;
+        if (colorName == null || clickId == null) return;
+        if (!activeShot) return;
+
+        const cursorSide = cursorSideOfMidline(virtualCursor.x);
+        const reactionMs = performance.now() - shotStartedAt;
+        BCI.recordReaction(analyticsSession, clickId, reactionMs);
+
+        const correctColor = colorName === activeShot.color;
+        // Five-hole (orange) ignores cursor side.
+        const correctSide = activeShot.side === null ? true : cursorSide === activeShot.side;
+
+        if (correctColor && correctSide) {
+          BCI.recordAttempt(analyticsSession, clickId, true);
+          recordZone(activeShot.zone, true);
+          if (activeShot.side) recordSide(activeShot.side, true);
+          resolveShot('goal');
+        } else if (!correctColor) {
+          BCI.recordAttempt(analyticsSession, clickId, false);
+          recordZone(activeShot.zone, false);
+          if (activeShot.side) recordSide(activeShot.side, false);
+          // Where the puck "went" — derive intended zone from the click + cursor
+          resolveClickedZone = inferClickedZone(colorName, cursorSide);
+          resolveShot('save_wrong_color');
+        } else {
+          BCI.recordAttempt(analyticsSession, clickId, false);
+          recordZone(activeShot.zone, false);
+          if (activeShot.side) recordSide(activeShot.side, false);
+          resolveClickedZone = inferClickedZone(colorName, cursorSide);
+          resolveShot('save_wrong_side');
+        }
+      });
+
+      function cursorSideOfMidline(x) {
+        const band = tunables.sideBandPx;
+        if (x < RINK.midlineX - band) return 'left';
+        if (x > RINK.midlineX + band) return 'right';
+        return null;
+      }
+
+      function inferClickedZone(colorName, cursorSide) {
+        if (colorName === 'orange') return 'FH';
+        const side = cursorSide || 'left'; // dead-zone defaults left for visual feedback
+        if (colorName === 'blue') return side === 'left' ? 'TL' : 'TR';
+        if (colorName === 'purple') return side === 'left' ? 'BL' : 'BR';
+        return null;
+      }
+
+      function recordZone(zone, scored) {
+        if (!zoneStats[zone]) zoneStats[zone] = { attempts: 0, scored: 0 };
+        zoneStats[zone].attempts++;
+        if (scored) zoneStats[zone].scored++;
+      }
+      function recordSide(side, scored) {
+        if (!sideStats[side]) sideStats[side] = { attempts: 0, scored: 0 };
+        sideStats[side].attempts++;
+        if (scored) sideStats[side].scored++;
+      }
+
+      function resolveShot(outcome) {
+        resolveOutcome = outcome;
+        if (!activeShot.resolveStartMs) activeShot.resolveStartMs = performance.now();
+
+        if (outcome === 'goal') {
+          goals++;
+          streak++;
+          if (streak > longestStreak) longestStreak = streak;
+          goalLightUntil = performance.now() + 900;
+          updateStatus(
+            `<span class="accent-good">GOAL!</span> &mdash; ${ZONE_LABEL[activeShot.zone].toUpperCase()}`
+          );
+        } else {
+          saves++;
+          streak = 0;
+          saveFlashUntil = performance.now() + FLASH_MS;
+          let why;
+          if (outcome === 'save_wrong_side') why = 'wrong side';
+          else if (outcome === 'save_wrong_color') why = 'wrong height';
+          else why = 'no shot';
+          updateStatus(
+            `<span class="accent-bad">SAVE</span> &mdash; ${why} (target was ${ZONE_LABEL[activeShot.zone].toUpperCase()})`
+          );
+        }
+        gameState = STATE.RESOLVING;
+        stateEnteredAt = performance.now();
+        updateHUD();
+      }
+
+      /* ── Update ───────────────────────────────────────────────── */
+      function update() {
+        if (paused) return;
+        const now = performance.now();
+
+        if (gameState === STATE.PRE_SHOT) {
+          if (now - stateEnteredAt > PRE_SHOT_MS) {
+            activeShot.promptStartMs = now;
+            shotStartedAt = now;
+            gameState = STATE.SHOT_PROMPT;
+            stateEnteredAt = now;
+            updateStatus(
+              `Shot ${currentShot} of ${totalShots} &mdash; <span class="accent">read it</span>`
+            );
+          }
+          return;
+        }
+
+        if (gameState === STATE.SHOT_PROMPT) {
+          const elapsed = now - activeShot.promptStartMs;
+          if (elapsed > tunables.shotClockMs) {
+            recordZone(activeShot.zone, false);
+            if (activeShot.side) recordSide(activeShot.side, false);
+            resolveClickedZone = null;
+            resolveShot('save_no_react');
+          }
+          return;
+        }
+
+        if (gameState === STATE.RESOLVING) {
+          if (now - stateEnteredAt > RESOLVE_MS) {
+            advanceToNextShot();
+          }
+          return;
+        }
+      }
+
+      function advanceToNextShot() {
+        if (currentShot >= totalShots) {
+          endRound();
+          return;
+        }
+        currentShot++;
+        setupNewShot();
+        gameState = STATE.PRE_SHOT;
+        stateEnteredAt = performance.now();
+        resolveOutcome = null;
+        resolveClickedZone = null;
+        updateHUD();
+        // Reset shot-clock display to the full duration so the HUD shows
+        // the upcoming budget instead of the prior shot's leftover value.
+        elClock.textContent = (tunables.shotClockMs / 1000).toFixed(1);
+        elClock.classList.remove('is-low');
+        updateStatus(
+          `Shot ${currentShot} of ${totalShots} &mdash; <span class="accent">stick down</span>`
+        );
+      }
+
+      /* ── Round flow ──────────────────────────────────────────── */
+      function startRound(shots) {
+        totalShots = shots;
+        currentShot = 0;
+        goals = 0;
+        saves = 0;
+        streak = 0;
+        longestStreak = 0;
+        analyticsSession = BCI.createSession();
+        resetCustomStats();
+        hideOverlay('menu-overlay');
+        hideOverlay('results-overlay');
+        advanceToNextShot();
+      }
+
+      function endRound() {
+        gameState = STATE.ROUND_END;
+        const sessionExtras = {
+          mode: 'slap_shot',
+          totalShots,
+          goals,
+          saves,
+          longestStreak,
+          zoneStats: { ...zoneStats },
+          sideStats: { ...sideStats },
+          shotPct: totalShots > 0 ? Math.round((goals / totalShots) * 100) : 0,
+        };
+        BCI.saveSession(GAME_ID, analyticsSession, sessionExtras);
+
+        document.getElementById('result-goals').textContent = `${goals}/${totalShots}`;
+        document.getElementById('result-pct').textContent =
+          totalShots > 0 ? `${Math.round((goals / totalShots) * 100)}%` : '0%';
+        document.getElementById('result-streak').textContent = String(longestStreak);
+        document.getElementById('result-saves').textContent = String(saves);
+
+        showOverlay('results-overlay');
+      }
+
+      /* ── HUD + status ────────────────────────────────────────── */
+      const elShot = document.getElementById('hud-shot');
+      const elGoals = document.getElementById('hud-goals');
+      const elStreak = document.getElementById('hud-streak');
+      const elClock = document.getElementById('hud-clock');
+      const elStatus = document.getElementById('status-msg');
+
+      function updateHUD() {
+        if (gameState === STATE.MENU || currentShot === 0) {
+          elShot.textContent = '–/–';
+          elClock.textContent = '–';
+          elClock.classList.remove('is-low');
+        } else {
+          elShot.textContent = `${currentShot}/${totalShots}`;
+        }
+        elGoals.textContent = String(goals);
+        elStreak.textContent = String(streak);
+      }
+
+      function updateClockHUD() {
+        if (gameState !== STATE.SHOT_PROMPT || !activeShot || !activeShot.promptStartMs) {
+          if (gameState !== STATE.SHOT_PROMPT) {
+            elClock.classList.remove('is-low');
+          }
+          return;
+        }
+        const remaining = Math.max(
+          0,
+          tunables.shotClockMs - (performance.now() - activeShot.promptStartMs)
+        );
+        const sec = remaining / 1000;
+        elClock.textContent = sec.toFixed(1);
+        if (sec < 1.5) elClock.classList.add('is-low');
+        else elClock.classList.remove('is-low');
+      }
+
+      function updateStatus(html) {
+        elStatus.innerHTML = html;
+      }
+
+      /* ── Drawing ──────────────────────────────────────────────── */
+      function drawCrowd() {
+        ctx.fillStyle = '#20262f';
+        ctx.fillRect(0, 0, W, RINK.boardsTopY);
+        // Crowd silhouette band — distant heads
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        const heads = 80;
+        for (let i = 0; i < heads; i++) {
+          const t = (i + 0.5) / heads;
+          const jitter = Math.sin(i * 12.9898) * 0.5;
+          const x = t * W + jitter * 6;
+          const y = RINK.crowdY + Math.sin(i * 7.13) * 1.6;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Glass / boards line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, RINK.boardsTopY - 2);
+        ctx.lineTo(W, RINK.boardsTopY - 2);
+        ctx.stroke();
+        // Yellow kickplate stripe just below the boards
+        ctx.fillStyle = 'rgba(220, 180, 60, 0.45)';
+        ctx.fillRect(0, RINK.boardsTopY, W, 3);
+      }
+
+      function drawIce() {
+        // Base ice fill below the boards
+        ctx.fillStyle = '#f0f6fb';
+        ctx.fillRect(0, RINK.boardsTopY + 3, W, H - (RINK.boardsTopY + 3));
+
+        // Subtle ice gradient — slight blue tint near the boards, fading
+        const grad = ctx.createLinearGradient(0, RINK.boardsTopY, 0, H);
+        grad.addColorStop(0, 'rgba(180, 205, 225, 0.45)');
+        grad.addColorStop(0.4, 'rgba(220, 232, 240, 0.0)');
+        grad.addColorStop(1, 'rgba(195, 215, 230, 0.4)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, RINK.boardsTopY + 3, W, H - (RINK.boardsTopY + 3));
+
+        // Soft scuff lines for "skated ice" feel
+        ctx.strokeStyle = 'rgba(140, 165, 185, 0.18)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 28; i++) {
+          const r = Math.sin(i * 13.13);
+          const x0 = ((i * 97) % W) + r * 24;
+          const y0 = RINK.boardsTopY + 30 + ((i * 53) % (H - RINK.boardsTopY - 60));
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x0 + 22 + r * 8, y0 + 2 + r * 1.5);
+          ctx.stroke();
+        }
+      }
+
+      function drawRinkLines() {
+        // Goal line (red, just in front of the goal frame on the ice)
+        ctx.strokeStyle = '#d22b2b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(40, RINK.goalLineY + 70);
+        ctx.lineTo(W - 40, RINK.goalLineY + 70);
+        ctx.stroke();
+
+        // Blue line (offensive zone, under shooter)
+        ctx.fillStyle = '#2767c2';
+        ctx.fillRect(0, RINK.blueLineY - 7, W, 14);
+
+        // Crease (blue half-circle in front of goal)
+        ctx.fillStyle = 'rgba(107, 169, 224, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(
+          RINK.goalCenterX,
+          RINK.goalLineY + 70,
+          RINK.creaseRadiusX,
+          RINK.creaseRadiusY,
+          0,
+          Math.PI,
+          2 * Math.PI
+        );
+        ctx.lineTo(RINK.goalCenterX - RINK.creaseRadiusX, RINK.goalLineY + 70);
+        ctx.fill();
+        ctx.strokeStyle = '#2767c2';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(
+          RINK.goalCenterX,
+          RINK.goalLineY + 70,
+          RINK.creaseRadiusX,
+          RINK.creaseRadiusY,
+          0,
+          Math.PI,
+          2 * Math.PI
+        );
+        ctx.stroke();
+
+        // Faceoff circles (offensive zone, flanking the slot)
+        for (const cx of [RINK.leftCircleX, RINK.rightCircleX]) {
+          ctx.strokeStyle = '#d22b2b';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(cx, RINK.circleY, RINK.circleR, 0, 2 * Math.PI);
+          ctx.stroke();
+          // Center dot
+          ctx.fillStyle = '#d22b2b';
+          ctx.beginPath();
+          ctx.arc(cx, RINK.circleY, 4, 0, 2 * Math.PI);
+          ctx.fill();
+          // Hash marks (4 short ticks at the cardinal points)
+          ctx.lineWidth = 2;
+          for (const ang of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+            const x0 = cx + Math.cos(ang) * (RINK.circleR + 2);
+            const y0 = RINK.circleY + Math.sin(ang) * (RINK.circleR + 2);
+            const x1 = cx + Math.cos(ang) * (RINK.circleR + 10);
+            const y1 = RINK.circleY + Math.sin(ang) * (RINK.circleR + 10);
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.stroke();
+          }
+        }
+
+        // Center red dot at the slot (subtle scoring-area marker)
+        ctx.fillStyle = 'rgba(210, 43, 43, 0.45)';
+        ctx.beginPath();
+        ctx.arc(RINK.shooterX, RINK.circleY + 70, 3, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Faint midline reference (camera plane) — very subtle
+        ctx.strokeStyle = 'rgba(60, 90, 120, 0.10)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(RINK.midlineX, RINK.boardsTopY);
+        ctx.lineTo(RINK.midlineX, H - 10);
+        ctx.stroke();
+      }
+
+      function drawGoalNetMesh() {
+        // Net mesh inside the goal — draw before the posts so posts overlap
+        const left = RINK.goalLeftX;
+        const right = RINK.goalRightX;
+        const top = RINK.goalTopY;
+        const bot = RINK.goalBottomY;
+
+        // Net background — dark slate so the mesh reads
+        ctx.fillStyle = 'rgba(22, 30, 38, 0.92)';
+        ctx.fillRect(left, top, right - left, bot - top);
+
+        // Diamond mesh
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(left, top, right - left, bot - top);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+        ctx.lineWidth = 0.8;
+        const step = 14;
+        for (let x = left - (bot - top); x < right + (bot - top); x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, top);
+          ctx.lineTo(x + (bot - top), bot);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x, bot);
+          ctx.lineTo(x + (bot - top), top);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Slight inner shadow at top (depth into the net)
+        const grad = ctx.createLinearGradient(0, top, 0, top + 40);
+        grad.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(left, top, right - left, 40);
+      }
+
+      function drawZoneTarget() {
+        // Highlight the active target zone during PRE_SHOT and SHOT_PROMPT
+        if (!activeShot) return;
+        if (gameState !== STATE.PRE_SHOT && gameState !== STATE.SHOT_PROMPT) return;
+
+        const tint = COLOR_HEX[activeShot.color];
+        const center = zoneCenter(activeShot.zone);
+        const isFH = activeShot.zone === 'FH';
+        const rx = isFH ? 32 : 38;
+        const ry = isFH ? 26 : 30;
+
+        // Pulsing alpha
+        const pulse = 0.55 + 0.35 * Math.sin(performance.now() / 180);
+        ctx.save();
+        ctx.shadowColor = tint;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = tint;
+        ctx.globalAlpha = 0.18 + 0.18 * pulse;
+        ctx.beginPath();
+        ctx.ellipse(center.x, center.y, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = tint;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(center.x, center.y, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawGoalie() {
+        // Static goalie covering the center of the net. The 5 zones are
+        // the visible gaps around him: TL/TR above his shoulders, BL/BR
+        // beside his pads, and FH between his pads.
+        const left = RINK.goalLeftX;
+        const right = RINK.goalRightX;
+        const top = RINK.goalTopY;
+        const bot = RINK.goalBottomY;
+        const cx = (left + right) / 2;
+        const goalW = right - left;
+        const goalH = bot - top;
+
+        // Helmet (top-center, between TL and TR)
+        const helmetCY = top + goalH * 0.16;
+        const helmetR = 13;
+        ctx.fillStyle = '#1a1f26';
+        ctx.beginPath();
+        ctx.arc(cx, helmetCY, helmetR, 0, 2 * Math.PI);
+        ctx.fill();
+        // Cage front
+        ctx.strokeStyle = 'rgba(220, 220, 220, 0.55)';
+        ctx.lineWidth = 1;
+        for (let i = -3; i <= 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(cx + i * 2.6, helmetCY - 7);
+          ctx.lineTo(cx + i * 2.6, helmetCY + 7);
+          ctx.stroke();
+        }
+        for (let j = -2; j <= 2; j++) {
+          ctx.beginPath();
+          ctx.moveTo(cx - 9, helmetCY + j * 3);
+          ctx.lineTo(cx + 9, helmetCY + j * 3);
+          ctx.stroke();
+        }
+
+        // Chest / sweater — bands of dark navy
+        const chestTopY = top + goalH * 0.24;
+        const chestBotY = top + goalH * 0.55;
+        const chestLeft = cx - goalW * 0.22;
+        const chestRight = cx + goalW * 0.22;
+        ctx.fillStyle = '#0f1e2e';
+        ctx.fillRect(chestLeft, chestTopY, chestRight - chestLeft, chestBotY - chestTopY);
+        // Chest highlight (top stripe)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.fillRect(chestLeft + 4, chestTopY + 3, chestRight - chestLeft - 8, 4);
+        // Number on chest
+        ctx.fillStyle = '#c9d1d9';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('30', cx, chestTopY + 22);
+
+        // Glove (left hand from camera POV — goalie's right) at TR side
+        const gloveX = chestRight + 8;
+        const gloveY = chestTopY + 8;
+        ctx.fillStyle = '#2a3340';
+        ctx.beginPath();
+        ctx.ellipse(gloveX, gloveY, 14, 14, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        // Trapper webbing edge
+        ctx.strokeStyle = 'rgba(220, 220, 220, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(gloveX + 3, gloveY - 4, 8, Math.PI, 1.7 * Math.PI);
+        ctx.stroke();
+
+        // Blocker (right hand from camera POV — goalie's left) at TL side
+        const blockerX = chestLeft - 8;
+        const blockerY = chestTopY + 12;
+        ctx.fillStyle = '#1a2330';
+        ctx.fillRect(blockerX - 12, blockerY - 11, 14, 22);
+        // Stick paddle extending down from blocker
+        ctx.fillStyle = '#5a3a22';
+        ctx.fillRect(blockerX - 9, blockerY - 4, 7, goalH * 0.32);
+
+        // Leg pads — two big rectangles at the bottom, with a visible
+        // gap between them = the FIVE-HOLE
+        const padTopY = top + goalH * 0.55;
+        const padBotY = bot - 4;
+        const padW = goalW * 0.16;
+        const fiveHoleW = goalW * 0.1; // gap between pads
+        const padLeftInner = cx - fiveHoleW / 2;
+        const padRightInner = cx + fiveHoleW / 2;
+
+        ctx.fillStyle = '#e6e2d4'; // off-white pads
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1.2;
+        // Left pad (BL side)
+        ctx.fillRect(padLeftInner - padW, padTopY, padW, padBotY - padTopY);
+        ctx.strokeRect(padLeftInner - padW, padTopY, padW, padBotY - padTopY);
+        // Right pad (BR side)
+        ctx.fillRect(padRightInner, padTopY, padW, padBotY - padTopY);
+        ctx.strokeRect(padRightInner, padTopY, padW, padBotY - padTopY);
+        // Pad horizontal stitching ridges
+        ctx.strokeStyle = 'rgba(120, 100, 70, 0.5)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 5; i++) {
+          const py = padTopY + (i * (padBotY - padTopY)) / 5;
+          ctx.beginPath();
+          ctx.moveTo(padLeftInner - padW + 2, py);
+          ctx.lineTo(padLeftInner - 2, py);
+          ctx.moveTo(padRightInner + 2, py);
+          ctx.lineTo(padRightInner + padW - 2, py);
+          ctx.stroke();
+        }
+      }
+
+      function drawGoalFrame() {
+        const left = RINK.goalLeftX;
+        const right = RINK.goalRightX;
+        const top = RINK.goalTopY;
+        const bot = RINK.goalBottomY;
+        const pw = RINK.postW;
+
+        // Posts + crossbar — RED hockey posts (iconic)
+        ctx.fillStyle = '#d22b2b';
+        ctx.strokeStyle = '#8c1818';
+        ctx.lineWidth = 1;
+        ctx.fillRect(left - pw, top, pw, bot - top);
+        ctx.strokeRect(left - pw, top, pw, bot - top);
+        ctx.fillRect(right, top, pw, bot - top);
+        ctx.strokeRect(right, top, pw, bot - top);
+        ctx.fillRect(left - pw, top - pw, right - left + pw * 2, pw);
+        ctx.strokeRect(left - pw, top - pw, right - left + pw * 2, pw);
+
+        // Highlight on crossbar
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.fillRect(left - pw + 1, top - pw + 1, right - left + pw * 2 - 2, 1);
+
+        // Goal lights — red domes mounted above each upper corner
+        const lightOn = performance.now() < goalLightUntil;
+        const lightColor = lightOn ? '#ffd23f' : '#ff5050';
+        for (const lx of [left - pw - 14, right + pw + 14]) {
+          // Mount post
+          ctx.fillStyle = '#3a4150';
+          ctx.fillRect(lx - 1, top - 22, 2, 14);
+          // Bulb
+          ctx.save();
+          if (lightOn) {
+            ctx.shadowColor = '#ffd23f';
+            ctx.shadowBlur = 18;
+          } else {
+            ctx.shadowColor = 'rgba(255, 80, 80, 0.5)';
+            ctx.shadowBlur = 4;
+          }
+          ctx.fillStyle = lightColor;
+          ctx.beginPath();
+          ctx.arc(lx, top - 24, 6, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.restore();
+          // Highlight
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+          ctx.beginPath();
+          ctx.arc(lx - 2, top - 26, 1.6, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+
+        // Goal shadow on the ice (just behind the goal line)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse((left + right) / 2, bot + 2, (right - left) / 2 + 12, 5, 0, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      function drawShooter() {
+        // Shooter silhouette in the lower foreground — back of jersey + helmet
+        // visible, stick angled toward the goal. Stationary in v1.
+        const cx = RINK.shooterX;
+        const cy = RINK.shooterY;
+
+        // Shadow on ice
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 38, 32, 6, 0, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Skates
+        ctx.fillStyle = '#0a0d12';
+        ctx.fillRect(cx - 22, cy + 30, 18, 6);
+        ctx.fillRect(cx + 4, cy + 30, 18, 6);
+        // Skate blades
+        ctx.fillStyle = '#c9d1d9';
+        ctx.fillRect(cx - 22, cy + 36, 18, 1.5);
+        ctx.fillRect(cx + 4, cy + 36, 18, 1.5);
+
+        // Legs (hockey pants — dark)
+        ctx.fillStyle = '#0d1218';
+        ctx.fillRect(cx - 24, cy + 4, 18, 28);
+        ctx.fillRect(cx + 6, cy + 4, 18, 28);
+
+        // Torso — back of jersey (navy) widening from waist to shoulders
+        ctx.fillStyle = '#1d2a3d';
+        ctx.beginPath();
+        ctx.moveTo(cx - 30, cy - 28);
+        ctx.lineTo(cx + 30, cy - 28);
+        ctx.lineTo(cx + 26, cy + 6);
+        ctx.lineTo(cx - 26, cy + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Jersey trim stripe
+        ctx.fillStyle = '#c9202a';
+        ctx.fillRect(cx - 28, cy - 8, 56, 3);
+        // Jersey number on the back
+        ctx.fillStyle = '#e8e4d9';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('17', cx, cy + 2);
+
+        // Shoulder pad bumps
+        ctx.fillStyle = '#152233';
+        ctx.beginPath();
+        ctx.ellipse(cx - 27, cy - 26, 7, 5, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 27, cy - 26, 7, 5, 0, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Helmet (back of head)
+        ctx.fillStyle = '#0f161e';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 36, 12, 0, 2 * Math.PI);
+        ctx.fill();
+        // Helmet highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+        ctx.beginPath();
+        ctx.arc(cx - 4, cy - 40, 4, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Stick — angled across the body toward the puck on the ice in
+        // front of the shooter. Stick blade in lower-foreground center.
+        const handTopX = cx + 18;
+        const handTopY = cy - 18;
+        const bladeX = cx + 6;
+        const bladeY = cy + 32;
+        ctx.strokeStyle = '#b88550';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(handTopX, handTopY);
+        ctx.lineTo(bladeX, bladeY);
+        ctx.stroke();
+        // Stick blade
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(bladeX - 14, bladeY - 2, 22, 4);
+        ctx.lineCap = 'butt';
+
+        // Puck on the ice next to the blade (visible during PRE_SHOT and
+        // SHOT_PROMPT — disappears once the shot fires)
+        if (
+          gameState === STATE.PRE_SHOT ||
+          gameState === STATE.SHOT_PROMPT ||
+          gameState === STATE.MENU
+        ) {
+          ctx.fillStyle = '#0a0a0a';
+          ctx.beginPath();
+          ctx.ellipse(bladeX - 4, bladeY + 2, 7, 3, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(80, 80, 80, 0.6)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.ellipse(bladeX - 4, bladeY + 2, 7, 3, 0, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      }
+
+      function drawPuckInFlight() {
+        // During RESOLVING, animate the puck from the shooter's stick to the
+        // resolved destination — either the activeShot zone (goal) or the
+        // clicked-zone (save). For 'save_no_react', puck stays on the ice
+        // (no shot was taken).
+        if (gameState !== STATE.RESOLVING || !activeShot) return;
+        if (resolveOutcome === 'save_no_react') return;
+
+        const since = performance.now() - activeShot.resolveStartMs;
+        const dur = 380; // fast, slap-shot feel
+        const t = Math.max(0, Math.min(1, since / dur));
+
+        const startX = activeShot.fromX + 6;
+        const startY = activeShot.fromY + 28;
+
+        let endX, endY;
+        if (resolveOutcome === 'goal') {
+          endX = activeShot.toX;
+          endY = activeShot.toY;
+        } else {
+          // Save — puck heads to wherever the player aimed (clicked zone)
+          const clicked = resolveClickedZone || activeShot.zone;
+          const ctr = zoneCenter(clicked);
+          endX = ctr.x;
+          endY = ctr.y;
+        }
+
+        const x = startX + (endX - startX) * t;
+        const y = startY + (endY - startY) * t;
+
+        // Puck shadow on the ice — drops as puck rises
+        const shadowY = startY + (endY - startY) * t * 0.2 + 8;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x, shadowY, 8 - 4 * t, 2.5 - t, 0, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Puck size grows slightly as it travels (perspective)
+        const r = 5 + 4 * t;
+
+        // Color tint glow
+        const tint = COLOR_HEX[activeShot.color];
+        ctx.save();
+        ctx.shadowColor = tint;
+        ctx.shadowBlur = 10 + 6 * t;
+        ctx.fillStyle = '#0a0a0a';
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * 0.62, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+
+        // Puck face highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.3, y - r * 0.18, r * 0.45, r * 0.18, 0, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Speed streak behind puck
+        if (t > 0.05 && t < 0.95) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(x - (endX - startX) * 0.05, y - (endY - startY) * 0.05);
+          ctx.lineTo(x - (endX - startX) * 0.18, y - (endY - startY) * 0.18);
+          ctx.stroke();
+        }
+      }
+
+      function drawShotClockBar() {
+        // Horizontal bar at the top of the rink frame, draining left-to-right
+        if (gameState !== STATE.SHOT_PROMPT || !activeShot || !activeShot.promptStartMs) return;
+        const elapsed = performance.now() - activeShot.promptStartMs;
+        const ratio = Math.max(0, 1 - elapsed / tunables.shotClockMs);
+        const barX = 12;
+        const barY = RINK.boardsTopY + 8;
+        const barW = W - 24;
+        const barH = 5;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(barX, barY, barW, barH);
+        const tintColor = COLOR_HEX[activeShot.color];
+        ctx.fillStyle = ratio < 0.25 ? '#d44b4b' : tintColor;
+        ctx.fillRect(barX, barY, barW * ratio, barH);
+      }
+
+      function drawCursor() {
+        // Crosshair cursor over the ice
+        BCI.drawCursorDot(ctx, virtualCursor.x, virtualCursor.y, {
+          arm: 8,
+          color: 'rgba(15, 25, 35, 0.85)',
+        });
+        // Outer ring for visibility on white ice
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(virtualCursor.x, virtualCursor.y, 4.5, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+
+      function drawSaveFlash() {
+        if (performance.now() > saveFlashUntil) return;
+        const since = saveFlashUntil - performance.now();
+        const alpha = (since / FLASH_MS) * 0.35;
+        ctx.fillStyle = `rgba(212, 75, 75, ${alpha})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      function drawGoalFlash() {
+        if (performance.now() > goalLightUntil) return;
+        const since = goalLightUntil - performance.now();
+        const alpha = (since / 900) * 0.28;
+        ctx.fillStyle = `rgba(255, 210, 63, ${alpha})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      /* ── Main render ─────────────────────────────────────────── */
+      function render() {
+        // Background
+        ctx.fillStyle = '#08111c';
+        ctx.fillRect(0, 0, W, H);
+
+        drawCrowd();
+        drawIce();
+        drawRinkLines();
+        drawGoalNetMesh();
+        drawGoalie();
+        drawGoalFrame();
+        // Target zone glow draws AFTER goalie + frame so the cue is
+        // always visible — five-hole would otherwise hide behind the pads.
+        drawZoneTarget();
+        drawShooter();
+        drawPuckInFlight();
+        drawShotClockBar();
+        drawSaveFlash();
+        drawGoalFlash();
+        drawCursor();
+      }
+
+      function loop() {
+        update();
+        updateClockHUD();
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      /* ── Overlay handling ────────────────────────────────────── */
+      function showOverlay(id) {
+        document.getElementById(id).classList.add('is-visible');
+        pauseGame();
+      }
+      function hideOverlay(id) {
+        document.getElementById(id).classList.remove('is-visible');
+        // Only unpause if no overlay is still visible
+        const anyVisible = document.querySelectorAll('.overlay.is-visible').length > 0;
+        if (!anyVisible) unpauseGame();
+      }
+
+      // Mode-select buttons
+      document.querySelectorAll('#menu-overlay .mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const shots = parseInt(btn.dataset.shots, 10);
+          startRound(shots);
+        });
+      });
+
+      // Results buttons
+      document.getElementById('result-replay').addEventListener('click', () => {
+        startRound(totalShots);
+      });
+      document.getElementById('result-menu').addEventListener('click', () => {
+        hideOverlay('results-overlay');
+        showOverlay('menu-overlay');
+        gameState = STATE.MENU;
+        currentShot = 0;
+        updateHUD();
+        updateStatus(
+          'Read the zone. <span class="accent">Right side, right color, before the clock.</span>'
+        );
+      });
+      document.getElementById('result-home').addEventListener('click', () => BCI.goToLauncher());
+
+      /* ── Settings panel wiring ───────────────────────────────── */
+      const setSensSlider = document.getElementById('set-sens');
+      const setSensVal = document.getElementById('set-sens-val');
+      const setClockSlider = document.getElementById('set-clock');
+      const setClockVal = document.getElementById('set-clock-val');
+      const setBandSlider = document.getElementById('set-band');
+      const setBandVal = document.getElementById('set-band-val');
+
+      function reflectSettingsUI() {
+        const eff = BCI.getEffectiveSettings(GAME_ID);
+        const sens = Math.round(eff.cursorSensitivity * 100);
+        setSensSlider.value = String(sens);
+        setSensVal.innerHTML = `${(sens / 100).toFixed(2)}&times;`;
+
+        const clockS = (tunables.shotClockMs / 1000).toFixed(1);
+        setClockSlider.value = String(Math.round((tunables.shotClockMs / 1000) * 10));
+        setClockVal.textContent = `${clockS} s`;
+
+        setBandSlider.value = String(tunables.sideBandPx);
+        setBandVal.textContent = `${tunables.sideBandPx} px`;
+      }
+
+      setSensSlider.addEventListener('input', () => {
+        const v = parseInt(setSensSlider.value, 10) / 100;
+        setSensVal.innerHTML = `${v.toFixed(2)}&times;`;
+        virtualCursor.setSensitivity(v);
+        BCI.saveGameSettings(GAME_ID, { cursorSensitivity: v });
+      });
+      setClockSlider.addEventListener('input', () => {
+        const v = parseInt(setClockSlider.value, 10) / 10; // seconds
+        setClockVal.textContent = `${v.toFixed(1)} s`;
+        tunables.shotClockMs = v * 1000;
+        BCI.saveGameSettings(GAME_ID, { shotClockMs: v * 1000 });
+      });
+      setBandSlider.addEventListener('input', () => {
+        const v = parseInt(setBandSlider.value, 10);
+        setBandVal.textContent = `${v} px`;
+        tunables.sideBandPx = v;
+        BCI.saveGameSettings(GAME_ID, { sideBandPx: v });
+      });
+
+      document.getElementById('btn-settings').addEventListener('click', () => {
+        reflectSettingsUI();
+        showOverlay('settings-overlay');
+      });
+      document
+        .getElementById('set-close')
+        .addEventListener('click', () => hideOverlay('settings-overlay'));
+      document.getElementById('set-reset').addEventListener('click', () => {
+        BCI.clearGameSettings(GAME_ID);
+        BCI.saveGlobalSettings({ cursorSensitivity: 1.0 });
+        tunables.shotClockMs = DEFAULTS.shotClockMs;
+        tunables.sideBandPx = DEFAULTS.sideBandPx;
+        virtualCursor.setSensitivity(1.0);
+        reflectSettingsUI();
+      });
+      document.getElementById('set-replay').addEventListener('click', () => {
+        hideOverlay('settings-overlay');
+        startRound(totalShots);
+      });
+
+      /* ── Analytics panel wiring ──────────────────────────────── */
+      const elAlltimeGrid = document.getElementById('alltime-grid');
+      const elZonesGrid = document.getElementById('zones-grid');
+      const elSidesGrid = document.getElementById('sides-grid');
+      const elHistoryRows = document.getElementById('history-rows');
+
+      function pct(num, den) {
+        if (!den) return '–';
+        return `${Math.round((num / den) * 100)}%`;
+      }
+
+      function renderAnalytics() {
+        const all = BCI.getAllTimeStats(GAME_ID);
+        const colorCells = [
+          { id: 0, name: 'Blue', sub: 'Top corners', hex: COLOR_HEX.blue },
+          { id: 2, name: 'Orange', sub: 'Five-hole', hex: COLOR_HEX.orange },
+          { id: 1, name: 'Purple', sub: 'Bottom corners', hex: COLOR_HEX.purple },
+        ];
+        elAlltimeGrid.innerHTML = colorCells
+          .map((c) => {
+            const f = all.fingers[c.id] || {};
+            const att = f.attempts || 0;
+            const cor = f.correct || 0;
+            return `
+              <div class="alltime-cell" style="border-color: ${c.hex}">
+                <div class="alltime-cell-name" style="color: ${c.hex}">${c.name}</div>
+                <div class="alltime-cell-stat">${pct(cor, att)}</div>
+                <div class="alltime-cell-sub">${cor}/${att} &middot; ${c.sub}</div>
+              </div>
+            `;
+          })
+          .join('');
+
+        // Per-zone (aggregate from history.zoneStats)
+        const history = BCI.getSessionHistory(GAME_ID);
+        const zoneAgg = {
+          TL: { attempts: 0, scored: 0 },
+          TR: { attempts: 0, scored: 0 },
+          FH: { attempts: 0, scored: 0 },
+          BL: { attempts: 0, scored: 0 },
+          BR: { attempts: 0, scored: 0 },
+        };
+        const sideAgg = { left: { attempts: 0, scored: 0 }, right: { attempts: 0, scored: 0 } };
+        history.forEach((entry) => {
+          if (entry.zoneStats) {
+            for (const z of ZONES) {
+              if (entry.zoneStats[z]) {
+                zoneAgg[z].attempts += entry.zoneStats[z].attempts || 0;
+                zoneAgg[z].scored += entry.zoneStats[z].scored || 0;
+              }
+            }
+          }
+          if (entry.sideStats) {
+            for (const s of ['left', 'right']) {
+              if (entry.sideStats[s]) {
+                sideAgg[s].attempts += entry.sideStats[s].attempts || 0;
+                sideAgg[s].scored += entry.sideStats[s].scored || 0;
+              }
+            }
+          }
+        });
+
+        elZonesGrid.innerHTML = ZONES.map((z) => {
+          const s = zoneAgg[z];
+          const accent =
+            ZONE_COLOR[z] === 'blue'
+              ? COLOR_HEX.blue
+              : ZONE_COLOR[z] === 'orange'
+                ? COLOR_HEX.orange
+                : COLOR_HEX.purple;
+          return `
+            <div class="alltime-cell" style="border-color: ${accent}">
+              <div class="alltime-cell-name" style="color: ${accent}">${z}</div>
+              <div class="alltime-cell-stat">${pct(s.scored, s.attempts)}</div>
+              <div class="alltime-cell-sub">${s.scored}/${s.attempts}</div>
+            </div>
+          `;
+        }).join('');
+
+        elSidesGrid.innerHTML = ['left', 'right']
+          .map((side) => {
+            const s = sideAgg[side];
+            return `
+              <div class="alltime-cell">
+                <div class="alltime-cell-name">${side.toUpperCase()}</div>
+                <div class="alltime-cell-stat">${pct(s.scored, s.attempts)}</div>
+                <div class="alltime-cell-sub">${s.scored}/${s.attempts}</div>
+              </div>
+            `;
+          })
+          .join('');
+
+        if (history.length === 0) {
+          elHistoryRows.innerHTML =
+            '<div class="analytics-empty">No rounds yet. Take some shots.</div>';
+        } else {
+          elHistoryRows.innerHTML = history
+            .map((entry) => {
+              const goalsTxt = `${entry.goals ?? 0}/${entry.totalShots ?? '–'}`;
+              const pctTxt =
+                entry.shotPct != null ? `${entry.shotPct}%` : pct(entry.goals, entry.totalShots);
+              return `
+                <div class="analytics-row">
+                  <div class="a-date">${entry.dateStr || ''}</div>
+                  <div>${entry.totalShots ?? 0} shots</div>
+                  <div class="a-stat-strong">${goalsTxt}</div>
+                  <div class="a-stat">${pctTxt}</div>
+                </div>
+              `;
+            })
+            .join('');
+        }
+      }
+
+      document.getElementById('btn-analytics').addEventListener('click', () => {
+        renderAnalytics();
+        showOverlay('analytics-overlay');
+      });
+      document
+        .getElementById('analytics-close')
+        .addEventListener('click', () => hideOverlay('analytics-overlay'));
+
+      /* ── Walkthrough ─────────────────────────────────────────── */
+      const WALKTHROUGH = {
+        id: 'hockey/slap-shot-v1',
+        steps: [
+          {
+            title: 'Slap Shot — read the zone',
+            body: [
+              'You are the shooter, low in the slot. The goal sits up the ice with a static goalie covering the middle.',
+              'Move the on-screen cursor with your BCI. Cursor side (left or right of the midline) decides which corner of the goal you are aiming at.',
+            ],
+          },
+          {
+            title: 'Pick the height with a click',
+            body: 'Each shot, one of the five zones lights up. Click the matching color: top corners are BLUE, the five-hole is ORANGE, bottom corners are PURPLE.',
+            clicks: ['left', 'right', 'middle'],
+          },
+          {
+            title: 'Top corner — Blue',
+            body: 'When a TOP corner glows, click LEFT (Blue). Cursor on the LEFT or RIGHT of the midline picks which top corner.',
+            click: 'left',
+          },
+          {
+            title: 'Five-hole — Orange',
+            body: 'When the FIVE-HOLE between the goalie pads glows, click RIGHT (Orange). Cursor side does not matter for the five-hole.',
+            click: 'right',
+          },
+          {
+            title: 'Bottom corner — Purple',
+            body: 'When a BOTTOM corner glows, click MIDDLE (Purple). Cursor side picks which bottom corner.',
+            click: 'middle',
+          },
+          {
+            title: 'Beat the shot clock',
+            body: 'You have six seconds per shot. Right side, right color, before the clock. Get it all and the goal lights flash. Round picker is on the menu — 10 or 20 shots.',
+          },
+        ],
+      };
+
+      document.getElementById('help-slot').appendChild(BCI.createHelpButton(() => WALKTHROUGH));
+
+      function maybeShowWalkthrough() {
+        if (!BCI.hasSeenWalkthrough(WALKTHROUGH.id)) {
+          BCI.showWalkthrough(WALKTHROUGH.id, WALKTHROUGH.steps, {
+            onClose: () => {
+              BCI.markWalkthroughSeen(WALKTHROUGH.id);
+            },
+            onSkip: () => {
+              BCI.markWalkthroughSeen(WALKTHROUGH.id);
+            },
+          });
+        }
+      }
+
+      /* ── Initialize ──────────────────────────────────────────── */
+      reflectSettingsUI();
+      updateHUD();
+      maybeShowWalkthrough();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
