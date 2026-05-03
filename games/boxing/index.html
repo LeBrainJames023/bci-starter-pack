@@ -715,6 +715,52 @@
       // Live analytics session — saved at round end. Reset by resetRound().
       let session = BCI.createSession();
 
+      // Slow-mo / shake / flash effects state. fighterClock is the bob-driving
+      // time that advances at 0.55× during exchange phases — so the opponent
+      // and player camera visibly slow during combo + counter without the
+      // discontinuity that comes from raw t-scaling.
+      let fighterClock = 0;
+      let lastFrameTime = performance.now();
+      const fx = {
+        shakeUntil: 0,
+        shakeStrength: 0,
+        hitFlashUntil: 0,
+        koFlashUntil: 0,
+      };
+
+      function triggerHitShake(now) {
+        fx.shakeUntil = now + 380;
+        fx.shakeStrength = 14;
+        fx.hitFlashUntil = now + 220;
+      }
+
+      function triggerKOFlash(now) {
+        fx.koFlashUntil = now + 850;
+      }
+
+      function getFighterClockSpeedFactor() {
+        switch (game.phase) {
+          case PHASE.PRE_INIT:
+          case PHASE.COMBO:
+          case PHASE.POST_COMBO:
+          case PHASE.COUNTER:
+          case PHASE.POST_COUNTER:
+            return 0.55;
+          default:
+            return 1.0;
+        }
+      }
+
+      function getShakeOffset(now) {
+        if (now >= fx.shakeUntil) return { x: 0, y: 0 };
+        const remaining = (fx.shakeUntil - now) / 380;
+        const s = fx.shakeStrength * remaining;
+        return {
+          x: (Math.random() - 0.5) * s * 2,
+          y: (Math.random() - 0.5) * s * 2,
+        };
+      }
+
       function rollInitiator() {
         return Math.random() < 0.5 ? 'player' : 'opponent';
       }
@@ -765,11 +811,13 @@
       function checkKO(now) {
         if (game.opponentHP <= 0) {
           game.roundResult = { winner: 'player', reason: 'ko' };
+          triggerKOFlash(now);
           enterPhase(PHASE.ROUND_END, now);
           return true;
         }
         if (game.playerHP <= 0) {
           game.roundResult = { winner: 'opponent', reason: 'ko' };
+          triggerKOFlash(now);
           enterPhase(PHASE.ROUND_END, now);
           return true;
         }
@@ -926,9 +974,11 @@
          These match drawOpponent's geometry exactly so windows track the
          body parts as the opponent bobs.
          ───────────────────────────────────────────────────────── */
-      function getOpponentLayout(now) {
-        const bob = getOpponentBob(now);
-        const cam = getPlayerCameraBob(now);
+      function getOpponentLayout(_now) {
+        // Body anchors track the fighter clock (slow-mo aware) so combo windows
+        // stay attached to the visible body during slow motion.
+        const bob = getOpponentBob(fighterClock);
+        const cam = getPlayerCameraBob(fighterClock);
         const cx = W / 2 + bob.x + cam.x * 0.3;
         const feetY = H * 0.86 + bob.y + cam.y * 0.3;
         const torsoH = 220;
@@ -1250,7 +1300,8 @@
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         const beamGrad = ctx.createLinearGradient(W / 2, 0, W / 2, H * 0.7);
-        beamGrad.addColorStop(0, 'rgba(255, 240, 210, 0.10)');
+        beamGrad.addColorStop(0, 'rgba(255, 240, 210, 0.18)');
+        beamGrad.addColorStop(0.4, 'rgba(255, 240, 210, 0.07)');
         beamGrad.addColorStop(1, 'rgba(255, 240, 210, 0)');
         ctx.fillStyle = beamGrad;
         ctx.beginPath();
@@ -1266,10 +1317,10 @@
       function drawCrowd(ctx, t, cam) {
         // Crowd band ~ from y=0.35H to y=0.58H. Heads are dim half-circles,
         // positioned with a seeded random so they don't shimmer between frames.
-        const top = H * 0.36;
-        const bottom = H * 0.58;
-        const rows = 6;
-        const headsPerRow = 60;
+        const top = H * 0.34;
+        const bottom = H * 0.59;
+        const rows = 7;
+        const headsPerRow = 88;
 
         ctx.save();
         for (let row = 0; row < rows; row++) {
@@ -2029,6 +2080,14 @@
       }
 
       function update(now) {
+        // Advance the fighter clock (slow-mo aware) every frame, even while
+        // paused-for-modal so the bob doesn't jolt forward when unpaused.
+        const dt = Math.min(now - lastFrameTime, 80);
+        lastFrameTime = now;
+        if (pausedAt === null) {
+          fighterClock += dt * getFighterClockSpeedFactor();
+        }
+
         // Skip all phase logic while a modal is open
         if (pausedAt !== null) return;
 
@@ -2090,6 +2149,7 @@
               p.feedbackUntil = now + COUNTER_FEEDBACK_MS;
               game.counter.hit += 1;
               BCI.recordAttempt(session, p.colorId, false);
+              triggerHitShake(now);
             }
           }
           if (game.counterPunches.every((p) => p.resolved) || now >= game.phaseEndsAt) {
@@ -2107,13 +2167,17 @@
       }
 
       function render(now) {
-        const cam = getPlayerCameraBob(now);
+        // Camera = bob (driven by fighter clock, slow-mo aware) + shake
+        const cam = getPlayerCameraBob(fighterClock);
+        const shake = getShakeOffset(now);
+        cam.x += shake.x;
+        cam.y += shake.y;
 
         ctx.fillStyle = getCSS('--arena-frame');
         ctx.fillRect(0, 0, W, H);
 
         drawBackdrop(ctx, cam);
-        drawCrowd(ctx, now, cam);
+        drawCrowd(ctx, fighterClock, cam);
         drawCornerPosts(ctx, cam);
         drawRingRopes(ctx, cam);
         drawCanvasFloor(ctx, cam);
@@ -2124,8 +2188,8 @@
           tellAmount = clamp((now - game.opponentTellStartedAt) / OPPONENT_TELL_DURATION_MS, 0, 1);
         }
 
-        drawOpponent(ctx, now, cam, tellAmount);
-        drawPlayerGloves(ctx, now, cam);
+        drawOpponent(ctx, fighterClock, cam, tellAmount);
+        drawPlayerGloves(ctx, fighterClock, cam);
 
         // Combo windows over the opponent body — drawn during COMBO and held
         // briefly into POST_COMBO so the hit/closed feedback flashes can play.
@@ -2154,7 +2218,7 @@
           drawPhaseOverlay(ctx, game.phase, now);
         }
 
-        // Virtual cursor — only drawn during COMBO when aim matters
+        // Virtual cursor — drawn during COMBO (aim) and ROUND_END (button hover)
         if (game.phase === PHASE.COMBO) {
           BCI.drawCursorDot(ctx, cursor.x, cursor.y, { arm: 9 });
         }
@@ -2167,8 +2231,24 @@
         const msLeft = game.roundEndsAt - now;
         drawHUD(ctx, msLeft);
 
+        // Hit flash — red full-screen pulse when player took a punch
+        if (now < fx.hitFlashUntil) {
+          const fade = (fx.hitFlashUntil - now) / 220;
+          ctx.fillStyle = `rgba(220, 60, 60, ${fade * 0.4})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+
         if (game.phase === PHASE.ROUND_END) {
           drawRoundEndOverlay(ctx);
+        }
+
+        // KO white burst — drawn LAST so it peaks over the round-end overlay
+        // for the first moments of the knockout, then fades to reveal it.
+        if (now < fx.koFlashUntil) {
+          const fade = (fx.koFlashUntil - now) / 850;
+          const a = Math.min(1, fade * 1.4);
+          ctx.fillStyle = `rgba(255, 255, 255, ${a * 0.85})`;
+          ctx.fillRect(0, 0, W, H);
         }
       }
 
