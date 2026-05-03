@@ -258,7 +258,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 2</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 3</div>
             </div>
           </div>
           <div class="hud">
@@ -288,8 +288,8 @@
         <div class="bottom-bar">
           <div class="bb-content">
             <div class="status-msg" id="status-msg">
-              <span class="accent">Move the cursor — racket follows.</span> Center line marks your
-              neutral position. Incoming balls + halo timing land next.
+              <span class="accent">AI is feeding balls.</span> Read the color, watch the halo ring
+              close. Click matching color to return — wired in checkpoint 4.
             </div>
           </div>
           <div class="home-slot" id="home-slot"></div>
@@ -341,6 +341,89 @@
          halo timing window in checkpoint 3 governs the depth read). */
       let racketX = W / 2;
       const RACKET_LERP = 0.3;
+
+      /* ── Color identity (matches BCI.CLICKS) ──────────────────── */
+      const COLOR_HEX = {
+        blue: '#4488ff',
+        orange: '#ff8833',
+        purple: '#aa44ff',
+      };
+      const BALL_COLORS = ['blue', 'orange', 'purple'];
+
+      /* ── Rally state machine ──────────────────────────────────
+         IDLE → INCOMING → POST → IDLE …
+
+         Per the BCI timing-window rule, the GOOD click window spans
+         the entire ball flight (~75% of action duration). The halo
+         is the always-visible cue that contracts as the swing
+         moment approaches — not a hard gate. PERFECT is reserved as
+         a future quality upgrade (e.g. ACE returns) once the base
+         loop is tuned. */
+      const PHASE = { IDLE: 'idle', INCOMING: 'incoming', POST: 'post' };
+      let phase = PHASE.IDLE;
+      let phaseStart = 0;
+      let activeBall = null;
+
+      const BALL_FLIGHT_MS = 2200;
+      const IDLE_MS = 1200;
+      const POST_MS = 700;
+
+      function startNextBall(now) {
+        const color = BALL_COLORS[Math.floor(Math.random() * 3)];
+        // AI's racket release point — slightly off-center per shot
+        const startX = COURT.aiX + (Math.random() - 0.5) * 28;
+        const startY = COURT.aiBaseY - 14;
+        // Land somewhere inside the player's hit zone, biased to a side
+        // so the cursor has a real read each time.
+        const sideJitter = (Math.random() - 0.5) * 320;
+        const endX = COURT.centerX + sideJitter;
+        const endY = COURT.racketY;
+
+        activeBall = {
+          color,
+          startX,
+          startY,
+          endX,
+          endY,
+          apex: 95, // peak rise above the linear path, in screen-px
+          startSize: 4.5,
+          endSize: 11.5,
+          startHaloR: 58,
+          endHaloR: 18,
+        };
+        phase = PHASE.INCOMING;
+        phaseStart = now;
+      }
+
+      function getBallState(now) {
+        if (!activeBall || phase !== PHASE.INCOMING) return null;
+        const b = activeBall;
+        const t = Math.min(1, (now - phaseStart) / BALL_FLIGHT_MS);
+        const x = b.startX + (b.endX - b.startX) * t;
+        const linY = b.startY + (b.endY - b.startY) * t;
+        const arc = -4 * b.apex * t * (1 - t);
+        const y = linY + arc;
+        const r = b.startSize + (b.endSize - b.startSize) * t;
+        const haloR = b.startHaloR + (b.endHaloR - b.startHaloR) * t;
+        return { x, y, linY, r, haloR, t, color: b.color };
+      }
+
+      function tickRallyState(now) {
+        if (phase === PHASE.IDLE) {
+          if (now - phaseStart >= IDLE_MS) startNextBall(now);
+        } else if (phase === PHASE.INCOMING) {
+          if (now - phaseStart >= BALL_FLIGHT_MS) {
+            phase = PHASE.POST;
+            phaseStart = now;
+          }
+        } else if (phase === PHASE.POST) {
+          if (now - phaseStart >= POST_MS) {
+            phase = PHASE.IDLE;
+            phaseStart = now;
+            activeBall = null;
+          }
+        }
+      }
 
       /* ── Court geometry — behind-player POV ────────────────────
          Vanishing point sits high on the back wall. The court is a
@@ -783,6 +866,54 @@
         ctx.restore();
       }
 
+      /* ── Incoming ball + halo timing ring ───────────────────── */
+      function drawBall(state) {
+        const { x, y, linY, r, haloR, color } = state;
+
+        // Ground shadow under the ball, projected to its straight-line
+        // (no-arc) Y so the ball appears to lift off and come back down.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        ctx.beginPath();
+        ctx.ellipse(x, linY + r * 0.4, r * 0.85, r * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Halo ring — contracts as the swing moment approaches.
+        // Alpha ramps up so the late-flight ring reads stronger.
+        const alpha = 0.28 + state.t * 0.55;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, haloR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner color tick on the halo so the player's eye keeps the
+        // color identity locked even as the ring contracts.
+        ctx.strokeStyle = COLOR_HEX[color];
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x, y, haloR, -0.45, 0.45);
+        ctx.stroke();
+
+        // Ball body — fully tinted so color reads at any distance.
+        ctx.fillStyle = COLOR_HEX[color];
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(x - r * 0.32, y - r * 0.32, r * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outer rim for a touch of depth
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       /* ── Cursor reticle ──────────────────────────────────────── */
       function drawCursor(x, y) {
         ctx.save();
@@ -828,8 +959,11 @@
         const aiBob = Math.sin(t * 1.3 + 0.7) * 1.1;
         const racketBob = Math.sin(t * 1.6) * 1.6;
 
-        // Smooth racket toward cursor X
+        tickRallyState(ts);
         racketX += (cursor.x - racketX) * RACKET_LERP;
+
+        const ballState = getBallState(ts);
+        const ballPastNet = ballState && ballState.linY > COURT.netY;
 
         ctx.fillStyle = getCSSVar('--court-frame');
         ctx.fillRect(0, 0, W, H);
@@ -840,7 +974,9 @@
         drawSurround();
         drawCourt();
         drawAIPlayer(aiBob);
+        if (ballState && !ballPastNet) drawBall(ballState);
         drawNet();
+        if (ballState && ballPastNet) drawBall(ballState);
         drawRacket(racketX, COURT.racketY + racketBob);
         drawPlayerSilhouette(playerBob);
         drawCursor(cursor.x, cursor.y);
