@@ -435,6 +435,7 @@
             </div>
           </div>
           <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
             <button class="icon-btn" id="btn-stats">Stats</button>
             <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
@@ -566,6 +567,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
 
     <script>
       'use strict';
@@ -2504,6 +2506,59 @@
       document.getElementById('stats-reset').addEventListener('click', () => {
         BCI.clearAnalytics(GAME_ID);
         loadStatsIntoUI();
+      });
+
+      /* ─────────────────────────────────────────────────────────
+         Walkthrough — first-time intro overlay + replay button.
+         Mirrors the pattern in QB Targets / Hoops / WebGrid.
+         ───────────────────────────────────────────────────────── */
+      const BOXING_WT_ID = 'boxing/v1';
+      const BOXING_WT_STEPS = [
+        {
+          title: 'Boxing — First-Person Exchange',
+          body: "You're behind your gloves, opponent in front of you. Move your floating cursor to aim. Both fighters bob until someone throws — the prompt at the bottom of the screen tells you whose turn it is.",
+        },
+        {
+          title: 'Your Turn — Throw a Combo',
+          body: 'When the prompt says it’s your turn, click any color to start your combo. Time slows down and four colored hit windows pop on the opponent: head / chest / ribs / body. Move the cursor onto a window and click the matching color before it shrinks closed. Wrong color is a whiff — no penalty.',
+          clicks: ['left', 'middle', 'right'],
+        },
+        {
+          title: 'Opponent Counter — Dodge',
+          body: 'When the opponent throws, four punches come at you — colored target dots with white rings closing in. Click the matching click-color before each ring lands to dodge. Miss the dodge and you eat the punch (red flash, screen shake, lost HP).',
+          clicks: ['left', 'middle', 'right'],
+        },
+        {
+          title: 'Win the Round',
+          body: 'One 90-second round. Drop the opponent to zero HP for a knockout, or have more HP than them when the timer expires for a decision. Settings let you slow windows and rings down further if Normal still feels fast.',
+        },
+      ];
+
+      // Inject walkthrough styles even on returning visits (showWalkthrough
+      // skips style injection when already-seen). Throwaway button discarded.
+      BCI.createHelpButton(() => null);
+
+      // Custom help button so we can pause + unpause the game around the modal
+      const helpBtn = document.createElement('button');
+      helpBtn.type = 'button';
+      helpBtn.className = 'bci-help-btn';
+      helpBtn.title = 'How to play';
+      helpBtn.setAttribute('aria-label', 'How to play');
+      helpBtn.textContent = '?';
+      helpBtn.addEventListener('click', () => {
+        pauseGame();
+        BCI.showWalkthrough(BOXING_WT_ID, BOXING_WT_STEPS, {
+          force: true,
+          onClose: () => unpauseGame(),
+        });
+      });
+      document.getElementById('help-slot').appendChild(helpBtn);
+
+      // First-load auto-show. onClose fires either way (real close OR
+      // auto-skipped because already-seen), so unpauseGame always runs.
+      pauseGame();
+      BCI.showWalkthrough(BOXING_WT_ID, BOXING_WT_STEPS, {
+        onClose: () => unpauseGame(),
       });
     </script>
   </body>
