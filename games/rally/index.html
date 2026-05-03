@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rally — BCI Arcade</title>
+    <style>
+      :root {
+        --bg-page: #0d1117;
+        --bg-card: #1a222d;
+        --bg-card-hover: #222c3a;
+        --border: #2d333b;
+        --border-strong: #3a4150;
+
+        --text-primary: #e8e4d9;
+        --text-muted: #9aa4b1;
+        --text-dim: #5d6670;
+
+        --click-blue: #4488ff;
+        --click-orange: #ff8833;
+        --click-purple: #aa44ff;
+
+        --good: #5fbf6e;
+        --bad: #d44b4b;
+
+        /* Tennis scene palette — US Open style hard court. */
+        --court-frame: #08120f;
+        --sky-top: #4a6a8b;
+        --sky-bottom: #94b1c5;
+        --crowd: #1d2228;
+        --stand-wall: #21342b;
+        --stand-wall-line: #d8c468;
+        --surround: #2f6b3a;
+        --surround-dark: #245029;
+        --court-blue: #2a5fa0;
+        --court-blue-dark: #224d83;
+        --court-line: #f1ede0;
+        --net-tape: #f1ede0;
+        --net-mesh: rgba(15, 18, 22, 0.45);
+        --net-post: #444b54;
+        --player-shirt: #1a2a4a;
+        --player-shirt-dark: #11203a;
+        --player-skin: #c89b75;
+        --player-hair: #261b14;
+        --ai-shirt: #efe9d9;
+        --ai-shirt-dark: #cac4b4;
+        --ai-shorts: #1a2a4a;
+        --racket-frame: #1a1a1a;
+        --racket-string: rgba(241, 237, 224, 0.65);
+        --racket-grip: #2c2118;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-page);
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      #fit-wrap {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #game-wrapper {
+        width: 900px;
+        height: 700px;
+        position: relative;
+        transform-origin: center center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .back-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .back-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--click-blue);
+        background: var(--bg-card-hover);
+      }
+
+      .title-block .game-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+      .title-block .game-subtitle {
+        font-size: 9px;
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        min-width: 56px;
+      }
+      .hud-label {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
+      .hud-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-primary);
+        font-family: inherit;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 8px 13px;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-card-hover);
+      }
+      .icon-btn[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── Canvas + court frame ────────────────────────────────── */
+      .court-frame {
+        position: relative;
+        flex: 1;
+        background: var(--court-frame);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      /* ── Bottom bar ──────────────────────────────────────────── */
+      .bottom-bar {
+        height: 88px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        gap: 18px;
+      }
+      .bb-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status-msg {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .status-msg .accent {
+        color: var(--text-primary);
+      }
+      .home-slot {
+        display: flex;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fit-wrap">
+      <div id="game-wrapper">
+        <header class="game-header">
+          <div class="header-left">
+            <button class="back-btn" id="btn-back">&larr; Back</button>
+            <div class="title-block">
+              <div class="game-title">Rally</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 1</div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="hud-stat">
+              <div class="hud-label">Rally</div>
+              <div class="hud-value" id="hud-rally">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Best</div>
+              <div class="hud-value" id="hud-best">0</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-label">Score</div>
+              <div class="hud-value" id="hud-score">0–0</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="icon-btn" id="btn-stats" disabled>Stats</button>
+            <button class="icon-btn" id="btn-settings" disabled>Settings</button>
+          </div>
+        </header>
+
+        <div class="court-frame">
+          <canvas id="canvas" width="800" height="540"></canvas>
+        </div>
+
+        <div class="bottom-bar">
+          <div class="bb-content">
+            <div class="status-msg" id="status-msg">
+              <span class="accent">Behind-player POV established.</span> Court, AI opponent, and
+              your stance are in. Cursor + racket movement lands next.
+            </div>
+          </div>
+          <div class="home-slot" id="home-slot"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../shared/bci-input.js"></script>
+    <script src="../../shared/bci-settings.js"></script>
+    <script src="../../shared/bci-analytics.js"></script>
+    <script src="../../shared/bci-shell.js"></script>
+    <script>
+      'use strict';
+
+      const GAME_ID = 'rally';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      /* Suppress the right-click context menu so the orange (right) click
+         is usable inside the canvas. */
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      /* Header buttons */
+      document.getElementById('btn-back').addEventListener('click', () => BCI.goToLauncher());
+      document.getElementById('home-slot').appendChild(BCI.createHomeButton({ showLabel: true }));
+
+      /* Viewport fitter */
+      const wrapper = document.getElementById('game-wrapper');
+      const fitter = BCI.createViewportFitter(wrapper);
+      fitter.fit();
+      requestAnimationFrame(() => fitter.fit());
+
+      /* ── Court geometry — behind-player POV ────────────────────
+         Vanishing point sits high on the back wall. The court is a
+         trapezoid: wide at the player's near baseline (cropped at
+         the bottom by the player silhouette) and narrow at the AI's
+         far baseline. The net cuts across roughly the middle. */
+      const COURT = {
+        // Sky / crowd / back wall band
+        skyTopY: 0,
+        skyBottomY: 105,
+        crowdY: 96,
+        wallY: 120,
+        wallH: 22,
+
+        // Court trapezoid (in screen-space)
+        nearBaselineY: 472,
+        nearHalfW: 330, // → x ∈ [70, 730]
+        farBaselineY: 175,
+        farHalfW: 95, // → x ∈ [305, 495]
+        centerX: 400,
+
+        // Net (sits at the far end of the front service box, between
+        // the two service lines on the AI side and player side)
+        netY: 295,
+        netTapeH: 6,
+        netMeshH: 22,
+        netPostExtra: 14, // posts extend slightly past sidelines
+
+        // Service line (only the AI-side service line is visible since
+        // we're standing on top of the player-side line)
+        farServiceY: 235,
+
+        // AI player position at the far baseline
+        aiX: 400,
+        aiBaseY: 175,
+        aiHeight: 62,
+
+        // Player silhouette in foreground (back of head + shoulders +
+        // racket arm). Anchored so the head sits just below the net.
+        playerCenterX: 400,
+        playerHeadY: 470,
+      };
+
+      /* ── Drawing helpers ─────────────────────────────────────── */
+      function getCSSVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+
+      // Linear interpolation along court depth (0 = near, 1 = far)
+      function depthLerp(t, near, far) {
+        return near + (far - near) * t;
+      }
+
+      // Returns court half-width at a given screen Y (between near and far baseline).
+      function courtHalfWidthAtY(y) {
+        const t = (COURT.nearBaselineY - y) / (COURT.nearBaselineY - COURT.farBaselineY);
+        const tt = Math.max(0, Math.min(1, t));
+        return depthLerp(tt, COURT.nearHalfW, COURT.farHalfW);
+      }
+
+      /* ── Scene draws ─────────────────────────────────────────── */
+      function drawSky() {
+        const grad = ctx.createLinearGradient(0, 0, 0, COURT.skyBottomY);
+        grad.addColorStop(0, getCSSVar('--sky-top'));
+        grad.addColorStop(1, getCSSVar('--sky-bottom'));
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, COURT.skyBottomY);
+      }
+
+      function drawCrowd() {
+        ctx.fillStyle = getCSSVar('--crowd');
+        ctx.fillRect(0, COURT.crowdY - 8, W, 22);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        const heads = 110;
+        for (let i = 0; i < heads; i++) {
+          const t = (i + 0.5) / heads;
+          const jitter = Math.sin(i * 12.9898) * 0.5;
+          const x = t * W + jitter * 6;
+          const y = COURT.crowdY + Math.sin(i * 7.13) * 1.6;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Scoreboard glint on the back wall
+        const sbX = W / 2 - 70;
+        const sbY = COURT.crowdY - 28;
+        ctx.fillStyle = 'rgba(30, 35, 42, 0.85)';
+        ctx.fillRect(sbX, sbY, 140, 20);
+        ctx.fillStyle = 'rgba(255, 217, 90, 0.45)';
+        for (let i = 0; i < 5; i++) {
+          ctx.fillRect(sbX + 12 + i * 24, sbY + 6, 14, 8);
+        }
+      }
+
+      function drawBackWall() {
+        ctx.fillStyle = getCSSVar('--stand-wall');
+        ctx.fillRect(0, COURT.wallY, W, COURT.wallH);
+        ctx.fillStyle = getCSSVar('--stand-wall-line');
+        ctx.fillRect(0, COURT.wallY, W, 2);
+      }
+
+      function drawSurround() {
+        // Green surround fills everything below the back wall — the
+        // blue court will paint over it as a trapezoid.
+        ctx.fillStyle = getCSSVar('--surround');
+        ctx.fillRect(0, COURT.wallY + COURT.wallH, W, H - (COURT.wallY + COURT.wallH));
+
+        // Subtle horizontal banding to give the surround a worn look
+        ctx.fillStyle = getCSSVar('--surround-dark');
+        ctx.globalAlpha = 0.32;
+        ctx.fillRect(0, 152, W, 18);
+        ctx.fillRect(0, 196, W, 22);
+        ctx.globalAlpha = 1;
+      }
+
+      function drawCourt() {
+        // Court trapezoid (blue hard court)
+        const farLeftX = COURT.centerX - COURT.farHalfW;
+        const farRightX = COURT.centerX + COURT.farHalfW;
+        const nearLeftX = COURT.centerX - COURT.nearHalfW;
+        const nearRightX = COURT.centerX + COURT.nearHalfW;
+
+        ctx.fillStyle = getCSSVar('--court-blue');
+        ctx.beginPath();
+        ctx.moveTo(farLeftX, COURT.farBaselineY);
+        ctx.lineTo(farRightX, COURT.farBaselineY);
+        ctx.lineTo(nearRightX, COURT.nearBaselineY);
+        ctx.lineTo(nearLeftX, COURT.nearBaselineY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle darker band in the AI's back court for depth
+        ctx.fillStyle = getCSSVar('--court-blue-dark');
+        ctx.globalAlpha = 0.45;
+        ctx.beginPath();
+        const midServiceY = COURT.farServiceY;
+        const midServiceHalfW = courtHalfWidthAtY(midServiceY);
+        ctx.moveTo(farLeftX, COURT.farBaselineY);
+        ctx.lineTo(farRightX, COURT.farBaselineY);
+        ctx.lineTo(COURT.centerX + midServiceHalfW, midServiceY);
+        ctx.lineTo(COURT.centerX - midServiceHalfW, midServiceY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // ── Court lines ──
+        ctx.strokeStyle = getCSSVar('--court-line');
+        ctx.lineWidth = 2.5;
+
+        // Far baseline
+        ctx.beginPath();
+        ctx.moveTo(farLeftX, COURT.farBaselineY);
+        ctx.lineTo(farRightX, COURT.farBaselineY);
+        ctx.stroke();
+
+        // Near baseline (player side)
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(nearLeftX, COURT.nearBaselineY);
+        ctx.lineTo(nearRightX, COURT.nearBaselineY);
+        ctx.stroke();
+
+        // Sidelines (converging toward vanishing point)
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(nearLeftX, COURT.nearBaselineY);
+        ctx.lineTo(farLeftX, COURT.farBaselineY);
+        ctx.moveTo(nearRightX, COURT.nearBaselineY);
+        ctx.lineTo(farRightX, COURT.farBaselineY);
+        ctx.stroke();
+
+        // Far service line
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const farSvcHalfW = courtHalfWidthAtY(COURT.farServiceY);
+        ctx.moveTo(COURT.centerX - farSvcHalfW, COURT.farServiceY);
+        ctx.lineTo(COURT.centerX + farSvcHalfW, COURT.farServiceY);
+        ctx.stroke();
+
+        // Center service line on the far side (between net and far service line)
+        ctx.beginPath();
+        ctx.moveTo(COURT.centerX, COURT.netY);
+        ctx.lineTo(COURT.centerX, COURT.farServiceY);
+        ctx.stroke();
+
+        // Center mark at the far baseline (small tick)
+        ctx.beginPath();
+        ctx.moveTo(COURT.centerX, COURT.farBaselineY);
+        ctx.lineTo(COURT.centerX, COURT.farBaselineY + 6);
+        ctx.stroke();
+      }
+
+      function drawNet() {
+        const netHalfW = courtHalfWidthAtY(COURT.netY);
+        const leftX = COURT.centerX - netHalfW - COURT.netPostExtra;
+        const rightX = COURT.centerX + netHalfW + COURT.netPostExtra;
+
+        // Mesh body — translucent dark band, slightly tapered (taller at posts)
+        ctx.fillStyle = getCSSVar('--net-mesh');
+        ctx.beginPath();
+        ctx.moveTo(leftX, COURT.netY);
+        ctx.lineTo(rightX, COURT.netY);
+        ctx.lineTo(rightX, COURT.netY + COURT.netMeshH + 4);
+        ctx.lineTo(COURT.centerX, COURT.netY + COURT.netMeshH);
+        ctx.lineTo(leftX, COURT.netY + COURT.netMeshH + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mesh hatching — faint diagonal lines
+        ctx.strokeStyle = 'rgba(15, 18, 22, 0.35)';
+        ctx.lineWidth = 1;
+        for (let x = leftX + 4; x < rightX; x += 8) {
+          ctx.beginPath();
+          ctx.moveTo(x, COURT.netY);
+          ctx.lineTo(x, COURT.netY + COURT.netMeshH + 2);
+          ctx.stroke();
+        }
+
+        // White tape along the top
+        ctx.fillStyle = getCSSVar('--net-tape');
+        ctx.fillRect(leftX, COURT.netY - COURT.netTapeH, rightX - leftX, COURT.netTapeH);
+
+        // Net posts
+        ctx.fillStyle = getCSSVar('--net-post');
+        ctx.fillRect(leftX - 3, COURT.netY - COURT.netTapeH - 4, 4, COURT.netMeshH + 14);
+        ctx.fillRect(rightX - 1, COURT.netY - COURT.netTapeH - 4, 4, COURT.netMeshH + 14);
+      }
+
+      function drawAIPlayer(bobOffset) {
+        const x = COURT.aiX;
+        const groundY = COURT.aiBaseY + bobOffset;
+        const h = COURT.aiHeight;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x, groundY + 2, 14, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Legs (shorts)
+        ctx.fillStyle = getCSSVar('--ai-shorts');
+        ctx.fillRect(x - 8, groundY - h * 0.5, 7, h * 0.32);
+        ctx.fillRect(x + 1, groundY - h * 0.5, 7, h * 0.32);
+
+        // Torso (white polo)
+        ctx.fillStyle = getCSSVar('--ai-shirt');
+        ctx.beginPath();
+        ctx.moveTo(x - 11, groundY - h * 0.5);
+        ctx.lineTo(x + 11, groundY - h * 0.5);
+        ctx.lineTo(x + 9, groundY - h * 0.85);
+        ctx.lineTo(x - 9, groundY - h * 0.85);
+        ctx.closePath();
+        ctx.fill();
+
+        // Shoulder shading
+        ctx.fillStyle = getCSSVar('--ai-shirt-dark');
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(x - 11, groundY - h * 0.85, 22, 2);
+        ctx.globalAlpha = 1;
+
+        // Head
+        ctx.fillStyle = getCSSVar('--player-skin');
+        ctx.beginPath();
+        ctx.arc(x, groundY - h * 0.92, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Racket arm (down at side, racket head visible)
+        ctx.strokeStyle = getCSSVar('--ai-shirt');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 10, groundY - h * 0.78);
+        ctx.lineTo(x + 16, groundY - h * 0.4);
+        ctx.stroke();
+
+        // Tiny racket head (oval)
+        ctx.fillStyle = getCSSVar('--racket-frame');
+        ctx.beginPath();
+        ctx.ellipse(x + 18, groundY - h * 0.35, 4, 6, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = getCSSVar('--racket-string');
+        ctx.beginPath();
+        ctx.ellipse(x + 18, groundY - h * 0.35, 2.6, 4.4, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawPlayerSilhouette(bobOffset) {
+        // Back of player — shoulders, head, partial racket arm extending
+        // out and forward into the court. Bob offset slightly stronger
+        // than the AI for a more present "we're alive" feel.
+        const cx = COURT.playerCenterX;
+        const headY = COURT.playerHeadY + bobOffset;
+
+        // Shoulders / upper back — wide trapezoid that fans out toward
+        // the bottom edge of frame.
+        ctx.fillStyle = getCSSVar('--player-shirt');
+        ctx.beginPath();
+        ctx.moveTo(cx - 70, headY + 18);
+        ctx.lineTo(cx + 70, headY + 18);
+        ctx.lineTo(cx + 130, H + 8);
+        ctx.lineTo(cx - 130, H + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Shadow band along the bottom for solidity
+        ctx.fillStyle = getCSSVar('--player-shirt-dark');
+        ctx.globalAlpha = 0.55;
+        ctx.fillRect(cx - 130, H - 26, 260, 26);
+        ctx.globalAlpha = 1;
+
+        // Neck
+        ctx.fillStyle = getCSSVar('--player-skin');
+        ctx.fillRect(cx - 8, headY + 6, 16, 14);
+
+        // Back of head
+        ctx.fillStyle = getCSSVar('--player-hair');
+        ctx.beginPath();
+        ctx.ellipse(cx, headY - 4, 22, 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // A small skin sliver behind the ear-line for depth
+        ctx.fillStyle = getCSSVar('--player-skin');
+        ctx.beginPath();
+        ctx.ellipse(cx - 18, headY + 4, 4, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 18, headY + 4, 4, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right racket arm — extends out and down to the right of frame.
+        // (Cursor + racket movement become real in checkpoint 2; for now
+        // the arm rests in a neutral ready position.)
+        ctx.strokeStyle = getCSSVar('--player-skin');
+        ctx.lineWidth = 16;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx + 60, headY + 28);
+        ctx.lineTo(cx + 150, headY + 105);
+        ctx.stroke();
+
+        // Wristband
+        ctx.strokeStyle = getCSSVar('--player-shirt-dark');
+        ctx.lineWidth = 18;
+        ctx.beginPath();
+        ctx.moveTo(cx + 144, headY + 100);
+        ctx.lineTo(cx + 156, headY + 110);
+        ctx.stroke();
+
+        // Racket grip + frame
+        ctx.strokeStyle = getCSSVar('--racket-grip');
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx + 152, headY + 108);
+        ctx.lineTo(cx + 188, headY + 152);
+        ctx.stroke();
+
+        // Racket head (large oval extending out into the court)
+        ctx.fillStyle = getCSSVar('--racket-frame');
+        ctx.beginPath();
+        ctx.ellipse(cx + 208, headY + 178, 28, 36, -0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = getCSSVar('--racket-string');
+        ctx.beginPath();
+        ctx.ellipse(cx + 208, headY + 178, 22, 30, -0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        // String hatching
+        ctx.strokeStyle = 'rgba(40, 30, 20, 0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.save();
+        ctx.translate(cx + 208, headY + 178);
+        ctx.rotate(-0.55);
+        for (let i = -22; i <= 22; i += 5) {
+          ctx.beginPath();
+          ctx.moveTo(i, -28);
+          ctx.lineTo(i, 28);
+          ctx.stroke();
+        }
+        for (let j = -28; j <= 28; j += 5) {
+          ctx.beginPath();
+          ctx.moveTo(-22, j);
+          ctx.lineTo(22, j);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      /* ── Render loop ─────────────────────────────────────────── */
+      function render(ts) {
+        const t = ts / 1000;
+        const playerBob = Math.sin(t * 1.6) * 1.4;
+        const aiBob = Math.sin(t * 1.3 + 0.7) * 1.1;
+
+        ctx.fillStyle = getCSSVar('--court-frame');
+        ctx.fillRect(0, 0, W, H);
+
+        drawSky();
+        drawBackWall();
+        drawCrowd();
+        drawSurround();
+        drawCourt();
+        drawAIPlayer(aiBob);
+        drawNet();
+        drawPlayerSilhouette(playerBob);
+      }
+
+      function loop(ts) {
+        render(ts);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

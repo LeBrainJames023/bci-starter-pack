@@ -115,6 +115,9 @@
       .count-live {
         color: var(--live-text);
       }
+      .count-dev {
+        color: var(--dev-text);
+      }
       .count-soon {
         color: var(--text-dim);
       }
@@ -673,7 +676,8 @@
         <button id="btn-settings" class="settings-btn" title="Global BCI Settings">&#9881;</button>
         <div class="hub-counts">
           <div class="count-live">&#9632; 8 Games Live</div>
-          <div class="count-soon">&#9632; 6 Coming Soon</div>
+          <div class="count-dev">&#9632; 1 In Development</div>
+          <div class="count-soon">&#9632; 5 Coming Soon</div>
         </div>
       </div>
     </header>
@@ -860,13 +864,17 @@
           </div>
 
           <!-- Row 3 -->
-          <div class="game-card" style="--accent: var(--cat-sports)">
+          <div
+            class="game-card game-card--dev"
+            style="--accent: var(--dev-border)"
+            onclick="openGame('games/rally/index.html')"
+          >
             <div class="card-name">Rally</div>
             <div class="card-desc">
-              Tennis &amp; badminton. Return shots with matching color clicks to build your rally
-              streak.
+              Tennis (v1 in progress). Return shots with matching color clicks to build your rally
+              streak. Ping pong &amp; badminton variants planned.
             </div>
-            <span class="badge-soon">Coming Soon</span>
+            <span class="badge-dev">In Development</span>
           </div>
 
           <div class="game-card" style="--accent: var(--cat-sports)">
