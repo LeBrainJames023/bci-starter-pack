@@ -16,7 +16,7 @@ Built for Neuralink Prime Study participants and BCI users broadly. Every game i
 | Hoops            | Free Throw + Three-Point — rotating colored rim, click to match | Live    |
 | QB Targets       | Football receiver targeting under pressure                      | Planned |
 | Goalie / Striker | Soccer shot blocking and striking                               | Planned |
-| Batter / Pitcher | Baseball timing and pitch selection                             | Planned |
+| Batter / Pitcher | Baseball timing and pitch selection                             | Live    |
 | Rally            | Tennis / badminton color-matched returns                        | Planned |
 | Range            | Target practice with decision-making                            | Planned |
 | Tower Defense    | Wave-based click strategy                                       | Planned |
