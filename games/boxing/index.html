@@ -620,9 +620,9 @@
       const PHASE_DURATION = {
         [PHASE.IDLE]: 6000,
         [PHASE.PRE_INIT]: 700,
-        [PHASE.COMBO]: 4500,
+        [PHASE.COMBO]: 5500,
         [PHASE.POST_COMBO]: 700,
-        [PHASE.COUNTER]: 4500,
+        [PHASE.COUNTER]: 5500,
         [PHASE.POST_COUNTER]: 700,
         [PHASE.RECOVERY]: 1500,
         [PHASE.ROUND_END]: Infinity,
@@ -635,14 +635,14 @@
       // of its lifetime then shrinks linearly to zero. Settings can override
       // base radius and duration in checkpoint 6.
       const COMBO_WINDOW_COUNT = 4;
-      const COMBO_WINDOW_DURATION_MS = 3000;
+      const COMBO_WINDOW_DURATION_MS = 3800;
       const COMBO_BASE_RADIUS = 42;
       const COMBO_HIT_FEEDBACK_MS = 400;
 
       // Counter phase tunables (Guitar Hero style closing rings).
       const COUNTER_PUNCH_COUNT = 4;
-      const COUNTER_STAGGER_MS = 800;
-      const COUNTER_CLOSE_MS = 900;
+      const COUNTER_STAGGER_MS = 1000;
+      const COUNTER_CLOSE_MS = 1300;
       const COUNTER_TARGET_RADIUS = 22;
       const COUNTER_RING_START_RADIUS = 120;
       const COUNTER_FEEDBACK_MS = 400;
@@ -654,8 +654,8 @@
       // Boxing-specific setting maps. Effective values override these via the
       // settings panel; the constants above are the fallback "Normal" defaults.
       const WINDOW_SIZE_MAP = { small: 32, medium: 42, large: 52 };
-      const WINDOW_DURATION_MAP = { faster: 2400, normal: 3000, slower: 3600 };
-      const COUNTER_SPEED_MAP = { faster: 700, normal: 900, slower: 1100 };
+      const WINDOW_DURATION_MAP = { faster: 3000, normal: 3800, slower: 4600 };
+      const COUNTER_SPEED_MAP = { faster: 1000, normal: 1300, slower: 1600 };
 
       function getBoxingSetting(key, fallback) {
         const v = BCI.getEffectiveSettings(GAME_ID)[key];
@@ -745,7 +745,7 @@
           case PHASE.POST_COMBO:
           case PHASE.COUNTER:
           case PHASE.POST_COUNTER:
-            return 0.55;
+            return 0.45;
           default:
             return 1.0;
         }
