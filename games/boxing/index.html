@@ -260,6 +260,14 @@
       const COMBO_BASE_RADIUS = 42;
       const COMBO_HIT_FEEDBACK_MS = 400;
 
+      // Counter phase tunables (Guitar Hero style closing rings).
+      const COUNTER_PUNCH_COUNT = 4;
+      const COUNTER_STAGGER_MS = 800;
+      const COUNTER_CLOSE_MS = 900;
+      const COUNTER_TARGET_RADIUS = 22;
+      const COUNTER_RING_START_RADIUS = 120;
+      const COUNTER_FEEDBACK_MS = 400;
+
       const game = {
         phase: PHASE.IDLE,
         phaseStartedAt: 0,
@@ -276,6 +284,9 @@
         // for feedback flashes, then gets replaced on the next COMBO entry.
         comboWindows: [],
         combo: { hits: 0, closedCount: 0 },
+        // Counter phase state — same lifecycle as combo
+        counterPunches: [],
+        counter: { dodged: 0, hit: 0 },
       };
 
       // Live analytics session — saved at round end (checkpoint 7 wires the view)
@@ -319,6 +330,8 @@
           game.exchangeNumber += 1;
         } else if (phase === PHASE.COMBO) {
           spawnComboWindows(now);
+        } else if (phase === PHASE.COUNTER) {
+          spawnCounterPunches(now);
         }
       }
 
@@ -479,6 +492,74 @@
         // Wrong color: window stays open for another try (no penalty in v1).
       }
 
+      function spawnCounterPunches(now) {
+        // Four target spots in the player's view — opponent throws different
+        // punches at different angles. Positions are randomly assigned to the
+        // 4 punches so the player can't memorize which slot fires when.
+        const slots = [
+          { x: W * 0.34, y: H * 0.4 },
+          { x: W * 0.66, y: H * 0.42 },
+          { x: W * 0.4, y: H * 0.6 },
+          { x: W * 0.6, y: H * 0.62 },
+        ];
+        const shuffled = slots.slice().sort(() => Math.random() - 0.5);
+        const enabled = getEnabledClickIds();
+
+        game.counterPunches = shuffled.slice(0, COUNTER_PUNCH_COUNT).map((pos, i) => ({
+          targetX: pos.x,
+          targetY: pos.y,
+          colorId: enabled[Math.floor(Math.random() * enabled.length)],
+          spawnedAt: now + i * COUNTER_STAGGER_MS,
+          closeMs: COUNTER_CLOSE_MS,
+          resolved: false,
+          resolution: null, // 'dodged' | 'hit'
+          feedbackUntil: 0,
+        }));
+        game.counter = { dodged: 0, hit: 0 };
+      }
+
+      function getCounterRingProgress(punch, now) {
+        if (now < punch.spawnedAt) return null;
+        const elapsed = now - punch.spawnedAt;
+        if (elapsed >= punch.closeMs) return 1;
+        return elapsed / punch.closeMs;
+      }
+
+      function getCounterRingRadius(progress) {
+        return (
+          COUNTER_RING_START_RADIUS + (COUNTER_TARGET_RADIUS - COUNTER_RING_START_RADIUS) * progress
+        );
+      }
+
+      function handleCounterClick(click, now) {
+        // Resolve the most-progressed visible punch matching the click color.
+        // This is the "Guitar Hero forgiveness" pass — multiple visible punches
+        // with the matching color all qualify; we dodge the closest-to-landing.
+        let bestPunch = null;
+        let bestElapsed = -1;
+        for (const p of game.counterPunches) {
+          if (p.resolved) continue;
+          if (p.colorId !== click.id) continue;
+          if (now < p.spawnedAt) continue;
+          const elapsed = now - p.spawnedAt;
+          if (elapsed > bestElapsed) {
+            bestPunch = p;
+            bestElapsed = elapsed;
+          }
+        }
+
+        if (bestPunch) {
+          bestPunch.resolved = true;
+          bestPunch.resolution = 'dodged';
+          bestPunch.feedbackUntil = now + COUNTER_FEEDBACK_MS;
+          game.counter.dodged += 1;
+          BCI.recordAttempt(session, click.id, true);
+        }
+        // Wrong color while a punch is visible: just wastes the click. The
+        // unmatched punch can still be dodged by a later correct click. No
+        // attempt recorded so analytics stays meaningful.
+      }
+
       function drawComboWindows(ctx, now) {
         const layout = getOpponentLayout(now);
         for (const w of game.comboWindows) {
@@ -540,6 +621,77 @@
           ctx.beginPath();
           ctx.arc(anchor.x, anchor.y, 4, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawCounterPunches(ctx, now) {
+        for (const p of game.counterPunches) {
+          if (now < p.spawnedAt) continue;
+
+          const color = BCI.CLICKS[p.colorId].color;
+
+          if (p.resolved) {
+            if (now >= p.feedbackUntil) continue;
+            const fade = (p.feedbackUntil - now) / COUNTER_FEEDBACK_MS;
+            ctx.save();
+            if (p.resolution === 'dodged') {
+              const r = COUNTER_TARGET_RADIUS + (1 - fade) * 50;
+              ctx.strokeStyle = `rgba(95, 191, 110, ${fade * 0.95})`;
+              ctx.lineWidth = 4;
+              ctx.beginPath();
+              ctx.arc(p.targetX, p.targetY, r, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.fillStyle = `rgba(95, 191, 110, ${fade * 0.3})`;
+              ctx.beginPath();
+              ctx.arc(p.targetX, p.targetY, COUNTER_TARGET_RADIUS * fade, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              const r = 50 + (1 - fade) * 30;
+              ctx.fillStyle = `rgba(212, 75, 75, ${fade * 0.5})`;
+              ctx.beginPath();
+              ctx.arc(p.targetX, p.targetY, r, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = `rgba(212, 75, 75, ${fade * 0.85})`;
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.arc(p.targetX, p.targetY, r, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+            ctx.restore();
+            continue;
+          }
+
+          const progress = getCounterRingProgress(p, now);
+          if (progress === null) continue;
+          const ringR = getCounterRingRadius(progress);
+
+          ctx.save();
+          // Target dot — colored bullseye showing which click to use
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(p.targetX, p.targetY, COUNTER_TARGET_RADIUS, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.targetX, p.targetY, COUNTER_TARGET_RADIUS, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Closing white ring — contracts toward the target
+          const ringAlpha = 0.55 + progress * 0.4;
+          ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(p.targetX, p.targetY, ringR, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Color-tinted halo just outside the closing ring
+          ctx.strokeStyle = `${color}88`;
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.arc(p.targetX, p.targetY, ringR + 4, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
       }
@@ -1291,9 +1443,24 @@
           if (game.comboWindows.every((w) => w.resolved) || now >= game.phaseEndsAt) {
             advanceExchange(now);
           }
+        } else if (game.phase === PHASE.COUNTER) {
+          // Auto-resolve any punches whose closing rings landed without a dodge
+          for (const p of game.counterPunches) {
+            if (p.resolved) continue;
+            if (now < p.spawnedAt) continue;
+            if (now - p.spawnedAt >= p.closeMs) {
+              p.resolved = true;
+              p.resolution = 'hit';
+              p.feedbackUntil = now + COUNTER_FEEDBACK_MS;
+              game.counter.hit += 1;
+              BCI.recordAttempt(session, p.colorId, false);
+            }
+          }
+          if (game.counterPunches.every((p) => p.resolved) || now >= game.phaseEndsAt) {
+            advanceExchange(now);
+          }
         } else if (now >= game.phaseEndsAt) {
-          // Active exchange phase — advance when the timer expires. The COUNTER
-          // mechanic will resolve early once all 4 dodge rings finish.
+          // Active exchange phase — advance when the timer expires.
           advanceExchange(now);
         }
       }
@@ -1326,6 +1493,15 @@
           game.comboWindows.length > 0
         ) {
           drawComboWindows(ctx, now);
+        }
+
+        // Counter punches with closing rings — drawn during COUNTER and into
+        // POST_COUNTER so the dodge/hit feedback flashes can finish.
+        if (
+          (game.phase === PHASE.COUNTER || game.phase === PHASE.POST_COUNTER) &&
+          game.counterPunches.length > 0
+        ) {
+          drawCounterPunches(ctx, now);
         }
 
         // Slow-mo overlay during exchange phases
@@ -1378,8 +1554,11 @@
         }
         if (game.phase === PHASE.COMBO) {
           handleComboClick(click, now);
+          return;
         }
-        // COUNTER click handling lands in checkpoint 4
+        if (game.phase === PHASE.COUNTER) {
+          handleCounterClick(click, now);
+        }
       });
 
       requestAnimationFrame(loop);
