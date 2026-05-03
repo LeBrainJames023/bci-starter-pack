@@ -258,7 +258,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 3</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 4</div>
             </div>
           </div>
           <div class="hud">
@@ -288,8 +288,8 @@
         <div class="bottom-bar">
           <div class="bb-content">
             <div class="status-msg" id="status-msg">
-              <span class="accent">AI is feeding balls.</span> Read the color, watch the halo ring
-              close. Click matching color to return — wired in checkpoint 4.
+              <span class="accent">Match the color to return.</span> Wrong color or no swing and the
+              ball goes into the net. AI return loop lands in checkpoint 5.
             </div>
           </div>
           <div class="home-slot" id="home-slot"></div>
@@ -359,12 +359,22 @@
          moment approaches — not a hard gate. PERFECT is reserved as
          a future quality upgrade (e.g. ACE returns) once the base
          loop is tuned. */
-      const PHASE = { IDLE: 'idle', INCOMING: 'incoming', POST: 'post' };
+      const PHASE = {
+        IDLE: 'idle',
+        INCOMING: 'incoming',
+        RETURNING: 'returning',
+        NETTED: 'netted',
+        POST: 'post',
+      };
       let phase = PHASE.IDLE;
       let phaseStart = 0;
       let activeBall = null;
+      let lastOutcome = null; // 'return' | 'net-wrong' | 'net-timeout' | null
+      let racketSwingT = 0; // 1 → 0 fade after a swing fires
 
       const BALL_FLIGHT_MS = 2200;
+      const RETURN_FLIGHT_MS = 1500;
+      const NET_FLIGHT_MS = 600;
       const IDLE_MS = 1200;
       const POST_MS = 700;
 
@@ -395,10 +405,23 @@
         phaseStart = now;
       }
 
+      function flightDurationFor(p) {
+        if (p === PHASE.INCOMING) return BALL_FLIGHT_MS;
+        if (p === PHASE.RETURNING) return RETURN_FLIGHT_MS;
+        if (p === PHASE.NETTED) return NET_FLIGHT_MS;
+        return 0;
+      }
+
       function getBallState(now) {
-        if (!activeBall || phase !== PHASE.INCOMING) return null;
+        if (
+          !activeBall ||
+          (phase !== PHASE.INCOMING && phase !== PHASE.RETURNING && phase !== PHASE.NETTED)
+        ) {
+          return null;
+        }
         const b = activeBall;
-        const t = Math.min(1, (now - phaseStart) / BALL_FLIGHT_MS);
+        const dur = flightDurationFor(phase);
+        const t = Math.min(1, (now - phaseStart) / dur);
         const x = b.startX + (b.endX - b.startX) * t;
         const linY = b.startY + (b.endY - b.startY) * t;
         const arc = -4 * b.apex * t * (1 - t);
@@ -408,11 +431,66 @@
         return { x, y, linY, r, haloR, t, color: b.color };
       }
 
+      function startReturn(now) {
+        const cur = getBallState(now);
+        if (!cur) return;
+        activeBall = {
+          color: activeBall.color,
+          startX: cur.x,
+          startY: cur.y,
+          endX: COURT.aiX + (Math.random() - 0.5) * 60,
+          endY: COURT.aiBaseY - 18,
+          apex: 90,
+          startSize: cur.r,
+          endSize: 4.5,
+          startHaloR: 0,
+          endHaloR: 0,
+        };
+        phase = PHASE.RETURNING;
+        phaseStart = now;
+        lastOutcome = 'return';
+        racketSwingT = 1;
+        setStatus('clean');
+      }
+
+      function startNetted(now, reason) {
+        const cur = getBallState(now);
+        const sx = cur ? cur.x : activeBall.endX;
+        const sy = cur ? cur.y : activeBall.endY;
+        // Drop the ball forward and down into the net base. Slight forward
+        // drift toward AI side so it visually "tries to clear the net."
+        const forwardDX = (COURT.centerX - sx) * 0.4;
+        activeBall = {
+          color: activeBall.color,
+          startX: sx,
+          startY: sy,
+          endX: sx + forwardDX,
+          endY: COURT.netY + COURT.netMeshH + 4,
+          apex: 18,
+          startSize: cur ? cur.r : 11.5,
+          endSize: 9,
+          startHaloR: 0,
+          endHaloR: 0,
+        };
+        phase = PHASE.NETTED;
+        phaseStart = now;
+        lastOutcome = reason === 'wrong' ? 'net-wrong' : 'net-timeout';
+        if (reason === 'wrong') racketSwingT = 1;
+        setStatus(lastOutcome);
+      }
+
       function tickRallyState(now) {
         if (phase === PHASE.IDLE) {
           if (now - phaseStart >= IDLE_MS) startNextBall(now);
         } else if (phase === PHASE.INCOMING) {
-          if (now - phaseStart >= BALL_FLIGHT_MS) {
+          if (now - phaseStart >= BALL_FLIGHT_MS) startNetted(now, 'timeout');
+        } else if (phase === PHASE.RETURNING) {
+          if (now - phaseStart >= RETURN_FLIGHT_MS) {
+            phase = PHASE.POST;
+            phaseStart = now;
+          }
+        } else if (phase === PHASE.NETTED) {
+          if (now - phaseStart >= NET_FLIGHT_MS) {
             phase = PHASE.POST;
             phaseStart = now;
           }
@@ -423,6 +501,37 @@
             activeBall = null;
           }
         }
+      }
+
+      /* ── Click handling ──────────────────────────────────────── */
+      function handleClick(button) {
+        if (phase !== PHASE.INCOMING) return;
+        const click = BCI.CLICK_BY_BUTTON[button];
+        if (!click) return;
+        const colorName = click.name.toLowerCase(); // 'blue' / 'orange' / 'purple'
+        const now = performance.now();
+        if (colorName === activeBall.color) {
+          startReturn(now);
+        } else {
+          startNetted(now, 'wrong');
+        }
+      }
+
+      canvas.addEventListener('mousedown', (e) => handleClick(e.button));
+
+      /* ── Status message helper ───────────────────────────────── */
+      const STATUS_EL = document.getElementById('status-msg');
+      const STATUS_TEXT = {
+        clean:
+          '<span class="accent" style="color: var(--good)">Clean return.</span> Keep the rally going — AI loop lands in checkpoint 5.',
+        'net-wrong':
+          '<span class="accent" style="color: var(--bad)">Wrong color — into the net.</span> Match blue / orange / purple to the ball.',
+        'net-timeout':
+          '<span class="accent" style="color: var(--bad)">Whiffed — into the net.</span> Click a color before the halo closes.',
+        idle: '<span class="accent">Match the color to return.</span> Wrong color or no swing and the ball goes into the net.',
+      };
+      function setStatus(key) {
+        STATUS_EL.innerHTML = STATUS_TEXT[key] || STATUS_TEXT.idle;
       }
 
       /* ── Court geometry — behind-player POV ────────────────────
@@ -798,7 +907,7 @@
       }
 
       /* ── Floating racket — cursor-controlled hit element ──────── */
-      function drawRacket(x, y) {
+      function drawRacket(x, y, swingT) {
         ctx.save();
         ctx.translate(x, y);
 
@@ -807,6 +916,17 @@
         ctx.beginPath();
         ctx.ellipse(2, 64, 22, 4, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Swing flash — bright halo around the racket head when a click fires.
+        if (swingT > 0) {
+          ctx.globalAlpha = swingT * 0.85;
+          ctx.strokeStyle = 'rgba(255, 255, 240, 0.9)';
+          ctx.lineWidth = 4 + swingT * 6;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 32 + swingT * 8, 38 + swingT * 8, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
 
         // Grip (held by the player below frame)
         ctx.fillStyle = getCSSVar('--racket-grip');
@@ -961,6 +1081,7 @@
 
         tickRallyState(ts);
         racketX += (cursor.x - racketX) * RACKET_LERP;
+        if (racketSwingT > 0) racketSwingT = Math.max(0, racketSwingT - 0.06);
 
         const ballState = getBallState(ts);
         const ballPastNet = ballState && ballState.linY > COURT.netY;
@@ -977,7 +1098,7 @@
         if (ballState && !ballPastNet) drawBall(ballState);
         drawNet();
         if (ballState && ballPastNet) drawBall(ballState);
-        drawRacket(racketX, COURT.racketY + racketBob);
+        drawRacket(racketX, COURT.racketY + racketBob, racketSwingT);
         drawPlayerSilhouette(playerBob);
         drawCursor(cursor.x, cursor.y);
       }
