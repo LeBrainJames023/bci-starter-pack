@@ -240,12 +240,30 @@ during the post-MVP feel-test session — ranked by impact.
 - Precision and tremor-control training — uniquely valuable for BCI users
 - Analytics: grouping accuracy, hold steadiness, release timing consistency
 
-### BCI Rally (Tennis / Badminton)
+### BCI Rally (Tennis / Ping Pong / Badminton)
 
-- Side-view court, cursor controls racket
+- Behind-player POV court, cursor controls racket position
 - Incoming shots with 3 colors, click matching color to return with spin/angle
-- Badminton variant: slower, higher arcs for more float time
+- Player serves with rhythmic combo (3-click = good serve, 4-click fast = ACE attempt)
 - Analytics: return accuracy per color, rally length, cursor positioning precision
+
+**Tennis v1 ships first** with race-to-5 scoring, double-fault rule, and a single wrong-color penalty (ball into net). See `games/rally/GAME_PLAN.md` for the locked v1 spec. Ping Pong and Badminton variants and the items below are deferred to v1.5+.
+
+**Ping Pong variant (v1.5).** Same core mechanic, faster ball, tighter table geometry, compact racket, close-to-table neutral stance. Highest reuse off the tennis core — first variant to ship.
+
+**Badminton variant (v1.5).** Slower shuttle, higher arcs, more float time — the gentle on-ramp variant for newer BCI users. Mid-court neutral stance, racket up.
+
+**Mistake roulette (v1.5).** Replace v1's "always into the net" with weighted random outcomes per click type — out long, whiff into ground, mishit foul. Each click biases toward a different mistake so misreads have flavor.
+
+**Real tennis scoring (v1.5).** 15-30-40-deuce-advantage, best-of-3 sets, side-changes between games. v1 races to 5 to keep the loop tight while the core feel is tuned.
+
+**Adaptive AI (v2).** Opponent that improves with rally streak length and learns player tendencies (favorite return color, weak side).
+
+**Tournament bracket mode (v2).** Single-elimination ladder against AI personalities with different return styles and serve speeds.
+
+**Court surfaces (v2).** Clay slows the ball, grass speeds it up, hard court neutral. Affects rally pacing and changes the read difficulty.
+
+**Curved / spin returns (v2+).** Late-curving balls that change side mid-flight, forcing a re-read. Cousin of the goalie curved-shots backlog — same pattern across the pack.
 
 ### BCI Range (Sniper / Target Practice)
 
