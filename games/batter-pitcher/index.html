@@ -544,6 +544,93 @@
         color: var(--text-primary);
         border-color: var(--border-strong);
       }
+
+      /* ── Analytics panel ────────────────────────────────────── */
+      .analytics-card {
+        min-width: 560px;
+      }
+      .analytics-section {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .analytics-h {
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .analytics-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .analytics-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 60px 60px 60px;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+        padding: 4px 0;
+      }
+      .analytics-row .a-date {
+        color: var(--text-dim);
+      }
+      .analytics-row .a-stat {
+        text-align: right;
+      }
+      .analytics-row .a-stat-strong {
+        text-align: right;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .analytics-empty {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-align: center;
+        padding: 16px;
+      }
+      .alltime-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        width: 100%;
+      }
+      .alltime-cell {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .alltime-cell-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .alltime-cell-color {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .alltime-cell-name {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .alltime-cell-stat {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .alltime-cell-sub {
+        font-size: 9px;
+        color: var(--text-dim);
+      }
     </style>
   </head>
   <body>
@@ -577,7 +664,7 @@
           </div>
           <div class="header-right">
             <span class="help-slot" id="help-slot"></span>
-            <button class="icon-btn" id="btn-analytics" disabled>Stats</button>
+            <button class="icon-btn" id="btn-analytics">Stats</button>
             <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
         </header>
@@ -700,6 +787,24 @@
                   Reset Defaults
                 </button>
                 <button class="settings-btn settings-btn--ghost" id="set-close">Close</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="overlay" id="analytics-overlay">
+            <div class="overlay-card analytics-card">
+              <div class="overlay-title">Stats</div>
+              <div class="analytics-section">
+                <div class="analytics-h">All-time per-pitch performance</div>
+                <div class="alltime-grid" id="alltime-grid"></div>
+              </div>
+              <div class="analytics-section">
+                <div class="analytics-h">Recent rounds</div>
+                <div class="analytics-rows" id="history-rows"></div>
+              </div>
+              <div class="settings-buttons">
+                <button class="settings-btn settings-btn--ghost" id="analytics-close">Close</button>
               </div>
             </div>
           </div>
@@ -2157,6 +2262,91 @@
         tunables.pitchSpeedMul = v;
         setSpeedVal.textContent = v.toFixed(2) + '×';
         BCI.saveGameSettings(GAME_ID, { pitchSpeedMul: v });
+      });
+
+      /* ── Analytics panel ──────────────────────────────────────── */
+      const analyticsOverlay = document.getElementById('analytics-overlay');
+      const alltimeGrid = document.getElementById('alltime-grid');
+      const historyRows = document.getElementById('history-rows');
+
+      // Click ID → pitch label for the all-time per-color grid.
+      const CLICK_ID_TO_PITCH = {
+        0: { name: 'Fastball', color: '#4488ff' },
+        1: { name: 'Changeup', color: '#aa44ff' },
+        2: { name: 'Curveball', color: '#ff8833' },
+      };
+
+      function renderAnalytics() {
+        // All-time per-pitch — hit rate + avg reaction time per click color
+        const stats = BCI.getAllTimeStats(GAME_ID);
+        const clicks = (stats && stats.clicks) || {};
+        let cellsHtml = '';
+        for (const id of [0, 2, 1]) {
+          // Render in fastball / curveball / changeup order for readability
+          const def = CLICK_ID_TO_PITCH[id];
+          const c = clicks[id] || { attempts: 0, correct: 0, totalReactionMs: 0, reactionCount: 0 };
+          const hitRate = c.attempts > 0 ? (c.correct / c.attempts) * 100 : 0;
+          const avgRxn = c.reactionCount > 0 ? c.totalReactionMs / c.reactionCount : 0;
+          cellsHtml += `
+            <div class="alltime-cell">
+              <div class="alltime-cell-row">
+                <div class="alltime-cell-color" style="background:${def.color}"></div>
+                <div class="alltime-cell-name">${def.name}</div>
+              </div>
+              <div class="alltime-cell-stat">${hitRate.toFixed(0)}%</div>
+              <div class="alltime-cell-sub">
+                ${c.correct}/${c.attempts} hits ·
+                ${avgRxn > 0 ? Math.round(avgRxn) + 'ms rxn' : '— rxn'}
+              </div>
+            </div>
+          `;
+        }
+        alltimeGrid.innerHTML = cellsHtml;
+
+        // Recent rounds
+        const history = BCI.getSessionHistory(GAME_ID) || [];
+        if (history.length === 0) {
+          historyRows.innerHTML =
+            '<div class="analytics-empty">No rounds played yet. Step in.</div>';
+        } else {
+          historyRows.innerHTML = history
+            .slice(0, 8)
+            .map((s) => {
+              const date = s.timestamp
+                ? new Date(s.timestamp).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : '—';
+              const extra = s.extra || {};
+              const hr = extra.homeRuns ?? 0;
+              const h = extra.hits ?? 0;
+              const p = extra.pitches ?? 0;
+              const avg = typeof extra.avg === 'number' ? formatAvg(extra.avg) : '.000';
+              const slg = typeof extra.slg === 'number' ? formatAvg(extra.slg) : '.000';
+              return `
+                <div class="analytics-row">
+                  <span class="a-date">${date}</span>
+                  <span>${h} hits / ${p} pitches · ${hr} HR</span>
+                  <span class="a-stat">${avg} AVG</span>
+                  <span class="a-stat">${slg} SLG</span>
+                  <span class="a-stat-strong">${hr ? '★' : ''}</span>
+                </div>
+              `;
+            })
+            .join('');
+        }
+      }
+
+      document.getElementById('btn-analytics').addEventListener('click', () => {
+        renderAnalytics();
+        pauseGame();
+        analyticsOverlay.classList.add('is-visible');
+      });
+
+      document.getElementById('analytics-close').addEventListener('click', () => {
+        analyticsOverlay.classList.remove('is-visible');
+        unpauseGame();
       });
 
       loop();
