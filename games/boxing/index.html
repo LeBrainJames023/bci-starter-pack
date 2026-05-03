@@ -155,6 +155,199 @@
         display: block;
         cursor: none;
       }
+
+      /* ── Modal (settings + stats) ───────────────────────────── */
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 11, 16, 0.84);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-panel {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        width: 460px;
+        max-height: 88vh;
+        overflow-y: auto;
+        padding: 22px 26px 22px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-title {
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+      }
+      .modal-close {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-muted);
+        font-size: 14px;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .modal-close:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .settings-section {
+        margin-bottom: 18px;
+      }
+      .settings-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+      }
+      .settings-desc {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+      .slider-top {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .slider-range {
+        font-size: 10px;
+        color: var(--text-muted);
+      }
+      .slider-value {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--text-primary);
+        min-width: 56px;
+        text-align: right;
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+        border: none;
+      }
+      .click-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+      }
+      .click-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .click-name {
+        flex: 1;
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+      .click-toggle-row input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--click-blue);
+        cursor: pointer;
+      }
+      .seg-group {
+        display: flex;
+        gap: 4px;
+      }
+      .seg-btn {
+        flex: 1;
+        padding: 9px 0;
+        background: rgba(13, 17, 23, 0.7);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        cursor: pointer;
+        border-radius: 4px;
+        transition:
+          color 0.15s,
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .seg-btn:hover:not(.seg-btn--active) {
+        border-color: var(--border-strong);
+        color: var(--text-primary);
+      }
+      .seg-btn--active {
+        background: rgba(68, 136, 255, 0.18);
+        color: #e8e4d9;
+        border-color: var(--click-blue);
+      }
+      .settings-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        gap: 12px;
+      }
+      .settings-note {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.4;
+        flex: 1;
+      }
+      .settings-reset {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 11px;
+        padding: 6px 12px;
+        cursor: pointer;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .settings-reset:hover {
+        color: var(--click-orange);
+        border-color: var(--click-orange);
+      }
     </style>
   </head>
   <body>
@@ -178,6 +371,94 @@
         <!-- ── Arena ───────────────────────────────────────────── -->
         <div class="arena-frame">
           <canvas id="canvas" width="900" height="616"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Settings modal ─────────────────────────────────────── -->
+    <div id="settings-modal" class="modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">Boxing Settings</div>
+          <button class="modal-close" id="settings-close" aria-label="Close">&#10005;</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Cursor Sensitivity</div>
+          <div class="slider-top">
+            <span class="slider-range">0.25× &nbsp;—&nbsp; 2.0×</span>
+            <span class="slider-value" id="set-sens-val">1.00×</span>
+          </div>
+          <input type="range" id="set-sens" min="25" max="200" step="5" value="100" />
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Enabled Clicks</div>
+          <div class="settings-desc">
+            Disable any click you don't use. Boxing falls back to enabled clicks for combo and
+            counter colors.
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-blue)"></div>
+            <span class="click-name">Left click &mdash; Blue (Head)</span>
+            <input type="checkbox" id="set-click-0" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-purple)"></div>
+            <span class="click-name">Middle click &mdash; Purple (Ribs)</span>
+            <input type="checkbox" id="set-click-1" checked />
+          </div>
+          <div class="click-toggle-row">
+            <div class="click-dot" style="background: var(--click-orange)"></div>
+            <span class="click-name">Right click &mdash; Orange (Body)</span>
+            <input type="checkbox" id="set-click-2" checked />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Slow-Mo Intensity</div>
+          <div class="settings-desc">
+            How dramatic the slow-mo vignette feels during your combo + the opponent's counter.
+          </div>
+          <div class="slider-top">
+            <span class="slider-range">10% &nbsp;—&nbsp; 50%</span>
+            <span class="slider-value" id="set-slowmo-val">30%</span>
+          </div>
+          <input type="range" id="set-slowmo" min="10" max="50" step="5" value="30" />
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Combo Window Size</div>
+          <div class="seg-group" id="set-window-size">
+            <button class="seg-btn" data-value="small">Small</button>
+            <button class="seg-btn seg-btn--active" data-value="medium">Medium</button>
+            <button class="seg-btn" data-value="large">Large</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Combo Window Duration</div>
+          <div class="seg-group" id="set-window-duration">
+            <button class="seg-btn" data-value="faster">Faster</button>
+            <button class="seg-btn seg-btn--active" data-value="normal">Normal</button>
+            <button class="seg-btn" data-value="slower">Slower</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Counter Ring Speed</div>
+          <div class="seg-group" id="set-counter-speed">
+            <button class="seg-btn" data-value="faster">Faster</button>
+            <button class="seg-btn seg-btn--active" data-value="normal">Normal</button>
+            <button class="seg-btn" data-value="slower">Slower</button>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <span class="settings-note"
+            >Boxing-only. Saves automatically. Game pauses while open.</span
+          >
+          <button class="settings-reset" id="set-reset">Reset</button>
         </div>
       </div>
     </div>
@@ -271,6 +552,34 @@
       // Damage values per the GAME_PLAN
       const COMBO_DAMAGE_PER_HIT = 10;
       const COUNTER_DAMAGE_PER_HIT = 12;
+
+      // Boxing-specific setting maps. Effective values override these via the
+      // settings panel; the constants above are the fallback "Normal" defaults.
+      const WINDOW_SIZE_MAP = { small: 32, medium: 42, large: 52 };
+      const WINDOW_DURATION_MAP = { faster: 2400, normal: 3000, slower: 3600 };
+      const COUNTER_SPEED_MAP = { faster: 700, normal: 900, slower: 1100 };
+
+      function getBoxingSetting(key, fallback) {
+        const v = BCI.getEffectiveSettings(GAME_ID)[key];
+        return v !== undefined ? v : fallback;
+      }
+      function getComboBaseRadius() {
+        return WINDOW_SIZE_MAP[getBoxingSetting('windowSize', 'medium')] ?? COMBO_BASE_RADIUS;
+      }
+      function getComboWindowDurationMs() {
+        return (
+          WINDOW_DURATION_MAP[getBoxingSetting('windowDuration', 'normal')] ??
+          COMBO_WINDOW_DURATION_MS
+        );
+      }
+      function getCounterCloseMs() {
+        return (
+          COUNTER_SPEED_MAP[getBoxingSetting('counterRingSpeed', 'normal')] ?? COUNTER_CLOSE_MS
+        );
+      }
+      function getSlowMoIntensitySetting() {
+        return getBoxingSetting('slowMoIntensity', 0.3);
+      }
 
       const game = {
         phase: PHASE.IDLE,
@@ -444,6 +753,37 @@
       enterPhase(PHASE.IDLE, performance.now());
 
       /* ─────────────────────────────────────────────────────────
+         Pause — settings + stats modals freeze the game clock so
+         tweaks don't accidentally trigger phase transitions.
+         ───────────────────────────────────────────────────────── */
+      let pausedAt = null;
+
+      function pauseGame() {
+        if (pausedAt !== null) return;
+        pausedAt = performance.now();
+      }
+
+      function unpauseGame() {
+        if (pausedAt === null) return;
+        const delta = performance.now() - pausedAt;
+        pausedAt = null;
+        game.phaseStartedAt += delta;
+        game.phaseEndsAt += delta;
+        game.roundEndsAt += delta;
+        if (game.opponentTellStartedAt !== null) {
+          game.opponentTellStartedAt += delta;
+        }
+        for (const w of game.comboWindows) {
+          w.spawnedAt += delta;
+          w.feedbackUntil += delta;
+        }
+        for (const p of game.counterPunches) {
+          p.spawnedAt += delta;
+          p.feedbackUntil += delta;
+        }
+      }
+
+      /* ─────────────────────────────────────────────────────────
          Helpers
          ───────────────────────────────────────────────────────── */
       function clamp(v, lo, hi) {
@@ -532,14 +872,17 @@
 
       function spawnComboWindows(now) {
         const parts = ['head', 'chest', 'left_ribs', 'right_ribs', 'left_body', 'right_body'];
-        // Shuffle and take 4
         const shuffled = parts.slice().sort(() => Math.random() - 0.5);
         const enabled = getEnabledClickIds();
+        const durationMs = getComboWindowDurationMs();
+        const baseRadius = getComboBaseRadius();
 
         game.comboWindows = shuffled.slice(0, COMBO_WINDOW_COUNT).map((bodyPart) => ({
           bodyPart,
           colorId: enabled[Math.floor(Math.random() * enabled.length)],
           spawnedAt: now,
+          durationMs,
+          baseRadius,
           resolved: false,
           resolution: null, // 'hit' | 'closed'
           feedbackUntil: 0,
@@ -549,12 +892,12 @@
 
       function computeWindowRadius(window, now) {
         const elapsed = now - window.spawnedAt;
-        if (elapsed >= COMBO_WINDOW_DURATION_MS) return 0;
-        const holdMs = COMBO_WINDOW_DURATION_MS * 0.3;
-        if (elapsed < holdMs) return COMBO_BASE_RADIUS;
-        const shrinkMs = COMBO_WINDOW_DURATION_MS - holdMs;
+        if (elapsed >= window.durationMs) return 0;
+        const holdMs = window.durationMs * 0.3;
+        if (elapsed < holdMs) return window.baseRadius;
+        const shrinkMs = window.durationMs - holdMs;
         const shrinkProgress = (elapsed - holdMs) / shrinkMs;
-        return COMBO_BASE_RADIUS * (1 - shrinkProgress);
+        return window.baseRadius * (1 - shrinkProgress);
       }
 
       function handleComboClick(click, now) {
@@ -600,13 +943,14 @@
         ];
         const shuffled = slots.slice().sort(() => Math.random() - 0.5);
         const enabled = getEnabledClickIds();
+        const closeMs = getCounterCloseMs();
 
         game.counterPunches = shuffled.slice(0, COUNTER_PUNCH_COUNT).map((pos, i) => ({
           targetX: pos.x,
           targetY: pos.y,
           colorId: enabled[Math.floor(Math.random() * enabled.length)],
           spawnedAt: now + i * COUNTER_STAGGER_MS,
-          closeMs: COUNTER_CLOSE_MS,
+          closeMs,
           resolved: false,
           resolution: null, // 'dodged' | 'hit'
           feedbackUntil: 0,
@@ -669,7 +1013,7 @@
             ctx.save();
             if (w.resolution === 'hit') {
               // Green expanding burst — clean hit
-              const r = COMBO_BASE_RADIUS * (1 + (1 - fade) * 0.7);
+              const r = w.baseRadius * (1 + (1 - fade) * 0.7);
               ctx.strokeStyle = `rgba(95, 191, 110, ${fade * 0.95})`;
               ctx.lineWidth = 4;
               ctx.beginPath();
@@ -677,14 +1021,14 @@
               ctx.stroke();
               ctx.fillStyle = `rgba(95, 191, 110, ${fade * 0.45})`;
               ctx.beginPath();
-              ctx.arc(anchor.x, anchor.y, COMBO_BASE_RADIUS * 0.65 * fade, 0, Math.PI * 2);
+              ctx.arc(anchor.x, anchor.y, w.baseRadius * 0.65 * fade, 0, Math.PI * 2);
               ctx.fill();
             } else {
               // Faded red ring — closed without a hit
               ctx.strokeStyle = `rgba(212, 75, 75, ${fade * 0.55})`;
               ctx.lineWidth = 2;
               ctx.beginPath();
-              ctx.arc(anchor.x, anchor.y, COMBO_BASE_RADIUS * 0.5, 0, Math.PI * 2);
+              ctx.arc(anchor.x, anchor.y, w.baseRadius * 0.5, 0, Math.PI * 2);
               ctx.stroke();
             }
             ctx.restore();
@@ -699,7 +1043,7 @@
           ctx.strokeStyle = `${color}55`;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(anchor.x, anchor.y, COMBO_BASE_RADIUS, 0, Math.PI * 2);
+          ctx.arc(anchor.x, anchor.y, w.baseRadius, 0, Math.PI * 2);
           ctx.stroke();
           // Inner shrinking hit zone fill
           ctx.fillStyle = `${color}30`;
@@ -1411,15 +1755,17 @@
 
       function drawSlowMoVignette(ctx, intensity) {
         if (intensity <= 0) return;
+        // Setting is the *target* darkness (0.10–0.50). Translate to the
+        // 0.55-default the math above used so the visual reads the same at the
+        // default 0.30.
+        const darknessTarget = (getSlowMoIntensitySetting() / 0.3) * 0.55;
         ctx.save();
-        // Edge vignette
         const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.25, W / 2, H / 2, W * 0.7);
         grad.addColorStop(0, 'rgba(0, 0, 20, 0)');
-        grad.addColorStop(1, `rgba(0, 0, 20, ${intensity * 0.55})`);
+        grad.addColorStop(1, `rgba(0, 0, 20, ${intensity * darknessTarget})`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
-        // Cool-blue tint
-        ctx.fillStyle = `rgba(50, 80, 130, ${intensity * 0.06})`;
+        ctx.fillStyle = `rgba(50, 80, 130, ${intensity * (darknessTarget * 0.11)})`;
         ctx.fillRect(0, 0, W, H);
         ctx.restore();
       }
@@ -1585,6 +1931,9 @@
       }
 
       function update(now) {
+        // Skip all phase logic while a modal is open
+        if (pausedAt !== null) return;
+
         // Round timer expiration → decision result if no KO already happened
         if (now >= game.roundEndsAt && game.phase !== PHASE.ROUND_END) {
           resolveDecision(now);
@@ -1621,7 +1970,7 @@
         } else if (game.phase === PHASE.COMBO) {
           // Auto-close any windows whose duration has elapsed
           for (const w of game.comboWindows) {
-            if (!w.resolved && now - w.spawnedAt >= COMBO_WINDOW_DURATION_MS) {
+            if (!w.resolved && now - w.spawnedAt >= w.durationMs) {
               w.resolved = true;
               w.resolution = 'closed';
               w.feedbackUntil = now + COMBO_HIT_FEEDBACK_MS;
@@ -1767,14 +2116,112 @@
       requestAnimationFrame(loop);
 
       /* ─────────────────────────────────────────────────────────
-         Header buttons — placeholders until checkpoints 6 & 7 land
+         Settings modal — boxing-specific overrides on top of globals
          ───────────────────────────────────────────────────────── */
-      document.getElementById('btn-settings').addEventListener('click', () => {
-        // Placeholder — settings panel ships in checkpoint 6
+      const settingsModal = document.getElementById('settings-modal');
+      const elSens = document.getElementById('set-sens');
+      const elSensVal = document.getElementById('set-sens-val');
+      const elSlowMo = document.getElementById('set-slowmo');
+      const elSlowMoVal = document.getElementById('set-slowmo-val');
+      const elClickToggles = [0, 1, 2].map((id) => document.getElementById(`set-click-${id}`));
+      const elWindowSize = document.getElementById('set-window-size');
+      const elWindowDuration = document.getElementById('set-window-duration');
+      const elCounterSpeed = document.getElementById('set-counter-speed');
+
+      function loadSettingsIntoUI() {
+        const s = BCI.getEffectiveSettings(GAME_ID);
+        const sens = s.cursorSensitivity ?? 1.0;
+        elSens.value = Math.round(sens * 100);
+        elSensVal.textContent = sens.toFixed(2) + '×';
+
+        const slowMo = s.slowMoIntensity ?? 0.3;
+        elSlowMo.value = Math.round(slowMo * 100);
+        elSlowMoVal.textContent = Math.round(slowMo * 100) + '%';
+
+        const enabled = s.enabledClicks ?? { 0: true, 1: true, 2: true };
+        [0, 1, 2].forEach((id) => {
+          elClickToggles[id].checked = !!enabled[id];
+        });
+
+        setSegActive(elWindowSize, s.windowSize ?? 'medium');
+        setSegActive(elWindowDuration, s.windowDuration ?? 'normal');
+        setSegActive(elCounterSpeed, s.counterRingSpeed ?? 'normal');
+      }
+
+      function setSegActive(group, value) {
+        group.querySelectorAll('.seg-btn').forEach((btn) => {
+          btn.classList.toggle('seg-btn--active', btn.dataset.value === value);
+        });
+      }
+
+      function openSettings() {
+        loadSettingsIntoUI();
+        pauseGame();
+        settingsModal.style.display = 'flex';
+      }
+
+      function closeSettings() {
+        settingsModal.style.display = 'none';
+        unpauseGame();
+        // Re-apply cursor sensitivity in case it was changed
+        cursor.setSensitivity(getBoxingSetting('cursorSensitivity', 1.0));
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', openSettings);
+      document.getElementById('settings-close').addEventListener('click', closeSettings);
+      settingsModal.addEventListener('mousedown', (e) => {
+        if (e.target === settingsModal) closeSettings();
       });
-      document.getElementById('btn-stats').addEventListener('click', () => {
-        // Placeholder — analytics view ships in checkpoint 7
+
+      elSens.addEventListener('input', (e) => {
+        const sens = parseInt(e.target.value, 10) / 100;
+        elSensVal.textContent = sens.toFixed(2) + '×';
+        BCI.saveGameSettings(GAME_ID, { cursorSensitivity: sens });
+        cursor.setSensitivity(sens);
       });
+
+      elSlowMo.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10) / 100;
+        elSlowMoVal.textContent = Math.round(v * 100) + '%';
+        BCI.saveGameSettings(GAME_ID, { slowMoIntensity: v });
+      });
+
+      [0, 1, 2].forEach((id) => {
+        elClickToggles[id].addEventListener('change', (e) => {
+          // Don't let the user disable all 3 — at least one must remain on.
+          const checked = [0, 1, 2].filter((i) => elClickToggles[i].checked).length;
+          if (checked === 0) {
+            e.target.checked = true;
+            return;
+          }
+          const current =
+            BCI.getGameSettings(GAME_ID).enabledClicks ?? BCI.getGlobalSettings().enabledClicks;
+          const enabledClicks = { ...current, [id]: e.target.checked };
+          BCI.saveGameSettings(GAME_ID, { enabledClicks });
+        });
+      });
+
+      function wireSegGroup(group, settingKey) {
+        group.addEventListener('click', (e) => {
+          const btn = e.target.closest('.seg-btn');
+          if (!btn) return;
+          const value = btn.dataset.value;
+          setSegActive(group, value);
+          BCI.saveGameSettings(GAME_ID, { [settingKey]: value });
+        });
+      }
+      wireSegGroup(elWindowSize, 'windowSize');
+      wireSegGroup(elWindowDuration, 'windowDuration');
+      wireSegGroup(elCounterSpeed, 'counterRingSpeed');
+
+      document.getElementById('set-reset').addEventListener('click', () => {
+        BCI.clearGameSettings(GAME_ID);
+        loadSettingsIntoUI();
+        cursor.setSensitivity(getBoxingSetting('cursorSensitivity', 1.0));
+      });
+
+      // Stats button — placeholder, full analytics view ships in checkpoint 7
+      document.getElementById('btn-stats').addEventListener('click', () => {});
     </script>
   </body>
 </html>
