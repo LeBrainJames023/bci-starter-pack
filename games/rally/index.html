@@ -258,7 +258,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 5</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 6</div>
             </div>
           </div>
           <div class="hud">
@@ -288,8 +288,8 @@
         <div class="bottom-bar">
           <div class="bb-content">
             <div class="status-msg" id="status-msg">
-              <span class="accent">Match the color to return.</span> Build a rally — the longer the
-              streak, the higher your Best.
+              <span class="accent">Click any color to toss.</span> Then 3 quick clicks in rhythm to
+              serve.
             </div>
           </div>
           <div class="home-slot" id="home-slot"></div>
@@ -364,13 +364,16 @@
          a future quality upgrade (e.g. ACE returns) once the base
          loop is tuned. */
       const PHASE = {
+        SERVE_READY: 'serve-ready', // waiting for player to click toss
+        SERVE_TOSS: 'serve-toss', // ball is tossed, awaiting combo clicks
+        SERVING: 'serving', // serve flying from player to AI
         IDLE: 'idle',
         INCOMING: 'incoming',
         RETURNING: 'returning',
         NETTED: 'netted',
         POST: 'post',
       };
-      let phase = PHASE.IDLE;
+      let phase = PHASE.SERVE_READY;
       let phaseStart = 0;
       let activeBall = null;
       let lastOutcome = null; // 'return' | 'net-wrong' | 'net-timeout' | null
@@ -382,9 +385,15 @@
       const BALL_FLIGHT_MS = 2200;
       const RETURN_FLIGHT_MS = 1500;
       const NET_FLIGHT_MS = 600;
+      const SERVING_FLIGHT_MS = 1400;
       const IDLE_MS = 1200; // pause before first ball / after a miss
       const AI_PREP_MS = 450; // brief beat between AI catching and re-sending mid-rally
       const POST_MS = 700;
+      const SERVE_WINDOW_MS = 2500; // total time to land combo clicks after toss
+      const SERVE_GOOD_COUNT = 3; // swing clicks needed after toss for a good serve
+
+      let serveClickCount = 0;
+      let serveStartTime = 0;
 
       function startNextBall(now) {
         const color = BALL_COLORS[Math.floor(Math.random() * 3)];
@@ -417,13 +426,17 @@
         if (p === PHASE.INCOMING) return BALL_FLIGHT_MS;
         if (p === PHASE.RETURNING) return RETURN_FLIGHT_MS;
         if (p === PHASE.NETTED) return NET_FLIGHT_MS;
+        if (p === PHASE.SERVING) return SERVING_FLIGHT_MS;
         return 0;
       }
 
       function getBallState(now) {
         if (
           !activeBall ||
-          (phase !== PHASE.INCOMING && phase !== PHASE.RETURNING && phase !== PHASE.NETTED)
+          (phase !== PHASE.INCOMING &&
+            phase !== PHASE.RETURNING &&
+            phase !== PHASE.NETTED &&
+            phase !== PHASE.SERVING)
         ) {
           return null;
         }
@@ -487,10 +500,95 @@
         setStatus(lastOutcome);
       }
 
+      function startServeReady(now) {
+        phase = PHASE.SERVE_READY;
+        phaseStart = now;
+        serveClickCount = 0;
+        activeBall = null;
+        setStatus('serve-ready');
+      }
+
+      function handleToss(now) {
+        serveClickCount = 0;
+        serveStartTime = now;
+        phase = PHASE.SERVE_TOSS;
+        phaseStart = now;
+        setStatus('serve-tossing', { remaining: SERVE_GOOD_COUNT });
+      }
+
+      function handleServeStep(now) {
+        serveClickCount += 1;
+        racketSwingT = 1;
+        if (serveClickCount >= SERVE_GOOD_COUNT) {
+          landServe(now);
+        } else {
+          setStatus('serve-progress', {
+            remaining: SERVE_GOOD_COUNT - serveClickCount,
+          });
+        }
+      }
+
+      function landServe(now) {
+        const color = BALL_COLORS[Math.floor(Math.random() * 3)];
+        activeBall = {
+          color,
+          startX: racketX,
+          startY: racketY,
+          endX: COURT.aiX + (Math.random() - 0.5) * 50,
+          endY: COURT.aiBaseY - 12,
+          apex: 100,
+          startSize: 11.5,
+          endSize: 4.5,
+          startHaloR: 0,
+          endHaloR: 0,
+        };
+        phase = PHASE.SERVING;
+        phaseStart = now;
+        setStatus('serve-good');
+      }
+
+      function handleServeFault(now) {
+        // Toss falls forward and dies in the net.
+        activeBall = {
+          color: 'blue', // any — color doesn't matter on a fault
+          startX: racketX,
+          startY: racketY - 24,
+          endX: racketX + (COURT.centerX - racketX) * 0.45,
+          endY: COURT.netY + COURT.netMeshH + 4,
+          apex: 22,
+          startSize: 11.5,
+          endSize: 9,
+          startHaloR: 0,
+          endHaloR: 0,
+        };
+        phase = PHASE.NETTED;
+        phaseStart = now;
+        lastOutcome = 'fault';
+        setStatus('fault');
+      }
+
       function tickRallyState(now) {
-        if (phase === PHASE.IDLE) {
-          const dur = rallyAlive ? AI_PREP_MS : IDLE_MS;
-          if (now - phaseStart >= dur) startNextBall(now);
+        if (phase === PHASE.SERVE_READY) {
+          // Wait for player toss click — no timeout
+        } else if (phase === PHASE.SERVE_TOSS) {
+          if (now - serveStartTime >= SERVE_WINDOW_MS) {
+            handleServeFault(now);
+          }
+        } else if (phase === PHASE.SERVING) {
+          if (now - phaseStart >= SERVING_FLIGHT_MS) {
+            // Serve arrived at AI — they immediately return.
+            activeBall = null;
+            rallyAlive = true;
+            phase = PHASE.IDLE;
+            phaseStart = now;
+          }
+        } else if (phase === PHASE.IDLE) {
+          if (rallyAlive) {
+            const dur = AI_PREP_MS;
+            if (now - phaseStart >= dur) startNextBall(now);
+          } else {
+            startServeReady(now);
+          }
         } else if (phase === PHASE.INCOMING) {
           if (now - phaseStart >= BALL_FLIGHT_MS) startNetted(now, 'timeout');
         } else if (phase === PHASE.RETURNING) {
@@ -529,15 +627,21 @@
 
       /* ── Click handling ──────────────────────────────────────── */
       function handleClick(button) {
-        if (phase !== PHASE.INCOMING) return;
         const click = BCI.CLICK_BY_BUTTON[button];
         if (!click) return;
-        const colorName = click.name.toLowerCase(); // 'blue' / 'orange' / 'purple'
         const now = performance.now();
-        if (colorName === activeBall.color) {
-          startReturn(now);
-        } else {
-          startNetted(now, 'wrong');
+
+        if (phase === PHASE.SERVE_READY) {
+          handleToss(now);
+        } else if (phase === PHASE.SERVE_TOSS) {
+          handleServeStep(now);
+        } else if (phase === PHASE.INCOMING) {
+          const colorName = click.name.toLowerCase();
+          if (colorName === activeBall.color) {
+            startReturn(now);
+          } else {
+            startNetted(now, 'wrong');
+          }
         }
       }
 
@@ -549,6 +653,16 @@
       const HUD_BEST = document.getElementById('hud-best');
 
       const STATUS_TEXT = {
+        'serve-ready':
+          '<span class="accent">Click any color to toss.</span> Then 3 quick clicks in rhythm to serve.',
+        'serve-tossing':
+          '<span class="accent">Toss is up — {remaining} swing clicks to land the serve.</span>',
+        'serve-progress':
+          '<span class="accent">{remaining} more click{remainingPlural}…</span> Stay in rhythm.',
+        'serve-good':
+          '<span class="accent" style="color: var(--good)">Good serve.</span> AI is reading it.',
+        fault:
+          '<span class="accent" style="color: var(--bad)">Fault.</span> Click any color to toss again.',
         clean:
           '<span class="accent" style="color: var(--good)">Clean return.</span> AI is sending the next ball.',
         rally:
@@ -564,8 +678,12 @@
 
       function setStatus(key, params = {}) {
         let text = STATUS_TEXT[key] || STATUS_TEXT.idle;
-        for (const k in params) {
-          text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), params[k]);
+        const mergedParams = { ...params };
+        if ('remaining' in params && !('remainingPlural' in params)) {
+          mergedParams.remainingPlural = params.remaining === 1 ? '' : 's';
+        }
+        for (const k in mergedParams) {
+          text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), mergedParams[k]);
         }
         STATUS_EL.innerHTML = text;
       }
@@ -575,6 +693,9 @@
         HUD_BEST.textContent = String(bestRally);
       }
       updateHUD();
+
+      // Initial prompt — player serves first.
+      setStatus('serve-ready');
 
       /* ── Court geometry — behind-player POV ────────────────────
          Vanishing point sits high on the back wall. The court is a
@@ -1121,6 +1242,68 @@
         ctx.stroke();
       }
 
+      /* ── Serve combo gauge ────────────────────────────────────
+         Shown only during SERVE_READY / SERVE_TOSS. Three dots
+         fill as the player lands swing clicks; a thin time bar
+         under the dots empties as the serve window expires. */
+      function drawComboGauge(now) {
+        if (phase !== PHASE.SERVE_READY && phase !== PHASE.SERVE_TOSS) return;
+
+        const cx = W / 2;
+        const cy = 510;
+        const dotR = 7;
+        const spacing = 26;
+        const startX = cx - spacing;
+
+        // Background pill
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const pillW = 110;
+        const pillH = 30;
+        const pillX = cx - pillW / 2;
+        const pillY = cy - pillH / 2;
+        const pillR = 14;
+        ctx.moveTo(pillX + pillR, pillY);
+        ctx.lineTo(pillX + pillW - pillR, pillY);
+        ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + pillR);
+        ctx.lineTo(pillX + pillW, pillY + pillH - pillR);
+        ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - pillR, pillY + pillH);
+        ctx.lineTo(pillX + pillR, pillY + pillH);
+        ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR);
+        ctx.lineTo(pillX, pillY + pillR);
+        ctx.quadraticCurveTo(pillX, pillY, pillX + pillR, pillY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Three dots
+        for (let i = 0; i < SERVE_GOOD_COUNT; i++) {
+          const x = startX + i * spacing;
+          const filled = i < serveClickCount;
+          ctx.fillStyle = filled ? getCSSVar('--good') : 'rgba(255, 255, 255, 0.18)';
+          ctx.beginPath();
+          ctx.arc(x, cy - 2, dotR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+        }
+
+        // Window timer bar (only during SERVE_TOSS)
+        if (phase === PHASE.SERVE_TOSS) {
+          const elapsed = now - serveStartTime;
+          const remainingT = Math.max(0, 1 - elapsed / SERVE_WINDOW_MS);
+          const barW = 70;
+          const barH = 3;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+          ctx.fillRect(cx - barW / 2, cy + 10, barW, barH);
+          ctx.fillStyle = remainingT < 0.3 ? getCSSVar('--bad') : 'rgba(255, 255, 255, 0.85)';
+          ctx.fillRect(cx - barW / 2, cy + 10, barW * remainingT, barH);
+        }
+      }
+
       /* ── Cursor reticle ──────────────────────────────────────── */
       function drawCursor(x, y) {
         ctx.save();
@@ -1207,6 +1390,7 @@
         // hand cleanly; the racket head sits in front of the player.
         drawPlayerSilhouette(playerBob, swayX, { x: handX, y: handY });
         drawRacket(racketX, racketDrawY, racketSwingT, tilt);
+        drawComboGauge(ts);
         drawCursor(cursor.x, cursor.y);
       }
 
