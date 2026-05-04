@@ -216,6 +216,223 @@
         cursor: none;
       }
 
+      /* ── Overlays (set-result, settings, stats) ──────────────── */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(8, 14, 22, 0.78);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      }
+      .overlay.is-visible {
+        display: flex;
+      }
+      .overlay-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        padding: 22px 26px 20px;
+        min-width: 320px;
+        max-width: 440px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+      }
+      .overlay-card--wide {
+        min-width: 460px;
+        max-width: 560px;
+      }
+      .overlay-title {
+        font-size: 14px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        font-weight: bold;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .overlay-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 18px;
+      }
+      .overlay-btn {
+        background: var(--click-blue);
+        border: 1px solid var(--click-blue);
+        border-radius: 6px;
+        color: #08120f;
+        padding: 9px 18px;
+        font-family: inherit;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-weight: bold;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .overlay-btn:hover {
+        background: #6aa3ff;
+        border-color: #6aa3ff;
+      }
+      .overlay-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+        border-color: var(--border-strong);
+        font-weight: normal;
+      }
+      .overlay-btn--ghost:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+        border-color: var(--text-muted);
+      }
+
+      /* Set-result */
+      .setresult-headline {
+        font-size: 16px;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+      }
+      .setresult-headline.win {
+        color: var(--good);
+      }
+      .setresult-headline.loss {
+        color: var(--bad);
+      }
+      .setresult-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .setresult-stat {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .setresult-label {
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+      .setresult-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+
+      /* Settings rows */
+      .settings-row {
+        margin-bottom: 16px;
+      }
+      .settings-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .settings-label {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .settings-value {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .settings-help {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-top: 6px;
+      }
+      input[type='range'] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border-strong);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--click-blue);
+        cursor: pointer;
+        border: none;
+      }
+
+      /* Stats */
+      .stats-section {
+        margin-bottom: 14px;
+      }
+      .stats-h {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+      .stats-grid--3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .stats-cell {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .stats-cell-label {
+        font-size: 9px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .stats-cell-value {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-primary);
+      }
+      .stats-cell-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .stats-cell-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
       /* ── Bottom bar ──────────────────────────────────────────── */
       .bottom-bar {
         height: 88px;
@@ -258,7 +475,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 7</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 8</div>
             </div>
           </div>
           <div class="hud">
@@ -276,13 +493,168 @@
             </div>
           </div>
           <div class="header-right">
-            <button class="icon-btn" id="btn-stats" disabled>Stats</button>
-            <button class="icon-btn" id="btn-settings" disabled>Settings</button>
+            <button class="icon-btn" id="btn-stats">Stats</button>
+            <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
         </header>
 
         <div class="court-frame">
           <canvas id="canvas" width="800" height="540"></canvas>
+
+          <!-- Set-result overlay -->
+          <div class="overlay" id="setresult-overlay">
+            <div class="overlay-card">
+              <div class="overlay-title" id="setresult-title">Set Complete</div>
+              <div class="setresult-headline" id="setresult-headline">Nice work.</div>
+              <div class="setresult-grid">
+                <div class="setresult-stat">
+                  <div class="setresult-label">You</div>
+                  <div class="setresult-value" id="setresult-you">0</div>
+                </div>
+                <div class="setresult-stat">
+                  <div class="setresult-label">AI</div>
+                  <div class="setresult-value" id="setresult-ai">0</div>
+                </div>
+                <div class="setresult-stat">
+                  <div class="setresult-label">Best Rally</div>
+                  <div class="setresult-value" id="setresult-best">0</div>
+                </div>
+                <div class="setresult-stat">
+                  <div class="setresult-label">ACEs</div>
+                  <div class="setresult-value" id="setresult-aces">0</div>
+                </div>
+              </div>
+              <div class="overlay-buttons">
+                <button class="overlay-btn" id="setresult-replay">Play Again</button>
+                <button class="overlay-btn overlay-btn--ghost" id="setresult-home">Home</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings overlay -->
+          <div class="overlay" id="settings-overlay">
+            <div class="overlay-card overlay-card--wide">
+              <div class="overlay-title">Settings</div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Cursor Sensitivity</span>
+                  <span class="settings-value" id="set-sens-val">1.00&times;</span>
+                </div>
+                <input type="range" id="set-sens" min="25" max="200" step="5" value="100" />
+                <div class="settings-help">
+                  How fast the on-screen cursor moves with your input.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">Halo Speed</span>
+                  <span class="settings-value" id="set-halo-val">Normal</span>
+                </div>
+                <input type="range" id="set-halo" min="70" max="140" step="5" value="100" />
+                <div class="settings-help">
+                  How fast the timing ring closes. Lower = slower flight, more time to read.
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-top">
+                  <span class="settings-label">AI Strength</span>
+                  <span class="settings-value" id="set-ai-val">Normal</span>
+                </div>
+                <input type="range" id="set-ai" min="60" max="140" step="5" value="100" />
+                <div class="settings-help">
+                  How aggressive the AI's returns are — affects ball speed and lateral spread.
+                </div>
+              </div>
+              <div class="overlay-buttons">
+                <button class="overlay-btn overlay-btn--ghost" id="set-reset">
+                  Reset Defaults
+                </button>
+                <button class="overlay-btn overlay-btn--ghost" id="set-close">Close</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats overlay -->
+          <div class="overlay" id="stats-overlay">
+            <div class="overlay-card overlay-card--wide">
+              <div class="overlay-title">Stats — This Session</div>
+              <div class="stats-section">
+                <div class="stats-h">Match</div>
+                <div class="stats-grid">
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Sets</div>
+                    <div class="stats-cell-value" id="st-sets">0 – 0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Points (set)</div>
+                    <div class="stats-cell-value" id="st-points">0 – 0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Best Rally</div>
+                    <div class="stats-cell-value" id="st-best">0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Avg Rally</div>
+                    <div class="stats-cell-value" id="st-avg">0.0</div>
+                  </div>
+                </div>
+              </div>
+              <div class="stats-section">
+                <div class="stats-h">Serve</div>
+                <div class="stats-grid">
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Attempts</div>
+                    <div class="stats-cell-value" id="st-serves">0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Good</div>
+                    <div class="stats-cell-value" id="st-good">0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Faults</div>
+                    <div class="stats-cell-value" id="st-faults">0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">Double Faults</div>
+                    <div class="stats-cell-value" id="st-dblfaults">0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-label">ACEs</div>
+                    <div class="stats-cell-value" id="st-aces">0</div>
+                  </div>
+                </div>
+              </div>
+              <div class="stats-section">
+                <div class="stats-h">Returns by Color</div>
+                <div class="stats-grid stats-grid--3">
+                  <div class="stats-cell">
+                    <div class="stats-cell-row">
+                      <span class="stats-cell-dot" style="background: var(--click-blue)"></span>
+                      <span class="stats-cell-label">Blue</span>
+                    </div>
+                    <div class="stats-cell-value" id="st-blue">0 / 0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-row">
+                      <span class="stats-cell-dot" style="background: var(--click-orange)"></span>
+                      <span class="stats-cell-label">Orange</span>
+                    </div>
+                    <div class="stats-cell-value" id="st-orange">0 / 0</div>
+                  </div>
+                  <div class="stats-cell">
+                    <div class="stats-cell-row">
+                      <span class="stats-cell-dot" style="background: var(--click-purple)"></span>
+                      <span class="stats-cell-label">Purple</span>
+                    </div>
+                    <div class="stats-cell-value" id="st-purple">0 / 0</div>
+                  </div>
+                </div>
+              </div>
+              <div class="overlay-buttons">
+                <button class="overlay-btn overlay-btn--ghost" id="stats-close">Close</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="bottom-bar">
@@ -403,6 +775,22 @@
       let faultCount = 0; // 0 / 1 (one more = double fault)
       let pointsWon = 0;
       let pointsLost = 0;
+      let setsWon = 0;
+      let setsLost = 0;
+      let setOver = false;
+      let serveAttempts = 0;
+      let goodServes = 0;
+      let faultServes = 0;
+      let doubleFaultServes = 0;
+      // Per-color rally swing stats (clean returns vs miss)
+      const rallyStats = {
+        blue: { clean: 0, miss: 0 },
+        orange: { clean: 0, miss: 0 },
+        purple: { clean: 0, miss: 0 },
+      };
+      let totalRallyLengths = 0;
+      let rallyRoundsCount = 0; // for averaging
+      const POINTS_TO_WIN_SET = 5;
 
       function startNextBall(now) {
         const color = BALL_COLORS[Math.floor(Math.random() * 3)];
@@ -411,7 +799,7 @@
         const startY = COURT.aiBaseY - 14;
         // Land somewhere inside the player's hit zone, biased to a side
         // so the cursor has a real read each time.
-        const sideJitter = (Math.random() - 0.5) * 320;
+        const sideJitter = (Math.random() - 0.5) * effectiveLateralVariance();
         const endX = COURT.centerX + sideJitter;
         const endY = COURT.racketY;
 
@@ -432,7 +820,7 @@
       }
 
       function flightDurationFor(p) {
-        if (p === PHASE.INCOMING) return BALL_FLIGHT_MS;
+        if (p === PHASE.INCOMING) return effectiveBallFlightMs();
         if (p === PHASE.RETURNING) return RETURN_FLIGHT_MS;
         if (p === PHASE.NETTED) return NET_FLIGHT_MS;
         if (p === PHASE.SERVING) return SERVING_FLIGHT_MS;
@@ -524,6 +912,7 @@
         serveStartTime = now;
         phase = PHASE.SERVE_TOSS;
         phaseStart = now;
+        if (faultCount === 0) serveAttempts += 1;
         setStatus('serve-tossing', { remaining: SERVE_GOOD_COUNT });
       }
 
@@ -605,11 +994,13 @@
         phaseStart = now;
         isAceServe = false;
         faultCount = 0;
+        goodServes += 1;
         setStatus('serve-good');
       }
 
       function handleServeFault(now) {
         faultCount += 1;
+        faultServes += 1;
         const isDouble = faultCount >= 2;
         // Toss falls forward and dies in the net.
         activeBall = {
@@ -653,11 +1044,10 @@
             if (isAceServe) {
               // Player won the point with an unreturnable ACE.
               isAceServe = false;
-              pointsWon += 1;
+              recordPoint(true);
               rallyCount = 0;
               rallyAlive = false;
               faultCount = 0;
-              updateHUD();
               phase = PHASE.POST;
               phaseStart = now;
             } else {
@@ -668,6 +1058,7 @@
             }
           }
         } else if (phase === PHASE.IDLE) {
+          if (setOver) return; // pause auto-progression while set-result overlay shows
           if (rallyAlive) {
             const dur = AI_PREP_MS;
             if (now - phaseStart >= dur) startNextBall(now);
@@ -702,17 +1093,14 @@
             } else {
               // Rally miss OR double fault — point goes to AI, new point.
               if (lastOutcome === 'double-fault') {
-                pointsLost += 1;
+                doubleFaultServes += 1;
               } else if (rallyCount > 0) {
                 setStatus('miss-end-rally', { count: rallyCount, best: bestRally });
-                pointsLost += 1;
-              } else {
-                pointsLost += 1;
               }
+              recordPoint(false);
               rallyCount = 0;
               rallyAlive = false;
               faultCount = 0;
-              updateHUD();
               phase = PHASE.POST;
               phaseStart = now;
             }
@@ -738,9 +1126,12 @@
           handleServeStep(now);
         } else if (phase === PHASE.INCOMING) {
           const colorName = click.name.toLowerCase();
-          if (colorName === activeBall.color) {
+          const ballColor = activeBall.color;
+          if (colorName === ballColor) {
+            rallyStats[ballColor].clean += 1;
             startReturn(now);
           } else {
+            rallyStats[ballColor].miss += 1;
             startNetted(now, 'wrong');
           }
         }
@@ -796,10 +1187,49 @@
         STATUS_EL.innerHTML = text;
       }
 
+      const HUD_SCORE = document.getElementById('hud-score');
       function updateHUD() {
         HUD_RALLY.textContent = String(rallyCount);
         HUD_BEST.textContent = String(bestRally);
+        HUD_SCORE.textContent = pointsWon + '–' + pointsLost;
       }
+
+      function recordPoint(won) {
+        if (won) {
+          pointsWon += 1;
+        } else {
+          pointsLost += 1;
+        }
+        if (rallyCount > 0) {
+          totalRallyLengths += rallyCount;
+          rallyRoundsCount += 1;
+        }
+        updateHUD();
+        checkSetComplete();
+      }
+
+      function checkSetComplete() {
+        if (pointsWon >= POINTS_TO_WIN_SET || pointsLost >= POINTS_TO_WIN_SET) {
+          setOver = true;
+          const playerWon = pointsWon > pointsLost;
+          if (playerWon) setsWon += 1;
+          else setsLost += 1;
+          showSetResultOverlay(playerWon);
+        }
+      }
+
+      function resetForNextSet() {
+        pointsWon = 0;
+        pointsLost = 0;
+        rallyCount = 0;
+        rallyAlive = false;
+        faultCount = 0;
+        setOver = false;
+        activeBall = null;
+        updateHUD();
+        startServeReady(performance.now());
+      }
+
       updateHUD();
 
       // Initial prompt — player serves first.
@@ -1529,6 +1959,171 @@
         requestAnimationFrame(loop);
       }
       requestAnimationFrame(loop);
+
+      /* ── Overlays + Settings + Stats ─────────────────────────── */
+      const settingsOverlay = document.getElementById('settings-overlay');
+      const statsOverlay = document.getElementById('stats-overlay');
+      const setresultOverlay = document.getElementById('setresult-overlay');
+
+      function openOverlay(el) {
+        el.classList.add('is-visible');
+      }
+      function closeOverlay(el) {
+        el.classList.remove('is-visible');
+      }
+
+      document.getElementById('btn-settings').addEventListener('click', () => {
+        renderSettings();
+        openOverlay(settingsOverlay);
+      });
+      document.getElementById('btn-stats').addEventListener('click', () => {
+        renderStats();
+        openOverlay(statsOverlay);
+      });
+      document.getElementById('set-close').addEventListener('click', () => {
+        closeOverlay(settingsOverlay);
+      });
+      document.getElementById('stats-close').addEventListener('click', () => {
+        closeOverlay(statsOverlay);
+      });
+
+      /* ── Settings persistence (via shared BCI module) ─────────── */
+      const DEFAULT_GAME_SETTINGS = {
+        cursorSensitivity: 1.0,
+        haloSpeed: 1.0, // multiplier on flight speed (1 = normal, >1 = faster)
+        aiStrength: 1.0, // multiplier on AI return speed + lateral spread
+      };
+      let liveSettings = { ...DEFAULT_GAME_SETTINGS };
+
+      function loadSettings() {
+        const eff = (BCI.getEffectiveSettings && BCI.getEffectiveSettings(GAME_ID)) || {};
+        liveSettings.cursorSensitivity =
+          eff.cursorSensitivity ?? DEFAULT_GAME_SETTINGS.cursorSensitivity;
+        liveSettings.haloSpeed = eff.haloSpeed ?? DEFAULT_GAME_SETTINGS.haloSpeed;
+        liveSettings.aiStrength = eff.aiStrength ?? DEFAULT_GAME_SETTINGS.aiStrength;
+        applySettings();
+      }
+
+      function applySettings() {
+        cursor.setSensitivity(liveSettings.cursorSensitivity);
+      }
+
+      // Per-setting helpers — computed each time they're used so live changes
+      // affect the next ball without restart.
+      function effectiveBallFlightMs() {
+        return BALL_FLIGHT_MS / (liveSettings.haloSpeed * liveSettings.aiStrength);
+      }
+      function effectiveLateralVariance() {
+        return 320 * liveSettings.aiStrength;
+      }
+
+      const haloLabels = {
+        70: 'Slowest',
+        85: 'Slower',
+        100: 'Normal',
+        120: 'Faster',
+        140: 'Fastest',
+      };
+      const aiLabels = {
+        60: 'Easiest',
+        80: 'Easier',
+        100: 'Normal',
+        120: 'Harder',
+        140: 'Hardest',
+      };
+
+      function nearestLabel(map, value) {
+        const keys = Object.keys(map).map(Number);
+        let best = keys[0];
+        for (const k of keys) {
+          if (Math.abs(k - value) < Math.abs(best - value)) best = k;
+        }
+        return map[best];
+      }
+
+      function renderSettings() {
+        const sens = Math.round(liveSettings.cursorSensitivity * 100);
+        const halo = Math.round(liveSettings.haloSpeed * 100);
+        const ai = Math.round(liveSettings.aiStrength * 100);
+        document.getElementById('set-sens').value = sens;
+        document.getElementById('set-sens-val').textContent = (sens / 100).toFixed(2) + '×';
+        document.getElementById('set-halo').value = halo;
+        document.getElementById('set-halo-val').textContent = nearestLabel(haloLabels, halo);
+        document.getElementById('set-ai').value = ai;
+        document.getElementById('set-ai-val').textContent = nearestLabel(aiLabels, ai);
+      }
+
+      document.getElementById('set-sens').addEventListener('input', (e) => {
+        const v = Number(e.target.value) / 100;
+        liveSettings.cursorSensitivity = v;
+        document.getElementById('set-sens-val').textContent = v.toFixed(2) + '×';
+        applySettings();
+        if (BCI.saveGameSettings) BCI.saveGameSettings(GAME_ID, { cursorSensitivity: v });
+      });
+      document.getElementById('set-halo').addEventListener('input', (e) => {
+        const v = Number(e.target.value) / 100;
+        liveSettings.haloSpeed = v;
+        document.getElementById('set-halo-val').textContent = nearestLabel(
+          haloLabels,
+          Number(e.target.value)
+        );
+        if (BCI.saveGameSettings) BCI.saveGameSettings(GAME_ID, { haloSpeed: v });
+      });
+      document.getElementById('set-ai').addEventListener('input', (e) => {
+        const v = Number(e.target.value) / 100;
+        liveSettings.aiStrength = v;
+        document.getElementById('set-ai-val').textContent = nearestLabel(
+          aiLabels,
+          Number(e.target.value)
+        );
+        if (BCI.saveGameSettings) BCI.saveGameSettings(GAME_ID, { aiStrength: v });
+      });
+      document.getElementById('set-reset').addEventListener('click', () => {
+        liveSettings = { ...DEFAULT_GAME_SETTINGS };
+        applySettings();
+        if (BCI.saveGameSettings) BCI.saveGameSettings(GAME_ID, liveSettings);
+        renderSettings();
+      });
+
+      loadSettings();
+
+      /* ── Stats rendering ─────────────────────────────────────── */
+      function renderStats() {
+        document.getElementById('st-sets').textContent = setsWon + ' – ' + setsLost;
+        document.getElementById('st-points').textContent = pointsWon + ' – ' + pointsLost;
+        document.getElementById('st-best').textContent = String(bestRally);
+        document.getElementById('st-avg').textContent =
+          rallyRoundsCount > 0 ? (totalRallyLengths / rallyRoundsCount).toFixed(1) : '0.0';
+        document.getElementById('st-serves').textContent = String(serveAttempts);
+        document.getElementById('st-good').textContent = String(goodServes);
+        document.getElementById('st-faults').textContent = String(faultServes);
+        document.getElementById('st-dblfaults').textContent = String(doubleFaultServes);
+        document.getElementById('st-aces').textContent = String(aceCount);
+        for (const c of BALL_COLORS) {
+          const s = rallyStats[c];
+          document.getElementById('st-' + c).textContent = s.clean + ' / ' + (s.clean + s.miss);
+        }
+      }
+
+      /* ── Set-result overlay ──────────────────────────────────── */
+      function showSetResultOverlay(playerWon) {
+        const headline = document.getElementById('setresult-headline');
+        headline.textContent = playerWon ? 'Set won.' : 'Set lost.';
+        headline.className = 'setresult-headline ' + (playerWon ? 'win' : 'loss');
+        document.getElementById('setresult-you').textContent = String(pointsWon);
+        document.getElementById('setresult-ai').textContent = String(pointsLost);
+        document.getElementById('setresult-best').textContent = String(bestRally);
+        document.getElementById('setresult-aces').textContent = String(aceCount);
+        openOverlay(setresultOverlay);
+      }
+
+      document.getElementById('setresult-replay').addEventListener('click', () => {
+        closeOverlay(setresultOverlay);
+        resetForNextSet();
+      });
+      document.getElementById('setresult-home').addEventListener('click', () => {
+        BCI.goToLauncher();
+      });
     </script>
   </body>
 </html>
