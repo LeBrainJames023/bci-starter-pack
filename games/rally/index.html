@@ -340,7 +340,11 @@
          zone — vertical control is intentionally not part of v1 (the
          halo timing window in checkpoint 3 governs the depth read). */
       let racketX = W / 2;
+      let racketY = 418;
       const RACKET_LERP = 0.3;
+      const RACKET_Y_MIN = 365; // highest reach (over-the-shoulder)
+      const RACKET_Y_MAX = 465; // lowest reach (low ball, near foot)
+      const BODY_SWAY_FACTOR = 0.1; // how much the player leans with the cursor
 
       /* ── Color identity (matches BCI.CLICKS) ──────────────────── */
       const COLOR_HEX = {
@@ -889,11 +893,12 @@
         ctx.fill();
       }
 
-      function drawPlayerSilhouette(bobOffset) {
-        // Back of player — shoulders, head, partial racket arm extending
-        // out and forward into the court. Bob offset slightly stronger
-        // than the AI for a more present "we're alive" feel.
-        const cx = COURT.playerCenterX;
+      function drawPlayerSilhouette(bobOffset, swayX, racketHandPos) {
+        // Back of player — shoulders, head, and a connected racket arm
+        // that reaches toward wherever the cursor has the racket. The
+        // body leans subtly with cursor X so the player reads as
+        // shifting toward the ball rather than standing still.
+        const cx = COURT.playerCenterX + swayX;
         const headY = COURT.playerHeadY + bobOffset;
 
         // Shoulders / upper back — wide trapezoid that fans out toward
@@ -932,28 +937,72 @@
         ctx.ellipse(cx + 18, headY + 4, 4, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Hands resting on the bottom edge of frame — placeholders that
-        // anchor the player to the foreground without visually competing
-        // with the floating racket above.
+        // Off hand resting at the bottom edge — anchors the player to
+        // the foreground without competing with the racket arm above.
         ctx.fillStyle = getCSSVar('--player-skin');
+        const offHandX = racketHandPos.x > cx ? cx - 64 : cx + 64;
         ctx.beginPath();
-        ctx.ellipse(cx - 64, H - 8, 16, 9, 0, 0, Math.PI * 2);
+        ctx.ellipse(offHandX, H - 8, 16, 9, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Racket arm — picks the shoulder closer to the racket so the
+        // arm doesn't visually cross the body awkwardly. Two-segment
+        // curve with a soft elbow bias so it reads as a real reach.
+        const racketOnRight = racketHandPos.x >= cx;
+        const shoulderX = cx + (racketOnRight ? 32 : -32);
+        const shoulderY = headY + 30;
+        const handX = racketHandPos.x;
+        const handY = racketHandPos.y;
+
+        // Elbow position — biased outward so the arm bends naturally
+        const elbowBias = racketOnRight ? 16 : -16;
+        const elbowX = (shoulderX + handX) / 2 + elbowBias;
+        const elbowY = (shoulderY + handY) / 2 + 6;
+
+        // Skin arm
+        ctx.strokeStyle = getCSSVar('--player-skin');
+        ctx.lineWidth = 13;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.ellipse(cx + 64, H - 8, 16, 9, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.quadraticCurveTo(elbowX, elbowY, handX, handY);
+        ctx.stroke();
+
+        // Sleeve — covers the upper-arm segment so it reads as shirt
+        ctx.strokeStyle = getCSSVar('--player-shirt');
+        ctx.lineWidth = 17;
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(shoulderX * 0.55 + elbowX * 0.45, shoulderY * 0.55 + elbowY * 0.45);
+        ctx.stroke();
+
+        // Wristband — small dark band where the hand meets the grip
+        ctx.strokeStyle = getCSSVar('--player-shirt-dark');
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.moveTo(handX - 6, handY - 4);
+        ctx.lineTo(handX + 6, handY + 4);
+        ctx.stroke();
       }
 
-      /* ── Floating racket — cursor-controlled hit element ──────── */
-      function drawRacket(x, y, swingT) {
+      /* ── Floating racket — cursor-controlled hit element ────────
+         The render loop computes the effective draw position and
+         tilt (including swing modifications) so the player's arm can
+         reach the same hand point. */
+      function drawRacket(x, y, swingT, tilt) {
         ctx.save();
         ctx.translate(x, y);
+        ctx.rotate(tilt);
 
-        // Drop shadow on the court behind the racket — sells the height
+        // Drop shadow on the court — drawn in world-aligned space
+        ctx.save();
+        ctx.rotate(-tilt);
         ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
         ctx.beginPath();
         ctx.ellipse(2, 64, 22, 4, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
 
         // Swing flash — bright halo around the racket head when a click fires.
         if (swingT > 0) {
@@ -1119,7 +1168,25 @@
 
         tickRallyState(ts);
         racketX += (cursor.x - racketX) * RACKET_LERP;
+        const targetRacketY = Math.max(RACKET_Y_MIN, Math.min(RACKET_Y_MAX, cursor.y));
+        racketY += (targetRacketY - racketY) * RACKET_LERP;
         if (racketSwingT > 0) racketSwingT = Math.max(0, racketSwingT - 0.06);
+
+        // Effective racket transform — base tilt from cursor Y, plus a
+        // swing arc that rotates through as racketSwingT decays.
+        const baseTilt = ((racketY - COURT.racketY) / 50) * 0.32;
+        const swingTilt = racketSwingT > 0 ? (0.5 - racketSwingT) * 0.7 : 0;
+        const tilt = baseTilt + swingTilt;
+        const swingLift = racketSwingT * -6;
+        const racketDrawY = racketY + racketBob + swingLift;
+
+        // Hand grip position in world space — racket center + (0, 70)
+        // rotated by the effective tilt.
+        const handX = racketX + Math.sin(tilt) * 70;
+        const handY = racketDrawY + Math.cos(tilt) * 70;
+
+        // Body sway with cursor — subtle lean toward the racket
+        const swayX = (cursor.x - COURT.centerX) * BODY_SWAY_FACTOR;
 
         const ballState = getBallState(ts);
         const ballPastNet = ballState && ballState.linY > COURT.netY;
@@ -1136,8 +1203,10 @@
         if (ballState && !ballPastNet) drawBall(ballState);
         drawNet();
         if (ballState && ballPastNet) drawBall(ballState);
-        drawRacket(racketX, COURT.racketY + racketBob, racketSwingT);
-        drawPlayerSilhouette(playerBob);
+        // Player+arm renders BEFORE the racket so the grip covers the
+        // hand cleanly; the racket head sits in front of the player.
+        drawPlayerSilhouette(playerBob, swayX, { x: handX, y: handY });
+        drawRacket(racketX, racketDrawY, racketSwingT, tilt);
         drawCursor(cursor.x, cursor.y);
       }
 
