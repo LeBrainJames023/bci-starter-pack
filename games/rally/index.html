@@ -258,7 +258,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 6</div>
+              <div class="game-subtitle">v1 — Tennis · Checkpoint 7</div>
             </div>
           </div>
           <div class="hud">
@@ -391,9 +391,18 @@
       const POST_MS = 700;
       const SERVE_WINDOW_MS = 2500; // total time to land combo clicks after toss
       const SERVE_GOOD_COUNT = 3; // swing clicks needed after toss for a good serve
+      const SERVE_ACE_COUNT = 4; // tight 4th click = ACE attempt
+      const ACE_BONUS_MS = 450; // window after 3rd click to land 4th
+      const ACE_SERVING_MS = 950; // ACE flies faster than a normal serve
 
       let serveClickCount = 0;
       let serveStartTime = 0;
+      let serveClickTimes = [];
+      let isAceServe = false;
+      let aceCount = 0;
+      let faultCount = 0; // 0 / 1 (one more = double fault)
+      let pointsWon = 0;
+      let pointsLost = 0;
 
       function startNextBall(now) {
         const color = BALL_COLORS[Math.floor(Math.random() * 3)];
@@ -504,12 +513,14 @@
         phase = PHASE.SERVE_READY;
         phaseStart = now;
         serveClickCount = 0;
+        serveClickTimes = [];
         activeBall = null;
-        setStatus('serve-ready');
+        setStatus(faultCount > 0 ? 'second-serve' : 'serve-ready');
       }
 
       function handleToss(now) {
         serveClickCount = 0;
+        serveClickTimes = [];
         serveStartTime = now;
         phase = PHASE.SERVE_TOSS;
         phaseStart = now;
@@ -518,14 +529,62 @@
 
       function handleServeStep(now) {
         serveClickCount += 1;
+        serveClickTimes.push(now);
         racketSwingT = 1;
-        if (serveClickCount >= SERVE_GOOD_COUNT) {
-          landServe(now);
+
+        if (serveClickCount === SERVE_ACE_COUNT) {
+          landAce(now);
+        } else if (serveClickCount === SERVE_GOOD_COUNT) {
+          // 3rd click landed — open the ACE bonus window. The serve fires
+          // automatically when the bonus window expires (handled in tick).
+          setStatus('serve-ace-window');
         } else {
           setStatus('serve-progress', {
             remaining: SERVE_GOOD_COUNT - serveClickCount,
           });
         }
+      }
+
+      function checkAceRoll(times) {
+        // Tighter average rhythm = higher chance of an unreturnable ACE.
+        // Below 280ms avg = likely; above 380ms = almost always reads as a
+        // "good serve" (returnable) instead.
+        if (times.length < SERVE_ACE_COUNT) return false;
+        let total = 0;
+        for (let i = 1; i < times.length; i++) total += times[i] - times[i - 1];
+        const avg = total / (times.length - 1);
+        if (avg < 280) return Math.random() < 0.85;
+        if (avg < 380) return Math.random() < 0.55;
+        return Math.random() < 0.25;
+      }
+
+      function landAce(now) {
+        const isAce = checkAceRoll(serveClickTimes);
+        if (!isAce) {
+          // Failed roll — treat as a normal good serve.
+          landServe(now);
+          return;
+        }
+        const color = BALL_COLORS[Math.floor(Math.random() * 3)];
+        activeBall = {
+          color,
+          startX: racketX,
+          startY: racketY,
+          // Land deep behind the AI for visual impact
+          endX: COURT.aiX + (Math.random() - 0.5) * 100,
+          endY: COURT.aiBaseY + 22,
+          apex: 70,
+          startSize: 11.5,
+          endSize: 4.5,
+          startHaloR: 0,
+          endHaloR: 0,
+        };
+        phase = PHASE.SERVING;
+        phaseStart = now;
+        isAceServe = true;
+        aceCount += 1;
+        faultCount = 0;
+        setStatus('ace');
       }
 
       function landServe(now) {
@@ -544,10 +603,14 @@
         };
         phase = PHASE.SERVING;
         phaseStart = now;
+        isAceServe = false;
+        faultCount = 0;
         setStatus('serve-good');
       }
 
       function handleServeFault(now) {
+        faultCount += 1;
+        const isDouble = faultCount >= 2;
         // Toss falls forward and dies in the net.
         activeBall = {
           color: 'blue', // any — color doesn't matter on a fault
@@ -563,24 +626,46 @@
         };
         phase = PHASE.NETTED;
         phaseStart = now;
-        lastOutcome = 'fault';
-        setStatus('fault');
+        lastOutcome = isDouble ? 'double-fault' : 'fault';
+        setStatus(isDouble ? 'double-fault' : 'first-fault');
       }
 
       function tickRallyState(now) {
         if (phase === PHASE.SERVE_READY) {
           // Wait for player toss click — no timeout
         } else if (phase === PHASE.SERVE_TOSS) {
-          if (now - serveStartTime >= SERVE_WINDOW_MS) {
+          if (serveClickCount >= SERVE_GOOD_COUNT && serveClickCount < SERVE_ACE_COUNT) {
+            // 3 clicks landed — wait briefly for an optional 4th (ACE).
+            const lastClickT = serveClickTimes[serveClickTimes.length - 1];
+            if (now - lastClickT >= ACE_BONUS_MS) {
+              landServe(now);
+            }
+          } else if (
+            serveClickCount < SERVE_GOOD_COUNT &&
+            now - serveStartTime >= SERVE_WINDOW_MS
+          ) {
             handleServeFault(now);
           }
         } else if (phase === PHASE.SERVING) {
-          if (now - phaseStart >= SERVING_FLIGHT_MS) {
-            // Serve arrived at AI — they immediately return.
+          const dur = isAceServe ? ACE_SERVING_MS : SERVING_FLIGHT_MS;
+          if (now - phaseStart >= dur) {
             activeBall = null;
-            rallyAlive = true;
-            phase = PHASE.IDLE;
-            phaseStart = now;
+            if (isAceServe) {
+              // Player won the point with an unreturnable ACE.
+              isAceServe = false;
+              pointsWon += 1;
+              rallyCount = 0;
+              rallyAlive = false;
+              faultCount = 0;
+              updateHUD();
+              phase = PHASE.POST;
+              phaseStart = now;
+            } else {
+              // Standard serve — AI returns, rally begins.
+              rallyAlive = true;
+              phase = PHASE.IDLE;
+              phaseStart = now;
+            }
           }
         } else if (phase === PHASE.IDLE) {
           if (rallyAlive) {
@@ -606,15 +691,31 @@
           }
         } else if (phase === PHASE.NETTED) {
           if (now - phaseStart >= NET_FLIGHT_MS) {
-            // Rally ends. If the player had something going, surface it.
-            if (rallyCount > 0) {
-              setStatus('miss-end-rally', { count: rallyCount, best: bestRally });
+            if (lastOutcome === 'fault') {
+              // First fault — retry serve, fault count stays at 1.
+              activeBall = null;
+              phase = PHASE.SERVE_READY;
+              phaseStart = now;
+              serveClickCount = 0;
+              serveClickTimes = [];
+              setStatus('second-serve');
+            } else {
+              // Rally miss OR double fault — point goes to AI, new point.
+              if (lastOutcome === 'double-fault') {
+                pointsLost += 1;
+              } else if (rallyCount > 0) {
+                setStatus('miss-end-rally', { count: rallyCount, best: bestRally });
+                pointsLost += 1;
+              } else {
+                pointsLost += 1;
+              }
+              rallyCount = 0;
+              rallyAlive = false;
+              faultCount = 0;
+              updateHUD();
+              phase = PHASE.POST;
+              phaseStart = now;
             }
-            rallyCount = 0;
-            rallyAlive = false;
-            updateHUD();
-            phase = PHASE.POST;
-            phaseStart = now;
           }
         } else if (phase === PHASE.POST) {
           if (now - phaseStart >= POST_MS) {
@@ -654,15 +755,22 @@
 
       const STATUS_TEXT = {
         'serve-ready':
-          '<span class="accent">Click any color to toss.</span> Then 3 quick clicks in rhythm to serve.',
+          '<span class="accent">Click any color to toss.</span> Then 3 quick clicks in rhythm to serve — chain a 4th fast for an ACE attempt.',
+        'second-serve':
+          '<span class="accent" style="color: var(--dev-text, #d4a35a)">Second serve.</span> One more fault and AI gets the point.',
         'serve-tossing':
           '<span class="accent">Toss is up — {remaining} swing clicks to land the serve.</span>',
         'serve-progress':
           '<span class="accent">{remaining} more click{remainingPlural}…</span> Stay in rhythm.',
+        'serve-ace-window':
+          '<span class="accent" style="color: var(--good)">Locked.</span> One more fast click for an ACE attempt — or wait for the standard serve.',
         'serve-good':
           '<span class="accent" style="color: var(--good)">Good serve.</span> AI is reading it.',
-        fault:
-          '<span class="accent" style="color: var(--bad)">Fault.</span> Click any color to toss again.',
+        ace: '<span class="accent" style="color: var(--good)">ACE!</span> Unreturnable — point won.',
+        'first-fault':
+          '<span class="accent" style="color: var(--bad)">First fault.</span> One more attempt at this serve.',
+        'double-fault':
+          '<span class="accent" style="color: var(--bad)">Double fault.</span> Point to AI — new point starting.',
         clean:
           '<span class="accent" style="color: var(--good)">Clean return.</span> AI is sending the next ball.',
         rally:
@@ -1255,12 +1363,12 @@
         const spacing = 26;
         const startX = cx - spacing;
 
-        // Background pill
+        // Background pill — wider to accommodate the 4th ACE bonus dot
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        const pillW = 110;
+        const pillW = 144;
         const pillH = 30;
         const pillX = cx - pillW / 2;
         const pillY = cy - pillH / 2;
@@ -1278,7 +1386,7 @@
         ctx.fill();
         ctx.stroke();
 
-        // Three dots
+        // Three standard dots
         for (let i = 0; i < SERVE_GOOD_COUNT; i++) {
           const x = startX + i * spacing;
           const filled = i < serveClickCount;
@@ -1291,12 +1399,34 @@
           ctx.stroke();
         }
 
-        // Window timer bar (only during SERVE_TOSS)
+        // 4th ACE bonus dot — pulses once 3 standard clicks have landed.
+        const aceDotX = startX + SERVE_GOOD_COUNT * spacing + 4;
+        const aceArmed = serveClickCount >= SERVE_GOOD_COUNT;
+        const aceFilled = serveClickCount >= SERVE_ACE_COUNT;
+        const acePulse = aceArmed && !aceFilled ? 1 + Math.sin(now / 80) * 0.18 : 1;
+        ctx.fillStyle = aceFilled
+          ? getCSSVar('--good')
+          : aceArmed
+            ? 'rgba(95, 191, 110, 0.4)'
+            : 'rgba(255, 255, 255, 0.10)';
+        ctx.beginPath();
+        ctx.arc(aceDotX, cy - 2, dotR * 1.25 * acePulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = aceArmed ? getCSSVar('--good') : 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = aceArmed ? 1.8 : 1.2;
+        ctx.stroke();
+
+        // Window timer bar — counts down the active window (serve or ACE bonus)
         if (phase === PHASE.SERVE_TOSS) {
-          const elapsed = now - serveStartTime;
-          const remainingT = Math.max(0, 1 - elapsed / SERVE_WINDOW_MS);
-          const barW = 70;
+          const barW = 100;
           const barH = 3;
+          let remainingT;
+          if (serveClickCount >= SERVE_GOOD_COUNT && serveClickCount < SERVE_ACE_COUNT) {
+            const lastClickT = serveClickTimes[serveClickTimes.length - 1];
+            remainingT = Math.max(0, 1 - (now - lastClickT) / ACE_BONUS_MS);
+          } else {
+            remainingT = Math.max(0, 1 - (now - serveStartTime) / SERVE_WINDOW_MS);
+          }
           ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
           ctx.fillRect(cx - barW / 2, cy + 10, barW, barH);
           ctx.fillStyle = remainingT < 0.3 ? getCSSVar('--bad') : 'rgba(255, 255, 255, 0.85)';
