@@ -8,22 +8,22 @@ Built for Neuralink Prime Study participants and BCI users broadly. Every game i
 
 ## Games
 
-| Game             | Description                                                        | Status         |
-| ---------------- | ------------------------------------------------------------------ | -------------- |
-| Hackey Sac       | Color-matched click training with a falling ball                   | Live           |
-| WebGrid          | BPS benchmark — colored cells in an N×N grid                       | Live           |
-| Golf             | Putt-Putt v1 (7 holes); driving range + full course planned        | Live           |
-| Hoops            | Free Throw + Three-Point + 9-Shot Drill — color-matched shooting   | Live           |
-| QB Targets       | Behind-QB football targeting — concurrent reads, sack/incompletion | Live           |
-| Goalie / Striker | Soccer Penalty Shootout — side + color save read (Goalie mode)     | Live           |
-| Boxing           | First-person boxing — 4-punch combos with Guitar Hero counter      | Live           |
-| Batter / Pitcher | Baseball — 3 pitch types, free-cursor swing with timing windows    | Live           |
-| Hockey           | Slap Shot — 5-zone read with iconic five-hole, 6s shot clock       | Live           |
-| Rally            | Tennis / badminton color-matched returns                           | In Development |
-| Archery          | Hold cursor steady, release at the right moment                    | Coming Soon    |
-| Range            | Target practice with friend/foe decision-making                    | Coming Soon    |
-| Tower Defense    | Wave-based click strategy                                          | Coming Soon    |
-| Side Scroller    | Action platformer                                                  | Coming Soon    |
+| Game             | Description                                                        | Status      |
+| ---------------- | ------------------------------------------------------------------ | ----------- |
+| Hackey Sac       | Color-matched click training with a falling ball                   | Live        |
+| WebGrid          | BPS benchmark — colored cells in an N×N grid                       | Live        |
+| Golf             | Putt-Putt v1 (7 holes); driving range + full course planned        | Live        |
+| Hoops            | Free Throw + Three-Point + 9-Shot Drill — color-matched shooting   | Live        |
+| QB Targets       | Behind-QB football targeting — concurrent reads, sack/incompletion | Live        |
+| Goalie / Striker | Soccer Penalty Shootout — side + color save read (Goalie mode)     | Live        |
+| Boxing           | First-person boxing — 4-punch combos with Guitar Hero counter      | Live        |
+| Batter / Pitcher | Baseball — 3 pitch types, free-cursor swing with timing windows    | Live        |
+| Hockey           | Slap Shot — 5-zone read with iconic five-hole, 6s shot clock       | Live        |
+| Rally            | Tennis: serve combo + ACE, color-matched rally returns             | Live        |
+| Archery          | Hold cursor steady, release at the right moment                    | Coming Soon |
+| Range            | Target practice with friend/foe decision-making                    | Coming Soon |
+| Tower Defense    | Wave-based click strategy                                          | Coming Soon |
+| Side Scroller    | Action platformer                                                  | Coming Soon |
 
 ## How to Play
 
@@ -48,7 +48,7 @@ bci-starter-pack/
 │   ├── boxing/          # Live — 4-punch combo offense + counter
 │   ├── batter-pitcher/  # Live — Batter mode v1
 │   ├── hockey/          # Live — Slap Shot v1
-│   ├── rally/           # In Development — tennis
+│   ├── rally/           # Live — Tennis v1 (serve combo + ACE, color-matched returns)
 │   ├── archery/         # Coming Soon
 │   ├── range/           # Coming Soon
 │   ├── tower-defense/   # Coming Soon (Godot HTML5 export drops here)

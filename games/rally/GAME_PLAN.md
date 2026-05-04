@@ -2,7 +2,7 @@
 
 ## Status
 
-Planning — v1 spec locked 2026-05-03. Not yet started.
+v1 Live — 2026-05-03. All 9 build checkpoints shipped end-to-end.
 
 ## v1 MVP — One-Liner
 
@@ -113,7 +113,25 @@ Per-session and aggregate, persisted under `rally` key. Last 10 sessions visible
 
 ## Currently Building
 
-Nothing active. v1 spec just locked, awaiting kickoff.
+Nothing active. v1 is Live and the launcher card has been flipped.
+
+## Build History
+
+All 9 checkpoints shipped 2026-05-03:
+
+1. Court & POV foundation (behind-player camera, hard court, AI silhouette, idle bob)
+2. Cursor + racket movement (center-bias floating racket, faint center line)
+3. Incoming ball arc + halo timing ring (parabolic in screen-space, Z-order against net)
+4. Color-match return mechanic (3 click colors → return / netted, racket swing flash)
+5. AI return loop + rally counter (rally streak with AI_PREP fast-path)
+6. Player serve + combo gauge (toss + 3-click rhythm)
+7. Double-fault + ACE mechanic (4th-click ACE roll, retry on first fault)
+8. Score, settings, analytics (race-to-5 sets, settings overlay, stats overlay)
+9. Walkthrough overlay + help button + launcher card flip + README updates
+
+Mid-build polish add (between ck5 and ck6): connected swing arm and cursor-Y racket
+tilt/height — based on first-play feedback that the floating-racket-without-arm read
+as disconnected from the player.
 
 ## Up Next
 

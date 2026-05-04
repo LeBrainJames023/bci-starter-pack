@@ -475,7 +475,7 @@
             <button class="back-btn" id="btn-back">&larr; Back</button>
             <div class="title-block">
               <div class="game-title">Rally</div>
-              <div class="game-subtitle">v1 — Tennis · Checkpoint 8</div>
+              <div class="game-subtitle">v1 — Tennis</div>
             </div>
           </div>
           <div class="hud">
@@ -493,6 +493,7 @@
             </div>
           </div>
           <div class="header-right">
+            <span class="help-slot" id="help-slot"></span>
             <button class="icon-btn" id="btn-stats">Stats</button>
             <button class="icon-btn" id="btn-settings">Settings</button>
           </div>
@@ -673,6 +674,7 @@
     <script src="../../shared/bci-settings.js"></script>
     <script src="../../shared/bci-analytics.js"></script>
     <script src="../../shared/bci-shell.js"></script>
+    <script src="../../shared/bci-walkthrough.js"></script>
     <script>
       'use strict';
 
@@ -2124,6 +2126,50 @@
       document.getElementById('setresult-home').addEventListener('click', () => {
         BCI.goToLauncher();
       });
+
+      /* ── Walkthrough ─────────────────────────────────────────── */
+      const WALKTHROUGH_STEPS = [
+        {
+          title: 'Move the cursor',
+          body: [
+            'Move the floating cursor to position your racket on the court.',
+            'Side-to-side cursor movement slides the racket; up/down tilts and shifts the racket height for high or low balls.',
+          ],
+        },
+        {
+          title: 'Three click colors',
+          body: 'Every ball arrives with a color. Match the click color to land a clean return.',
+          clicks: ['left', 'right', 'middle'],
+        },
+        {
+          title: 'Serve to start',
+          body: [
+            'Click any color to toss the ball, then chain 3 quick clicks in rhythm to land a good serve.',
+            'Push for a 4th very fast click — chance at an unreturnable ACE.',
+          ],
+        },
+        {
+          title: 'Rally — match the color',
+          body: 'AI returns colored balls. Match the color before the halo ring closes. Wrong color or whiff sends the ball into the net.',
+        },
+        {
+          title: 'Race to 5',
+          body: 'First to 5 points wins the set. Two faults in a row on a single point = AI gets it (double fault).',
+        },
+      ];
+
+      const WALKTHROUGH_ID = 'rally/v1';
+
+      if (BCI.showWalkthrough) {
+        BCI.showWalkthrough(WALKTHROUGH_ID, WALKTHROUGH_STEPS);
+      }
+      if (BCI.createHelpButton) {
+        const help = BCI.createHelpButton(() => ({
+          id: WALKTHROUGH_ID,
+          steps: WALKTHROUGH_STEPS,
+        }));
+        document.getElementById('help-slot').appendChild(help);
+      }
     </script>
   </body>
 </html>
